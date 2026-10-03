@@ -162,9 +162,16 @@ async function main() {
     await page.close();
   }
 
-  // Every cell, checked against the service's own answer for that slot and party. A stage-4 policy
-  // can change what is free, and this is where that shows: a cell that disagrees with the service
-  // about the same slot is a diner shown a table the kitchen has given away.
+  // Every cell, checked against the service's own answer for that slot and party, in BOTH directions
+  // and with the two populations counted separately. A stage-4 policy can change what is free, and
+  // this is where that shows: a cell that disagrees with the service about the same slot is a diner
+  // shown a table the kitchen has given away.
+  //
+  // Both directions, because a forward-only comparison cannot see a slot the service offered and the
+  // grid never painted -- the same omission as a map that indexes only singles -- and because two
+  // populations of the same size can still be different sets. A count alone cannot tell those apart;
+  // the reverse loop can, and the count is asserted beside it so a disagreement says which side is
+  // short rather than only that the numbers differ.
   await seed({ ...baseFixture(), reservations: oneTableTaken('t_1') });
   for (const party of [2, 6]) {
     section(`every cell agrees with the service at party ${party}`);
@@ -176,20 +183,28 @@ async function main() {
     await page.click('[data-testid="search-button"]');
     await page.waitForTimeout(700);
 
+    // Keyed by the slot's position, never by its local time: two slots sharing a time would collapse
+    // into one key and the population would shrink before anything compared it. A map that silently
+    // drops a class of thing is the shape this whole row exists to catch, so it cannot be the map the
+    // row is built on. The times are kept alongside, and asserted to be distinct below.
     const answer = await page.evaluate(async (n) => {
       const r = await fetch(`/availability?restaurant_id=r_anker&date=2026-12-01&party_size=${n}`);
       const body = await r.json();
-      const out = {};
-      for (const slot of body.slots || []) {
-        out[slot.starts_at_local.slice(11, 16)] = {
-          tables: slot.available_table_ids,
-          pairs: (slot.available_options || []).map((o) => o.table_ids.join('+')),
-        };
-      }
-      return out;
+      return (body.slots || []).map((slot, index) => ({
+        index,
+        time: slot.starts_at_local.slice(11, 16),
+        tables: slot.available_table_ids,
+        pairs: (slot.available_options || []).map((o) => o.table_ids.join('+')),
+      }));
     }, party);
-    ok('the service answered with a slot list to compare against', Object.keys(answer).length > 0,
-      { slots: Object.keys(answer).length });
+    ok('the service answered with a slot list to compare against', answer.length > 0,
+      { slots: answer.length });
+    // If two slots shared a time the grid's own ids could not tell them apart either, so this is
+    // asserted rather than assumed: the comparison below is keyed by position precisely because the
+    // time is not guaranteed unique, and this row says whether it was.
+    ok('the slots the service offered have distinct local times',
+      new Set(answer.map((s) => s.time)).size === answer.length,
+      { times: answer.map((s) => s.time) });
 
     const painted = await page.evaluate(() => [...document.querySelectorAll('[data-available]')]
       .map((c) => {
@@ -200,10 +215,15 @@ async function main() {
       }));
 
     const disagreements = [];
+    const unmatchedCells = [];
     let freeSeen = 0;
+    const answerByTime = new Map(answer.map((slot) => [slot.time, slot]));
     for (const cell of painted) {
-      const slot = answer[cell.time];
-      if (!slot) { disagreements.push({ cell: cell.ids, time: cell.time, why: 'slot not in the answer' }); continue; }
+      const slot = answerByTime.get(cell.time);
+      if (!slot) {
+        unmatchedCells.push({ cell: cell.ids, time: cell.time, why: 'no slot in the answer at this time' });
+        continue;
+      }
       const said = cell.ids.length > 1
         ? slot.pairs.indexOf(cell.ids.join('+')) !== -1
         : slot.tables.indexOf(cell.ids[0]) !== -1;
@@ -212,6 +232,25 @@ async function main() {
       }
       if (cell.available) freeSeen += 1;
     }
+
+    // The reverse direction, and the count. A comparison that only walks one side cannot see a slot
+    // the service offered and the grid never painted -- the same omission as a map that indexes only
+    // singles -- and equal-looking counts over different sets are not agreement. Both are asserted,
+    // and the two populations are named separately so a disagreement says which side is short.
+    const paintedTimes = new Set(painted.map((c) => c.time));
+    const unpainted = answer.filter((slot) => !paintedTimes.has(slot.time)).map((slot) => slot.time);
+    ok(`every slot the service offered was painted at party ${party}`, unpainted.length === 0,
+      { unpainted, painted: paintedTimes.size, offered: answer.length });
+    // The count, over a population neither side can shrink: one row per table the restaurant lists,
+    // plus any paired rows the service offered, for every slot it offered.
+    const rows = await page.evaluate(
+      () => document.querySelectorAll('[data-testid="availability-grid"] tbody tr').length);
+    const expectedCells = answer.length * rows;
+    ok(`the two populations are equal at party ${party}: ${painted.length} cells and ${expectedCells}`,
+      painted.length === expectedCells && painted.length > 0,
+      { painted: painted.length, expectedCells, slots: answer.length, rows });
+    ok(`every painted cell has a slot in the answer at party ${party}`, unmatchedCells.length === 0,
+      unmatchedCells.slice(0, 4));
     ok(`every cell matches the service's answer at party ${party}`, disagreements.length === 0,
       disagreements.slice(0, 4));
     if (party === 2) {
