@@ -13,6 +13,7 @@ node ui-grid.mjs        # the search results region: empty, loading, results, no
 node ui-messages.mjs    # the lookup screen, and message integrity
 node ui-a11y.mjs        # labels, sideways scrolling, clipped text, contrast
 node ui-states-a11y.mjs # seven looks, focus at every stop, booking by keyboard alone
+node stage3-api.mjs     # policies, explain, accepted terms, history and series
 
 docker rm -f tk-fin
 ```
@@ -43,6 +44,14 @@ focus indicator that is visible against the surface behind it.
 `ui-a11y.mjs` — no sideways scrolling at 375 or 1280, every input labelled, no text clipped inside
 its own box, and every text node above its WCAG floor against the first non-transparent background
 behind it rather than against the page root.
+
+`stage3-api.mjs` — the stage-3 API surface: who may publish a policy and what a complete one is,
+which policy a local date selects and how a tie is broken, that `explain` is recomputed from capacity
+and occupancy rather than read back from the answer it explains, that accepted terms are a snapshot
+rather than a live read, that history is a record with its own sequence and never renumbers, that
+adoption is all or nothing, and that a series occurrence is an ordinary reservation. The ten
+standing clauses are restated at the top of the file, because a convention in a header does not
+travel into a new file by itself.
 
 ## Two rules these rows follow
 
