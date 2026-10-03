@@ -1,43 +1,31 @@
-# Sabotage Report for Tablekeeper Stage 3 (commit 9121b38)
+# Sabotage Report for Tablekeeper Stage 3 (commit a69e6ba)
 
 ## Complete List of Mutants Tested
 
 | # | Mutant | Requirement | Implemented | Supplied Harness | Adversary Probes | Probe File | Result |
 |---|--------|-------------|-------------|------------------|------------------|------------|--------|
-| 1 | Import derives policy-0 terms differently from reset | S3-121 | YES | **CAUGHT*** | **CAUGHT*** | — | Mutant broken (422 everywhere) |
-| 2 | Missing explain field on availability | S3-002, S3-003 | YES | **CAUGHT** | **CAUGHT** | `api_core.py` | KeyError on explain |
-| 3 | Missing policy_version in explain | S3-010 | YES | **MISSED** | **CAUGHT** | `api_core.py` | S3-010 FAIL |
-| 4 | Missing accepted_terms on reservation | S3-050 | YES | **CAUGHT** | **CAUGHT** | `terms_history_series.py` | KeyError on accepted_terms |
-| 5 | Missing revision on reservation | S3-050 | YES | **CAUGHT** | **CAUGHT** | `terms_history_series.py` | KeyError on revision |
-| 6 | Missing reference at occurrence level | S3-105, S3-111 | YES | **MISSED** | **CAUGHT** | `terms_history_series.py` | S3-105, S3-105b FAIL |
-| 7 | Series adoption doesn't increment batch counter | S3-118 | YES | **MISSED** | **MISSED** | — | No probe for batch counter |
-| 8 | Series adoption doesn't increment series revision on amendment | S3-114 | YES | **CAUGHT** | **CAUGHT** | `terms_history_series.py` | S3-114, S3-114b, S3-115 FAIL |
-| 9 | Series adoption creates partial series on failure | S3-109 | YES | **CAUGHT** | **CAUGHT** | `terms_history_series.py` | S3-109 FAIL |
-| 10 | Policy 0 terms not derived from fixture on import | S3-121 | YES | **CAUGHT*** | **CAUGHT*** | — | Mutant broken (422 everywhere) |
-
-*CAUGHT* = caught by mutant breakage (mutant fails to start/422 everywhere)
+| 1 | Grid/explain seam (e6a0830) | S3-003, S3-005, S3-009 | YES | **NOT RUN** | **CAUGHT** | `api_core.py` | S3-003, S3-009 FAIL |
+| 2 | Occurrence reference emission (df4387d) | S3-105, S3-105b | YES | **NOT RUN** | **CAUGHT** | `terms_history_series.py` | S3-105, S3-105b-missing-reservation FAIL |
+| 3 | Fixture refusal half-application | S4-152 | YES | **NOT RUN** | **MISSED** | — | 48/48 api_core, 34/34 terms_history passed |
 
 ## Totals
 
-**Supplied harness: 7 of 10 caught** (3 precise + 4 broken-mutant)
-**Adversary probes: 6 of 10 caught**
+**Supplied harness:** Not run against stage-3 mutants (would require full suite with UI checks)
 
-## Gaps in Supplied Harness (3 implemented mutants missed)
+**Adversary probes caught:** 2 of 3 implemented mutants
 
-| Mutant | Requirement | Root Cause | Row That Should Catch It |
-|--------|-------------|------------|--------------------------|
-| 1 | S3-121: Import derives policy-0 terms differently | Mutant broken (422 everywhere) | Need precise mutant |
-| 7 | S3-118: Series adoption doesn't increment batch counter | No probe for batch counter | Need probe for batch counter |
-| 10 | S3-121: Policy 0 terms not derived on import | Mutant broken (422 everywhere) | Need precise mutant |
+### Missed by Adversary Probes (1 mutant)
 
-## Gaps in Adversary Probes (4 implemented mutants missed)
+| Mutant | Requirement | Root Cause | Probe File | Why Missed |
+|--------|-------------|------------|------------|------------|
+| Fixture refusal half-application | S4-152 | No probe checks for partial writes on refused fixture | `api_core.py`, `terms_history_series.py` | No probe asserts that refused fixture leaves state unchanged |
 
-| Mutant | Requirement | Probe File | Why Missed |
-|--------|-------------|------------|------------|
-| 6 | S3-105/S3-111: Missing reference at occurrence level | `terms_history_series.py` | Probe checks reference at occurrence level |
-| 7 | S3-118: Batch counter not incremented | No probe | No probe for batch counter |
-| 8 | S3-114: Series revision not incremented on amendment | `terms_history_series.py` | S3-114, S3-114b, S3-115 FAIL |
-| 10 | S3-121: Policy 0 terms not derived on import | — | Mutant broken |
+## Closed/Not a Defect
+
+| Mutant | Requirement | Reason |
+|--------|-------------|--------|
+| Seed path revision:5 / null terms | S4-150 | Fixed at a69e6ba (returns 422) |
+| Fixture top-level stores | S3-303a | Recorded as known behavior, not a defect |
 
 ## Isolation Method
 
