@@ -6,6 +6,7 @@ const store = require('./state');
 const domain = require('./domain');
 const { hashPassword, randomId, randomToken } = require('./accounts');
 const { has, isPlainObject, normaliseEmail, MAX_ID_LENGTH } = require('./fields');
+const { canonical } = require('./idempotency');
 
 const REFERENCE_PATTERN = /^[A-Z0-9]{6,12}$/;
 
@@ -193,8 +194,14 @@ function parseSeededReservation(raw, state, nowMs) {
   if (has(raw, 'revision') && raw.revision !== 1) {
     fail('fixture_unsupported', { field: 'reservations', reason: 'revision_not_seedable' });
   }
-  if (has(raw, 'accepted_terms')
-      && JSON.stringify(raw.accepted_terms) !== JSON.stringify(derivedTerms)) {
+  // Equality here is only a gate; what is stored below is always the derived object, never the
+  // declared one. That is what makes the gate safe: a terms object that happens to equal the
+  // derivation cannot diverge from it later, because it is never the thing that gets kept.
+  //
+  // The comparison is canonical rather than a string compare, because two objects with the same
+  // content and different key order are the same terms, and refusing one of them would be a
+  // refusal the author cannot see the reason for.
+  if (has(raw, 'accepted_terms') && canonical(raw.accepted_terms) !== canonical(derivedTerms)) {
     fail('fixture_unsupported', { field: 'reservations', reason: 'terms_not_seedable' });
   }
   if (has(raw, 'series_id') || has(raw, 'series_index')) {
