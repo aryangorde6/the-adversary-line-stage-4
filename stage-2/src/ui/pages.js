@@ -48,23 +48,7 @@ with a tick are free for your whole visit.</p>
       </table>
     </div>
   </div>
-</section>
-
-<section aria-labelledby="booking-heading" data-testid="booking-section" hidden>
-  <h2 id="booking-heading">Your booking</h2>
-  <form class="card" data-testid="booking-form" data-msg-host novalidate>
-    <p data-testid="booking-summary"></p>
-    <div class="grid-fields">
-      <div>
-        <label for="booking-party-size">People</label>
-        <input id="booking-party-size" data-testid="booking-party-size" name="party_size" type="number"
-               min="1" max="20" step="1" inputmode="numeric" required>
-      </div>
-      <div class="row"><button type="submit" data-testid="booking-submit">Book this table</button></div>
-    </div>
-  </form>
-</section>
-`;
+</section>`;
 
   return layout({
     title: 'Find a table',

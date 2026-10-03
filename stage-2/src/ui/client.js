@@ -204,19 +204,21 @@
     var restaurantSelect = pick('restaurant-select');
     var dateInput = pick('date-input');
     var partyInput = pick('party-size-input');
-    var grid = pick('availability-grid');
-    var gridHead = pick('grid-head');
-    var gridBody = pick('grid-body');
-    var gridCaption = pick('grid-caption');
-    var gridEmpty = pick('grid-empty');
-    var gridTable = document.querySelector('[data-testid=\'availability-grid\'] table');
     var searchStatus = pick('search-status');
 
-    var bookingSection = pick('booking-section');
-    var bookingForm = document.querySelector('[data-testid="booking-form"]');
-    var bookingSummary = pick('booking-summary');
-    var bookingParty = pick('booking-party-size');
-    var bookingSubmit = pick('booking-submit');
+    // These regions are removed from the document when their state does not exist, so the handles
+    // below are re-bound every time a region is built rather than captured once at load.
+    var grid = null;
+    var gridHead = null;
+    var gridBody = null;
+    var gridCaption = null;
+    var gridEmpty = null;
+    var gridTable = null;
+    var bookingSection = null;
+    var bookingForm = null;
+    var bookingSummary = null;
+    var bookingParty = null;
+    var bookingSubmit = null;
 
     var issued = 0;
     var applied = 0;
@@ -224,9 +226,135 @@
     var currentRestaurant = null;
     var currentSlots = [];
 
+    bindGrid();
+    bindBooking();
+
+    // The results region exists only while there is something to show results in: it is built on
+    // load and rebuilt after a search, and taken out of the document entirely when the day has no
+    // slots, because "shown instead of the grid" is not satisfied by a grid left behind, hidden.
+    function bindGrid() {
+      grid = pick('availability-grid');
+      gridEmpty = grid ? grid.querySelector('[data-testid="grid-empty"]') : null;
+      gridTable = grid ? grid.querySelector('table') : null;
+      gridHead = pick('grid-head');
+      gridBody = pick('grid-body');
+      gridCaption = pick('grid-caption');
+    }
+
+    function buildGridRegion() {
+      if (pick('availability-grid')) {
+        bindGrid();
+        return;
+      }
+      var host = pick('availability-panel') || searchForm.parentNode;
+      var region = document.createElement('div');
+      region.className = 'grid-scroll';
+      region.setAttribute('data-testid', 'availability-grid');
+      var empty = document.createElement('p');
+      empty.className = 'msg empty grid-empty';
+      empty.setAttribute('data-testid', 'grid-empty');
+      empty.textContent = 'Choose a restaurant, a date and how many people are coming, then search. '
+        + 'We will show you every table that is free for the whole of your visit, and any pairs of '
+        + 'tables the restaurant sets together for larger parties.';
+      var table = document.createElement('table');
+      table.className = 'grid';
+      table.hidden = true;
+      var caption = document.createElement('caption');
+      caption.setAttribute('data-testid', 'grid-caption');
+      var thead = document.createElement('thead');
+      var headRow = document.createElement('tr');
+      headRow.setAttribute('data-testid', 'grid-head');
+      thead.appendChild(headRow);
+      var tbody = document.createElement('tbody');
+      tbody.setAttribute('data-testid', 'grid-body');
+      table.appendChild(caption);
+      table.appendChild(thead);
+      table.appendChild(tbody);
+      region.appendChild(empty);
+      region.appendChild(table);
+      host.insertBefore(region, host.firstChild);
+      bindGrid();
+    }
+
+    function removeGridRegion() {
+      var existing = pick('availability-grid');
+      if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
+      bindGrid();
+    }
+
+    // The booking form exists only while a booking is being made: it is built when a free table is
+    // chosen and taken out again when that attempt is abandoned or the search changes.
+    function bindBooking() {
+      bookingSection = pick('booking-section');
+      bookingForm = bookingSection ? bookingSection.querySelector('[data-testid="booking-form"]') : null;
+      bookingSummary = pick('booking-summary');
+      bookingParty = pick('booking-party-size');
+      bookingSubmit = pick('booking-submit');
+    }
+
+    function removeBooking() {
+      var existing = pick('booking-section');
+      if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
+      bindBooking();
+    }
+
+    function buildBooking() {
+      if (pick('booking-section')) {
+        bindBooking();
+        return;
+      }
+      var section = document.createElement('section');
+      section.setAttribute('aria-labelledby', 'booking-heading');
+      section.setAttribute('data-testid', 'booking-section');
+      var heading = document.createElement('h2');
+      heading.setAttribute('id', 'booking-heading');
+      heading.textContent = 'Your booking';
+      var form = document.createElement('form');
+      form.className = 'card';
+      form.setAttribute('data-testid', 'booking-form');
+      form.setAttribute('data-msg-host', '');
+      form.setAttribute('novalidate', '');
+      var summary = document.createElement('p');
+      summary.setAttribute('data-testid', 'booking-summary');
+      var fields = document.createElement('div');
+      fields.className = 'grid-fields';
+      var field = document.createElement('div');
+      var label = document.createElement('label');
+      label.setAttribute('for', 'booking-party-size');
+      label.textContent = 'People';
+      var input = document.createElement('input');
+      input.setAttribute('id', 'booking-party-size');
+      input.setAttribute('data-testid', 'booking-party-size');
+      input.setAttribute('name', 'party_size');
+      input.setAttribute('type', 'number');
+      input.setAttribute('min', '1');
+      input.setAttribute('max', '20');
+      input.setAttribute('step', '1');
+      input.setAttribute('inputmode', 'numeric');
+      input.setAttribute('required', '');
+      var actions = document.createElement('div');
+      actions.className = 'row';
+      actions.style.marginTop = '0.9rem';
+      var submit = document.createElement('button');
+      submit.setAttribute('type', 'submit');
+      submit.setAttribute('data-testid', 'booking-submit');
+      submit.textContent = 'Book this table';
+      actions.appendChild(submit);
+      field.appendChild(label);
+      field.appendChild(input);
+      fields.appendChild(field);
+      fields.appendChild(actions);
+      form.appendChild(summary);
+      form.appendChild(fields);
+      section.appendChild(heading);
+      section.appendChild(form);
+      searchForm.parentNode.appendChild(section);
+      bindBooking();
+    }
+
     function resetBooking() {
       selection = null;
-      if (bookingSection) bookingSection.hidden = true;
+      removeBooking();
       removeConfirmation();
       clearMessage('booking-form', 'booking-error');
       clearMessage('booking-form', 'booking-uncertain');
@@ -396,15 +524,14 @@
       currentRestaurant = restaurant;
       currentSlots = slots;
       if (!slots.length) {
-        grid.hidden = true;
-        if (gridEmpty) gridEmpty.hidden = true;
         clearMessage('availability-panel', 'grid-loading');
-        if (gridTable) gridTable.hidden = true;
+        removeGridRegion();
         showMessage('availability-panel', 'no-slots', 'empty', closedDayText(restaurant));
         resetBooking();
         return;
       }
       clearMessage('availability-panel', 'no-slots');
+      buildGridRegion();
       grid.hidden = false;
       if (gridTable) gridTable.hidden = false;
       if (gridEmpty) gridEmpty.hidden = true;
@@ -429,17 +556,21 @@
       clearMessage('booking-form', 'booking-error');
       clearMessage('booking-form', 'booking-uncertain');
       removeConfirmation();
+      buildBooking();
       selection = choice;
       selection.signature = signatureOf(choice);
       selection.key = newKey();
       bookingSummary.textContent = describe(choice);
       bookingParty.value = String(choice.partySize);
-      bookingSection.hidden = false;
       if (bookingSubmit) bookingSubmit.focus();
     }
 
-    if (bookingForm) {
-      bookingForm.addEventListener('submit', function (event) {
+    // The form is built when a free table is chosen, so its submit is caught once on the document
+    // rather than bound to an element that may not exist yet.
+    document.addEventListener('submit', function (event) {
+      var form = event.target;
+      if (!form || form.getAttribute('data-testid') !== 'booking-form') return;
+      {
         event.preventDefault();
         if (!selection) return;
         clearMessage('booking-form', 'booking-error');
@@ -490,8 +621,8 @@
             'We have not heard back about this booking, so we cannot say whether it went through. '
             + 'Your details are still here. Press book again and we will check safely, without booking twice.');
         });
-      });
-    }
+      }
+    });
 
     function renderConfirmation(attempt, body) {
       var reference = body && body.reference ? body.reference : '';
@@ -511,7 +642,8 @@
       clearMessage('search-form', 'auth-error');
       var mine = issued += 1;
       hide(searchStatus);
-      if (grid) grid.hidden = false;
+      buildGridRegion();
+      grid.hidden = false;
       if (gridEmpty) gridEmpty.hidden = true;
       if (gridTable) gridTable.hidden = true;
       showMessage('availability-panel', 'grid-loading', 'empty', 'Looking for tables' + String.fromCharCode(8230));

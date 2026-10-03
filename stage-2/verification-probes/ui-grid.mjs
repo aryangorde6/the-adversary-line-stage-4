@@ -4,6 +4,10 @@
 import { chromium } from 'playwright-core';
 import { BASE, SHOTS, ok, section, report, baseFixture, bookedDay, seed } from './ui-lib.mjs';
 
+// Presence, not visibility: a hidden container satisfies a visibility check and fails a presence
+// check, and only a driven check finds the difference.
+const present = (handle, sel) => handle.evaluate((s) => !!document.querySelector(s), sel);
+
 const vis = (handle, sel) => handle.evaluate((s) => {
   const el = document.querySelector(s);
   if (!el) return 'absent';
@@ -34,6 +38,12 @@ async function main() {
 
     section(`empty state at ${width}`);
     ok('results region visible on load', await vis(page, '[data-testid="availability-grid"]') === 'visible');
+    ok('results region in the document on load',
+      await present(page, '[data-testid="availability-grid"]'));
+    ok('no booking form in the document before a table is chosen',
+      await present(page, '[data-testid="booking-form"]') === false);
+    ok('no confirmation in the document before anything is booked',
+      await present(page, '[data-testid="confirmation"]') === false);
     ok('no-slots absent before any search', await vis(page, '[data-testid="no-slots"]') === 'absent');
     const emptyText = await text(page, '[data-testid="grid-empty"]');
     ok('empty state says what to do', typeof emptyText === 'string' && emptyText.length > 20
@@ -62,6 +72,8 @@ async function main() {
     ok('every cell unavailable', cells.every((c) => c[1] === 'false'),
       cells.filter((c) => c[1] !== 'false').slice(0, 4));
     ok('grid still visible', await vis(page, '[data-testid="availability-grid"]') === 'visible');
+    ok('grid in the document on a fully-booked day',
+      await present(page, '[data-testid="availability-grid"]'));
     ok('no-slots absent when a full day returns slots',
       await vis(page, '[data-testid="no-slots"]') === 'absent');
     ok('no sideways scrolling', await page.evaluate(() => document.documentElement.scrollWidth)
@@ -78,14 +90,15 @@ async function main() {
       && cell.disabled === true, cell);
     await page.waitForTimeout(300);
     ok('clicking it opens no booking form',
-      await page.locator('[data-testid="booking-form"]').count() === 0
-      || !(await page.locator('[data-testid="booking-section"]').isVisible()));
+      await present(page, '[data-testid="booking-form"]') === false);
     ok('clicking it leaves the grid alone',
       await vis(page, '[data-testid="availability-grid"]') === 'visible');
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/grid-booked-${width}.png`, fullPage: true });
 
     section(`day with no slots at ${width}`);
     await search(page, { date: '2026-12-06', party: 2 });
+    ok('the results region is out of the document, not merely hidden',
+      await present(page, '[data-testid="availability-grid"]') === false);
     ok('no-slots visible when the day has no slots',
       await vis(page, '[data-testid="no-slots"]') === 'visible');
     ok('no-slots does not sit beside the grid',

@@ -98,6 +98,10 @@ async function main() {
   section('a booking that fails');
   await signIn(page);
   await page.goto(BASE + '/', { waitUntil: 'networkidle' });
+  ok('no booking form in the document on load',
+    await page.locator('[data-testid="booking-form"]').count() === 0);
+  ok('no confirmation in the document on load',
+    await page.locator('[data-testid="confirmation"]').count() === 0);
   await page.fill('#date-input', '2026-12-01');
   await page.fill('#party-size-input', '2');
   await page.click('[data-testid="search-button"]');
@@ -109,6 +113,8 @@ async function main() {
   await page.waitForTimeout(800);
   ok('a booking that works shows a confirmation',
     await page.locator('[data-testid="confirmation"]').count() === 1);
+  ok('a booking that works leaves the booking form in the document to try again',
+    await page.locator('[data-testid="booking-form"]').count() === 1);
 
   // Now make the next attempt fail at the service, and check that the earlier confirmation does not
   // stay on the page beside the error: it belongs to an attempt that is not this one.
@@ -131,6 +137,8 @@ async function main() {
     /taken|Pick another/i.test(await page.locator('[data-testid="booking-error"]').textContent() || ''),
     await page.locator('[data-testid="booking-error"]').textContent());
   ok('no confirmation for that attempt', await page.locator('[data-testid="confirmation"]').count() === 0);
+  ok('the booking form is still there to correct the attempt',
+    await page.locator('[data-testid="booking-form"]').count() === 1);
   await page.unroute('**/reservations');
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/booking-failed.png`, fullPage: true });
 
