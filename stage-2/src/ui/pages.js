@@ -36,11 +36,12 @@ with a tick are free for your whole visit.</p>
 
 <section aria-labelledby="grid-heading">
   <h2 id="grid-heading">Availability</h2>
-  <div class="card">
-    <p class="msg empty" data-testid="no-slots" hidden>No tables are free on this date. Try another date, or a
-    smaller party, and we will find you something.</p>
-    <div class="grid-scroll" data-testid="availability-grid" data-msg-host hidden>
-      <table class="grid">
+  <div class="card" data-testid="availability-panel" data-msg-host>
+    <div class="grid-scroll" data-testid="availability-grid">
+      <p class="msg empty grid-empty" data-testid="grid-empty">Choose a restaurant, a date and how many
+      people are coming, then search. We will show you every table that is free for the whole of your
+      visit, and any pairs of tables the restaurant sets together for larger parties.</p>
+      <table class="grid" hidden>
         <caption data-testid="grid-caption"></caption>
         <thead><tr data-testid="grid-head"></tr></thead>
         <tbody data-testid="grid-body"></tbody>
@@ -157,22 +158,7 @@ function lookupPage({ user }) {
   </div>
 </form>
 
-<section aria-labelledby="detail-heading" data-testid="reservation-detail" hidden>
-  <h2 id="detail-heading">Your booking</h2>
-  <div class="card">
-    <p>Status: <span class="pill" data-testid="reservation-status"></span></p>
-    <p data-testid="reservation-tables"></p>
-    <dl class="facts">
-      <dt>Reference</dt><dd class="ref" data-testid="reservation-reference"></dd>
-      <dt>Where</dt><dd data-testid="reservation-restaurant"></dd>
-      <dt>When</dt><dd data-testid="reservation-when"></dd>
-      <dt>People</dt><dd data-testid="reservation-party"></dd>
-    </dl>
-    <div class="row" style="margin-top:1rem">
-      <button type="button" class="secondary" data-testid="reservation-cancel-button">Cancel booking</button>
-    </div>
-  </div>
-</section>`;
+<div data-detail-host></div>`;
   return layout({ title: 'My booking', current: '/lookup', user, body, bootstrap: { signedIn: Boolean(user) } });
 }
 

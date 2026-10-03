@@ -208,7 +208,8 @@
     var gridHead = pick('grid-head');
     var gridBody = pick('grid-body');
     var gridCaption = pick('grid-caption');
-    var noSlots = pick('no-slots');
+    var gridEmpty = pick('grid-empty');
+    var gridTable = document.querySelector('[data-testid=\'availability-grid\'] table');
     var searchStatus = pick('search-status');
 
     var bookingSection = pick('booking-section');
@@ -343,14 +344,19 @@
       currentSlots = slots;
       if (!slots.length) {
         grid.hidden = true;
-        clearMessage('availability-grid', 'grid-loading');
-        noSlots.hidden = false;
+        if (gridEmpty) gridEmpty.hidden = true;
+        clearMessage('availability-panel', 'grid-loading');
+        if (gridTable) gridTable.hidden = true;
+        showMessage('availability-panel', 'no-slots', 'empty',
+          'No tables are free on this date. Try another date, or a smaller party, and we will find you something.');
         resetBooking();
         return;
       }
-      noSlots.hidden = true;
+      clearMessage('availability-panel', 'no-slots');
       grid.hidden = false;
-      clearMessage('availability-grid', 'grid-loading');
+      if (gridTable) gridTable.hidden = false;
+      if (gridEmpty) gridEmpty.hidden = true;
+      clearMessage('availability-panel', 'grid-loading');
       renderGrid(restaurant, slots, Number(partyInput.value));
     }
 
@@ -452,8 +458,10 @@
       var mine = issued += 1;
       hide(searchStatus);
       if (grid) grid.hidden = false;
-      showMessage('availability-grid', 'grid-loading', 'empty', 'Looking for tables' + String.fromCharCode(8230));
-      noSlots.hidden = true;
+      if (gridEmpty) gridEmpty.hidden = true;
+      if (gridTable) gridTable.hidden = true;
+      showMessage('availability-panel', 'grid-loading', 'empty', 'Looking for tables' + String.fromCharCode(8230));
+      clearMessage('availability-panel', 'no-slots');
       resetBooking();
 
       restaurantOf(restaurantSelect.value).then(function (restaurant) {
@@ -463,8 +471,8 @@
           if (mine <= applied) return;
           applied = mine;
           if (result.status !== 200) {
-            grid.hidden = true;
-            clearMessage('availability-grid', 'grid-loading');
+            clearMessage('availability-panel', 'grid-loading');
+            if (gridEmpty) gridEmpty.hidden = false;
             show(searchStatus, messageOf(result, 'We could not load availability just now.'));
             return;
           }
@@ -473,8 +481,8 @@
       }).catch(function () {
         if (mine <= applied) return;
         applied = mine;
-        grid.hidden = true;
-        clearMessage('availability-grid', 'grid-loading');
+        if (gridEmpty) gridEmpty.hidden = false;
+        clearMessage('availability-panel', 'grid-loading');
         show(searchStatus, 'We could not reach the restaurant service. Please try again.');
       });
     });
@@ -483,15 +491,81 @@
   var lookupForm = document.querySelector('[data-testid="lookup-form"]');
   if (lookupForm) {
     var referenceInput = pick('lookup-reference-input');
-    var detail = pick('reservation-detail');
-    var statusPill = pick('reservation-status');
-    var detailTables = pick('reservation-tables');
-    var detailReference = pick('reservation-reference');
-    var detailRestaurant = pick('reservation-restaurant');
-    var detailWhen = pick('reservation-when');
-    var detailParty = pick('reservation-party');
-    var cancelButton = pick('reservation-cancel-button');
+    var detailHost = document.querySelector('[data-detail-host]');
     var current = null;
+
+    // A booking that was not found must leave nothing behind that reads like one. The detail
+    // section is built when a booking is found and torn out when one is not, so reservation-detail,
+    // reservation-status and reservation-cancel-button are absent from the document rather than
+    // present and invisible.
+    function removeDetail() {
+      var existing = pick('reservation-detail');
+      if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
+    }
+
+    function buildDetail() {
+      removeDetail();
+      var section = document.createElement('section');
+      section.setAttribute('aria-labelledby', 'detail-heading');
+      section.setAttribute('data-testid', 'reservation-detail');
+      var heading = document.createElement('h2');
+      heading.setAttribute('id', 'detail-heading');
+      heading.textContent = 'Your booking';
+      var card = document.createElement('div');
+      card.className = 'card';
+
+      var statusLine = document.createElement('p');
+      statusLine.appendChild(document.createTextNode('Status: '));
+      var pill = document.createElement('span');
+      pill.className = 'pill';
+      pill.setAttribute('data-testid', 'reservation-status');
+      statusLine.appendChild(pill);
+
+      var tables = document.createElement('p');
+      tables.setAttribute('data-testid', 'reservation-tables');
+
+      var facts = document.createElement('dl');
+      facts.className = 'facts';
+      [['Reference', 'reservation-reference', true], ['Where', 'reservation-restaurant', false],
+       ['When', 'reservation-when', false], ['People', 'reservation-party', false]]
+        .forEach(function (row) {
+          var dt = document.createElement('dt');
+          dt.textContent = row[0];
+          var dd = document.createElement('dd');
+          dd.setAttribute('data-testid', row[1]);
+          if (row[2]) dd.className = 'ref';
+          facts.appendChild(dt);
+          facts.appendChild(dd);
+        });
+
+      var row = document.createElement('div');
+      row.className = 'row';
+      row.style.marginTop = '1rem';
+      var cancel = document.createElement('button');
+      cancel.type = 'button';
+      cancel.className = 'secondary';
+      cancel.setAttribute('data-testid', 'reservation-cancel-button');
+      cancel.textContent = 'Cancel booking';
+      row.appendChild(cancel);
+
+      card.appendChild(statusLine);
+      card.appendChild(tables);
+      card.appendChild(facts);
+      card.appendChild(row);
+      section.appendChild(heading);
+      section.appendChild(card);
+      detailHost.appendChild(section);
+      return {
+        section: section,
+        statusPill: pill,
+        tables: tables,
+        cancelButton: cancel,
+        reference: facts.querySelector('[data-testid="reservation-reference"]'),
+        restaurant: facts.querySelector('[data-testid="reservation-restaurant"]'),
+        when: facts.querySelector('[data-testid="reservation-when"]'),
+        party: facts.querySelector('[data-testid="reservation-party"]'),
+      };
+    }
 
     function labelFor(reference, tableIds) {
       if (!current || !current.restaurant) return joinList(tableIds);
@@ -503,24 +577,33 @@
     function paint(body) {
       if (body.restaurant) current = { restaurant: body.restaurant };
       if (!current) current = { restaurant: null };
+      var parts = pick('reservation-detail') ? {
+        statusPill: pick('reservation-status'),
+        tables: pick('reservation-tables'),
+        cancelButton: pick('reservation-cancel-button'),
+        reference: pick('reservation-reference'),
+        restaurant: pick('reservation-restaurant'),
+        when: pick('reservation-when'),
+        party: pick('reservation-party'),
+      } : buildDetail();
       var ids = body.table_ids || (body.table_id ? [body.table_id] : []);
-      detailTables.textContent = 'Table' + (ids.length > 1 ? 's' : '') + ' ' + labelFor(body.reference, ids);
-      detailReference.textContent = body.reference || '';
-      detailRestaurant.textContent = current.restaurant ? current.restaurant.name : '';
-      detailWhen.textContent = longDate(body.starts_at_local) + ' at ' + labelTime(body.starts_at_local);
-      detailParty.textContent = String(body.party_size);
-      statusPill.textContent = body.status === 'cancelled' ? 'cancelled' : 'confirmed';
-      statusPill.className = 'pill ' + (body.status === 'cancelled' ? 'cancelled' : 'confirmed');
-      detail.hidden = false;
-      if (body.status === 'cancelled' && cancelButton && cancelButton.parentNode) {
-        cancelButton.parentNode.removeChild(cancelButton);
+      parts.tables.textContent = 'Table' + (ids.length > 1 ? 's' : '') + ' ' + labelFor(body.reference, ids);
+      parts.reference.textContent = body.reference || '';
+      parts.restaurant.textContent = current.restaurant ? current.restaurant.name : '';
+      parts.when.textContent = longDate(body.starts_at_local) + ' at ' + labelTime(body.starts_at_local);
+      parts.party.textContent = String(body.party_size);
+      parts.statusPill.textContent = body.status === 'cancelled' ? 'cancelled' : 'confirmed';
+      parts.statusPill.className = 'pill ' + (body.status === 'cancelled' ? 'cancelled' : 'confirmed');
+      if (body.status === 'cancelled' && parts.cancelButton && parts.cancelButton.parentNode) {
+        parts.cancelButton.parentNode.removeChild(parts.cancelButton);
       }
+      return parts;
     }
 
     function load(reference) {
       return api('GET', '/reservations/' + encodeURIComponent(reference)).then(function (result) {
         if (result.status !== 200 || !result.body) {
-          detail.hidden = true;
+          removeDetail();
           showMessage('lookup-form', 'reservation-error', 'error', messageOf(result, 'We could not find that booking.'));
           return false;
         }
@@ -554,24 +637,30 @@
       });
     });
 
-    if (cancelButton) {
-      cancelButton.addEventListener('click', function () {
-        if (!current) return;
-        var reference = detailReference.textContent;
-        cancelButton.disabled = true;
-        api('POST', '/reservations/' + encodeURIComponent(reference) + '/cancel').then(function (result) {
-          cancelButton.disabled = false;
-          if (result.status === 200 && result.body) {
-            clearMessage('lookup-form', 'reservation-error');
-            paint(result.body);
-            return;
-          }
-          showMessage('lookup-form', 'reservation-error', 'error', messageOf(result, 'We could not cancel that booking.'));
-        }).catch(function () {
-          cancelButton.disabled = false;
-          showMessage('lookup-form', 'reservation-error', 'error', 'We could not reach the restaurant service. Please try again.');
-        });
+    // The cancel button is created with the detail section, so the handler is bound once on the
+    // host and reads whichever button is currently in the document.
+    detailHost.addEventListener('click', function (event) {
+      var button = event.target && event.target.closest
+        ? event.target.closest('[data-testid="reservation-cancel-button"]')
+        : null;
+      if (!button) return;
+      if (!current) return;
+      var referenceNode = pick('reservation-reference');
+      var reference = referenceNode ? referenceNode.textContent.trim() : '';
+      if (!reference) return;
+      button.disabled = true;
+      api('POST', '/reservations/' + encodeURIComponent(reference) + '/cancel').then(function (result) {
+        button.disabled = false;
+        if (result.status === 200 && result.body) {
+          clearMessage('lookup-form', 'reservation-error');
+          paint(result.body);
+          return;
+        }
+        showMessage('lookup-form', 'reservation-error', 'error', messageOf(result, 'We could not cancel that booking.'));
+      }).catch(function () {
+        button.disabled = false;
+        showMessage('lookup-form', 'reservation-error', 'error', 'We could not reach the restaurant service. Please try again.');
       });
-    }
+    });
   }
 })();

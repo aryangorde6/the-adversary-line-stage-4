@@ -120,6 +120,7 @@ function styles() {
   button.cellbtn[data-available="true"] {
     background: ${COLOURS.greenSoft}; border-color: #a9d3bb; color: ${COLOURS.green};
   }
+  button.cellbtn[data-available="true"]::after { content: "\\2713"; }
   button.cellbtn[data-available="true"]:hover { background: #d2ebdd; }
   button.cellbtn[data-available="false"] { cursor: default; opacity: 0.75; }
   button.cellbtn[data-available="false"]::after { content: "\\2013"; }
