@@ -3,6 +3,19 @@
 const { formatInZone } = require('./time');
 const { randomId, randomToken, newReference } = require('./accounts');
 
+// Plan ids share the reservation counter's namespace deliberately: a plan and a booking are both
+// addressed by an opaque string, and a caller holding the wrong kind of id gets a 404 rather than a plan.
+function allocatePlanId(state) {
+  let id = randomId('plan_');
+  while (state.replans.some((plan) => plan.plan_id === id)) id = randomId('plan_');
+  return id;
+}
+
+function rememberPlan(state, plan) {
+  state.replans.push(plan);
+  return plan;
+}
+
 function emptyState() {
   return {
     users: [],
@@ -20,7 +33,26 @@ function emptyState() {
     // here and the ledger's S3-A1 is answered by reading exactly this: one counter per restaurant,
     // moved by one per operation rather than by one per booking inside it.
     batch_counters: {},
+    // Stage 4 adds one store for previewed replans. It is empty in every earlier stage, so an export
+    // from stage 1, 2 or 3 imports here without a migration step, and a plan is a claim about a moment
+    // rather than a fact about the restaurant, which is why it does not travel in an export at all.
+    replans: [],
+    // Applied closures persist, unlike plans. A plan is a claim about a moment and is spent once; a
+    // closure is a fact about a date and outlives the request that created it, so it is the thing
+    // availability reads and the thing that can move a date's day_state.
+    closures: [],
   };
+}
+
+// Whether a table is out of service on a date, by an applied closure. A closed table is treated as
+// occupied rather than as a fourth rule, so `explain` keeps its two rules and a diner is told the table
+// is not available rather than that some new reason exists.
+function isTableClosed(state, restaurantId, tableId, date) {
+  return state.closures.some((closure) => (
+    closure.restaurant_id === restaurantId
+    && closure.date === date
+    && closure.table_ids.indexOf(tableId) !== -1
+  ));
 }
 
 let current = emptyState();
@@ -129,5 +161,8 @@ module.exports = {
   allocateUserId,
   allocateReservationId,
   allocateReference,
+  allocatePlanId,
+  rememberPlan,
+  isTableClosed,
   reservationView,
 };

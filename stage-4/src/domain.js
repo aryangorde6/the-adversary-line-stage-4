@@ -383,7 +383,15 @@ function checkExpectedRevision(reservation, body) {
   }
 }
 
-function amendReservation(state, reservation, body, nowMs) {
+// `seriesTravel` is how a whole-series move says "these occurrences are moving together, so do not
+// treat each one as an individual amendment". Left true, the single-booking path marks every occurrence
+// an exception and bumps the series revision once PER OCCURRENCE -- which is correct for a diner amending
+// one occurrence and wrong for a series changing its clock time, where moving together is the point and
+// a series is one booking intent. It is an explicit argument rather than a flag on the body because a
+// body field would be caller-settable, and a caller must not be able to declare its own amendment
+// simultaneous.
+function amendReservation(state, reservation, body, nowMs, options) {
+  const travelsWithSeries = !options || options.seriesTravel !== false;
   const restaurant = requireRestaurant(state, reservation.restaurant_id);
   checkExpectedRevision(reservation, body);
   if (reservation.status === 'cancelled') fail('reservation_cancelled', { reference: reservation.reference });
@@ -423,8 +431,10 @@ function amendReservation(state, reservation, body, nowMs) {
   // negative half of S3-114 that a flag set before validation would get wrong.
   // Required lazily: series requires this module, so a top-level import would be a cycle. The
   // lookup happens on a path that only runs for a series occurrence, so the cost is paid only there.
-  const series = require('./series');
-  if (series.markException(state, reservation)) series.bumpSeriesRevision(state, reservation.series_id);
+  if (travelsWithSeries) {
+    const series = require('./series');
+    if (series.markException(state, reservation)) series.bumpSeriesRevision(state, reservation.series_id);
+  }
   return reservation;
 }
 
@@ -470,10 +480,13 @@ function availabilityFor(state, restaurant, date, partySize, options) {
       if (instants.length === 0) continue;
       const startMs = instants[0];
       const endMs = startMs + duration * MILLIS_PER_MINUTE;
+      // A table out of service by an applied closure is skipped here, in the booking path and in the
+      // grid alike, so the two cannot disagree about whether a closed table can be taken.
+      const outOfService = (tableId) => store.isTableClosed(state, restaurant.id, tableId, dateString);
       const available = [];
       for (const table of restaurant.tables) {
         const capacity = policyRules.policyCapacity(selected, table.id);
-        if (capacity >= partySize && !isOccupied(state, restaurant.id, [table.id], startMs, endMs, null)) {
+        if (capacity >= partySize && !outOfService(table.id) && !isOccupied(state, restaurant.id, [table.id], startMs, endMs, null)) {
           available.push(table.id);
         }
       }
@@ -483,13 +496,14 @@ function availabilityFor(state, restaurant, date, partySize, options) {
       const options_ = [];
       for (const table of restaurant.tables) {
         const capacity = policyRules.policyCapacity(selected, table.id);
-        if (capacity >= partySize && !isOccupied(state, restaurant.id, [table.id], startMs, endMs, null)) {
+        if (capacity >= partySize && !outOfService(table.id) && !isOccupied(state, restaurant.id, [table.id], startMs, endMs, null)) {
           options_.push({ table_ids: [table.id], capacity });
         }
       }
       for (const pair of restaurant.combinable || []) {
         const capacity = policyRules.capacityUnder(selected, pair);
         if (capacity < partySize) continue;
+        if (pair.some((tableId) => outOfService(tableId))) continue;
         if (isOccupied(state, restaurant.id, pair, startMs, endMs, null)) continue;
         options_.push({ table_ids: [pair[0], pair[1]], capacity });
       }

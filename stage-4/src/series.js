@@ -218,6 +218,70 @@ function markException(state, reservation) {
   return true;
 }
 
+// The clock time of a series: the time of day every occurrence is laid out on. The dates are derived
+// from the anchor and the interval and are NOT the caller's to state, because a series whose dates
+// could be moved piecemeal is a list of bookings rather than a series.
+//
+// Changing the clock time moves every occurrence that is not an exception, re-adopting the terms of the
+// date each occurrence lands on -- the same re-adoption a single amendment does, because an occurrence
+// that lands on a different date is a booking under different rules (S3-056, S3-057).
+//
+// The revision moves ONCE for the amendment however many occurrences moved. A no-op amendment, where
+// the new clock time is the one already in force, moves nothing and moves the revision zero times: the
+// caller asked for no change and got none, which is the only honest reading of a revision.
+function amendClockTime(state, seriesRecord, body, nowMs) {
+  if (body === null || typeof body !== 'object' || Array.isArray(body)) {
+    fail('malformed_request', { field: 'body' });
+  }
+  const wanted = body.starts_at_local;
+  if (typeof wanted !== 'string') fail('malformed_request', { field: 'starts_at_local' });
+  const anchor = store.findReservation(state, seriesRecord.anchor_reference);
+  if (!anchor) fail('not_found', { resource: 'reservation', reference: seriesRecord.anchor_reference });
+
+  const clockOf = (stamp) => {
+    const wall = time.parseWall(stamp);
+    return String(wall.h).padStart(2, '0') + ':' + String(wall.mi).padStart(2, '0');
+  };
+  // Only the time of day is the caller's. Each occurrence keeps its own date and moves to the new clock
+  // time on that date, so a series cannot be renumbered onto different days by an amendment that claimed
+  // to move a clock. The anchor's date is never rewritten either: it is the series' name in time.
+  const targetClock = clockOf(wanted);
+  const anchorWall = time.parseWall(anchor.starts_at_local);
+  if (Number.isNaN(anchorWall.y) || Number.isNaN(clockOf(wanted).length)) {
+    fail('validation_failed', { field: 'starts_at_local' });
+  }
+
+  const moved = [];
+  for (const entry of seriesRecord.occurrences) {
+    // An exception has already been amended away from the series by the diner, so it does not travel
+    // with the series and is not an exception a second time. Moving every occurrence together is not an
+    // exception at all -- that flag means "this one diverged", and here none of them did.
+    if (entry.exception) continue;
+    const reservation = store.findReservation(state, entry.reference);
+    if (!reservation || reservation.status !== 'confirmed') continue;
+    if (clockOf(reservation.starts_at_local) === targetClock) continue;
+    const wall = time.parseWall(reservation.starts_at_local);
+    const [hours, minutes] = targetClock.split(':').map(Number);
+    const next = time.wallFromMinutes(wall.y, wall.mo, wall.d, hours * 60 + minutes);
+    // domain.amendReservation is the single write path: it re-derives the terms of the date the
+    // occurrence now lands on, re-checks capacity and the cutoff, and records the history entry. This
+    // function decides WHICH occurrences move; it does not write a booking itself, because a second
+    // writer is how two paths come to describe the same booking differently.
+    // seriesTravel: false, because these occurrences are moving together. The single-booking path would
+    // mark each one a permanent exception and bump the revision once per occurrence, which is the
+    // opposite of what a series changing its clock time means.
+    domain.amendReservation(state, reservation, { starts_at_local: time.wallToString(next) }, nowMs,
+      { seriesTravel: false });
+    moved.push(reservation.reference);
+  }
+
+  // Once for the amendment, whatever the count. A no-op amendment moves nothing and moves the revision
+  // zero times: the caller asked for no change and got none, which is the only honest reading of a
+  // revision. This is the "+0" half of S4-154 and it is only reachable with a second, no-op call.
+  if (moved.length > 0) seriesRecord.revision += 1;
+  return seriesView(state, seriesRecord);
+}
+
 function bumpSeriesRevision(state, seriesId) {
   const found = findSeries(state, seriesId);
   if (found) found.revision += 1;
@@ -240,6 +304,7 @@ module.exports = {
   allocateSeriesId,
   moveRestaurantBatchCounter,
   adopt,
+  amendClockTime,
   findSeries,
   requireOwnSeries,
   seriesView,

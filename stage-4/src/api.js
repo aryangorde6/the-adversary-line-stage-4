@@ -13,6 +13,7 @@ const moves = require('./moves');
 const policyRules = require('./policy');
 const historyRules = require('./history');
 const series = require('./series');
+const replans = require('./replans');
 
 const { has, optionalString, requireString, normaliseEmail } = fields;
 
@@ -177,6 +178,21 @@ function publishPolicy(ctx) {
   return { status: 201, body: policyRules.acceptedTermsOf(policy) };
 }
 
+// A replan is a manager's closure and its consequences, so it is manager-scoped like policy
+// publication. The preview is a separate request from the apply on purpose: the caller can read the
+// plan, show it to whoever asked for the closure, and only then write.
+function previewReplan(ctx) {
+  const restaurant = domain.requireRestaurant(ctx.state, ctx.params.id);
+  policyRules.requireManager(ctx.state, restaurant, ctx.user);
+  return { status: 201, body: replans.previewReplan(ctx.state, ctx.user, restaurant, ctx.body, ctx.nowMs) };
+}
+
+function applyReplan(ctx) {
+  const restaurant = domain.requireRestaurant(ctx.state, ctx.params.id);
+  policyRules.requireManager(ctx.state, restaurant, ctx.user);
+  return { status: 200, body: replans.applyReplan(ctx.state, ctx.user, restaurant, ctx.params.planId, ctx.nowMs) };
+}
+
 function listPolicies(ctx) {
   const restaurant = domain.requireRestaurant(ctx.state, ctx.params.id);
   return { status: 200, body: { policies: policyRules.listPolicies(ctx.state, restaurant) } };
@@ -214,6 +230,15 @@ function reservationDecision(ctx) {
 function adoptSeries(ctx) {
   const created = series.adopt(ctx.state, ctx.user, ctx.body, ctx.nowMs);
   return { status: 201, body: series.seriesView(ctx.state, created) };
+}
+
+// A series amendment changes the clock time its occurrences are laid out on: the time of day is the
+// caller's, the dates are derived from the anchor, and the whole series moves together or not at all.
+// The series revision moves once per amendment whether one occurrence or all of them moved, because a
+// series is one booking intent.
+function amendSeries(ctx) {
+  const found = series.requireOwnSeries(ctx.state, ctx.user, ctx.params.seriesId);
+  return { status: 200, body: series.amendClockTime(ctx.state, found, ctx.body, ctx.nowMs) };
 }
 
 function getSeries(ctx) {
@@ -256,6 +281,9 @@ module.exports = {
   cancelReservation,
   patchReservation,
   reservationMoves,
+  previewReplan,
+  applyReplan,
+  amendSeries,
   publishPolicy,
   listPolicies,
   reservationHistory,

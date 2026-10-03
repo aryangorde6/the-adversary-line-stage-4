@@ -25,6 +25,14 @@ const BUILTIN_STATUS_BY_CODE = Object.freeze({
   // It is a validation failure, not a malformed body, and it exists so that the refusal is legible
   // instead of a 204 that silently seeded nothing.
   fixture_unsupported: 422,
+  // Stage 4 codes. stale_plan is a conflict for the same reason stale_revision is: the caller named a
+  // plan built against a state that has since moved, so what they hold is no longer what the service
+  // would plan. 409 rather than 422, because nothing in the request is malformed and a caller who
+  // re-previews gets a different, applicable plan rather than a corrected one.
+  stale_plan: 409,
+  // A closure naming a table the restaurant does not have is a validation failure rather than a 404,
+  // because the closure names many tables and one of them being unknown is a fault in the closure.
+  unknown_table: 422,
 });
 
 let catalogue = null;

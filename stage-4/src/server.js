@@ -32,6 +32,9 @@ const ROUTES = [
   { method: 'GET', path: ['reservations', ':reference', 'decision'], optionalAuth: true, handler: api.reservationDecision },
   { method: 'POST', path: ['series'], auth: true, key: true, body: 'object', handler: api.adoptSeries },
   { method: 'GET', path: ['series', ':seriesId'], optionalAuth: true, handler: api.getSeries },
+  { method: 'POST', path: ['series', ':seriesId', 'amend'], auth: true, body: 'object', handler: api.amendSeries },
+  { method: 'POST', path: ['restaurants', ':id', 'replans'], auth: true, key: true, body: 'object', handler: api.previewReplan },
+  { method: 'POST', path: ['restaurants', ':id', 'replans', ':planId', 'apply'], auth: true, body: 'object', handler: api.applyReplan },
 ];
 
 // The four screens and the one script they load. src/ui/ owns what a page says; this file only
