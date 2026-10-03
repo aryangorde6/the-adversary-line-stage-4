@@ -290,6 +290,21 @@ async function main() {
           return getComputedStyle(f).outlineStyle !== 'none';
         });
         ok('the ring is back at once after the field loses and regains the keyboard', backFromBlur);
+        // A field can also be emptied without anything else happening: calling blur() on it fires
+        // one event and nothing more. The ring has to go on that event too, or it is left on a field
+        // the keyboard has left, which is the same defect as a missing one in the other direction.
+        const blurOnly = await p2.evaluate(() => {
+          document.querySelector('#date-input').blur();
+          const f = document.querySelector('[data-date-field]');
+          return getComputedStyle(f).outlineStyle === 'none';
+        });
+        ok('the ring goes at once when the field is emptied and nothing else happens', blurOnly);
+        const stillGone = await p2.evaluate(async () => {
+          await new Promise((r) => setTimeout(r, 300));
+          const f = document.querySelector('[data-date-field]');
+          return getComputedStyle(f).outlineStyle === 'none';
+        });
+        ok('and it stays gone, with nothing polling to put it back', stillGone);
         const innerBefore = await innerStop();
         ok('the inner segment carries a ring before any exit has fired', innerBefore === true,
           { innerBefore });

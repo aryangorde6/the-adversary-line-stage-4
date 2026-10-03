@@ -240,7 +240,10 @@
         var inside = dateField.contains(document.activeElement);
         dateField.classList.toggle('kb-focus', inside);
       };
-      ['focusin', 'focus', 'pointerdown', 'keydown', 'touchstart'].forEach(function (name) {
+      // focusout is in the list because a field can also be emptied without any other event:
+      // calling blur() on it fires this and nothing else, and a ring left on a field the keyboard
+      // has left is the same defect as a ring missing from one the keyboard is inside.
+      ['focusin', 'focusout', 'focus', 'pointerdown', 'keydown', 'touchstart'].forEach(function (name) {
         document.addEventListener(name, syncDateRing, true);
       });
       document.addEventListener('visibilitychange', syncDateRing);
