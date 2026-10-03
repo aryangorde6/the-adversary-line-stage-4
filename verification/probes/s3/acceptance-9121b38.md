@@ -1,6 +1,8 @@
-# Stage-3 acceptance — `9121b38`, re-confirmed at `77c69f8` — PASS
+# Stage-3 acceptance at `9121b38` — PASS
 
-**The accepted hash is `77c69f8`.** `git diff 9121b38 77c69f8 -- stage-3/src` is **empty**: the
+**The accepted hash is `9121b38`.** `77c69f8`, `df4387d` and `e6a0830` are row-only additions
+recorded against it (`git diff 9121b38 77c69f8 -- stage-3/src` empty), each graded directly at the
+row-only hash and each unchanged: at `77c69f8` — `git diff 9121b38 77c69f8 -- stage-3/src` is **empty**: the
 commit is row-only, the Builder's own words, so I graded it directly rather than letting the verdict
 rest on its parent. At `77c69f8`, from `git archive`: `/health` ok, `/` 200 in 9917 bytes;
 supplied stage 1 **120/120**, stage 2 **25/25**, stage 3 **7/7**, highest contiguous **3**;
