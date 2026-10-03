@@ -1,23 +1,5 @@
 "use strict";
 
-const ERROR_CODES = [
-  "malformed_request",
-  "missing_idempotency_key",
-  "unauthenticated",
-  "forbidden",
-  "not_found",
-  "idempotency_key_reuse",
-  "validation_failed",
-  "email_taken",
-  "table_unavailable",
-  "not_on_slot_grid",
-  "outside_opening_hours",
-  "party_exceeds_capacity",
-  "invalid_local_time",
-  "cutoff_passed",
-  "reservation_cancelled",
-];
-
 const WEEKDAYS = [
   "Sunday",
   "Monday",
@@ -140,7 +122,7 @@ const MESSAGES = {
     "We could not read what you sent. Check the details you entered and try again.",
 
   missing_idempotency_key: () =>
-    "We could not book this without a repeat-protection key, so nothing was booked. Please try again.",
+    "We could not book this without an Idempotency-Key header, so nothing was booked. Please try again.",
 
   unauthenticated: (ctx) =>
     ctx.reason === "sign_in"
@@ -173,7 +155,38 @@ const MESSAGES = {
   },
 
   idempotency_key_reuse: () =>
-    "That repeat-protection key was already used for a different booking, so nothing was changed. Use a fresh key for a new booking.",
+    "That Idempotency-Key was already used for a different booking, so nothing was changed. Use a fresh Idempotency-Key for a new booking.",
+
+  validation_failed: (ctx) => {
+    switch (ctx.reason) {
+      case "password_too_short":
+        return "Passwords need at least 8 characters. Make it a little longer and try again.";
+      case "email_format":
+        return "That does not look like an email address. Use the form name@example.com and try again.";
+      case "party_size":
+        return "The number of people has to be a whole number of at least 1. Check it and try again.";
+      case "time_format": {
+        const when = longDate(ctx.date);
+        return when
+          ? `That start time is not a date and time we recognise for ${when}. Pick one of the times shown.`
+          : "That start time is not a date and time we recognise. Pick one of the times shown.";
+      }
+      case "key_length":
+        return "An Idempotency-Key has to be between 1 and 255 characters. Shorten it and try again.";
+      case "moves_shape":
+        return "Changing several bookings at once needs between 1 and 8 bookings, each listed once. Check the list and try again.";
+      case "single_restaurant":
+        return "Bookings changed together have to be at the same restaurant. Try again with bookings from one restaurant.";
+      case "missing_search_details":
+        return "To show you free times we need a restaurant, a date and the number of people. Fill in what is missing.";
+      default: {
+        const named = fieldNoun(ctx);
+        return named
+          ? `The ${named} you entered is not valid. Check it and try again.`
+          : "Some of the details you entered are not valid. Check them and try again.";
+      }
+    }
+  },
 
   email_taken: () =>
     "There is already an account with that email address. Sign in instead, or sign up with a different one.",
@@ -244,42 +257,9 @@ const MESSAGES = {
       ? `Booking ${ref} is cancelled, so it cannot be changed. Make a new booking instead.`
       : "That booking is cancelled, so it cannot be changed. Make a new booking instead.";
   },
-
-  validation_failed: (ctx) => {
-    switch (ctx.reason) {
-      case "password_too_short":
-        return "Passwords need at least 8 characters. Make it a little longer and try again.";
-      case "email_format":
-        return "That does not look like an email address. Use the form name@example.com and try again.";
-      case "party_size":
-        return "The number of people has to be a whole number of at least 1. Check it and try again.";
-      case "time_format": {
-        const when = longDate(ctx.date);
-        return when
-          ? `That start time is not a date and time we recognise for ${when}. Pick one of the times shown.`
-          : "That start time is not a date and time we recognise. Pick one of the times shown.";
-      }
-      case "key_length":
-        return "A repeat-protection key has to be between 1 and 255 characters. Shorten it and try again.";
-      case "moves_shape":
-        return "Changing several bookings at once needs between 1 and 8 bookings, each listed once. Check the list and try again.";
-      case "single_restaurant":
-        return "Bookings changed together have to be at the same restaurant. Try again with bookings from one restaurant.";
-      case "missing_search_details":
-        return "To show you free times we need a restaurant, a date and the number of people. Fill in what is missing.";
-      default: {
-        const named = fieldNoun(ctx);
-        return named
-          ? `The ${named} you entered is not valid. Check it and try again.`
-          : "Some of the details you entered are not valid. Check them and try again.";
-      }
-    }
-  },
 };
 
-for (const code of ERROR_CODES) {
-  if (typeof MESSAGES[code] !== "function") MESSAGES[code] = () => FALLBACK;
-}
+const ERROR_CODES = Object.freeze(Object.keys(MESSAGES));
 
 function at(place) {
   const name = word(place);
