@@ -62,18 +62,34 @@ console.log('  Two seats free on t_a (unused 0) and t_b (unused 0); t_b is close
   ok('and exactly one booking moved', plan.body.moved_count === 1 && moved === 1, { reported: plan.body.moved_count, counted: moved });
 }
 
-console.log('\nOBJECTIVE 3 -- the rank vector decides when 1 and 2 tie');
+console.log('\nOBJECTIVE 3 -- the rank vector decides when 1 and 2 tie -- NOT YET A TIE. SEE BELOW.');
 console.log('  t_a cap4 unused 2 rank 0  |  t_b cap4 unused 2 rank 1. Identical on both earlier objectives.');
+console.log('  THIS FIXTURE IS SATISFIED BY ENUMERATION ORDER, NOT BY THE RANK VECTOR. betterThan returns');
+console.log('  on `moved` first, so with the third term deleted the search keeps the FIRST complete plan it');
+console.log('  finds -- and fixture order coincides with rank order, so the first plan found IS the');
+console.log('  rank-correct plan. Mutant M2 deleted the rank vector and every assertion here stayed green.');
+console.log('  So this section currently PROVES NOTHING about objective 3 and the Adversary owes the row');
 {
   const token = await withTables([table('t_a', 4), table('t_b', 4), table('t_c', 4)], [], [booking('t_c', 2)]);
   const plan = await call('POST', '/restaurants/r_1/replans', { body: close('t_c'), token, key: 'o3' });
   ok('the plan is produced', plan.status === 201, plan.status);
   const chosen = plan.body.assignments[0].table_ids;
   ok('the lower-ranked table wins the tie', chosen[0] === 't_a', chosen);
-  ok('and unused_seats is 2 either way -- which is what makes this the tie-break case', plan.body.unused_seats === 2, plan.body.unused_seats);
+  ok('and unused_seats is 2 either way -- which is what makes this LOOK like the tie-break case', plan.body.unused_seats === 2, plan.body.unused_seats);
+  // Stated as a standing FAILING expectation rather than a note, because a probe that says in prose that
+  // it does not establish something still prints a green line. This assertion is the probe admitting it.
+  ok('OBJECTIVE 3 IS NOT ESTABLISHED BY THIS PROBE (see the note above)', false,
+    { fixture: 't_a before t_b, so enumeration order coincides with rank order',
+      mutant_that_survives: 'M2, the rank vector deleted from betterThan' });
 }
 
-console.log('\nA build that ignored the seat total would fail the first fixture, and one that ignored the');
-console.log('rank vector would fail the third. Neither failure is visible in "unused_seats is reported".');
-console.log(`\n${failures === 0 ? 'the three objectives are separated' : failures + ' FAILURES'}`);
+console.log('\nWHAT THIS PROBE ESTABLISHES, and the claim it used to make:');
+console.log('  objective 1, fewest changed table sets -- SEPARATED by the second fixture');
+console.log('  objective 2, fewest unused seats      -- SEPARATED by the first fixture (M1 dies here)');
+console.log('  objective 3, the rank vector          -- NOT ESTABLISHED. The third fixture is satisfied by');
+console.log('                                           enumeration order, and M2 survives all of this.');
+console.log('  It used to print "the three objectives are separated", which was false under M2: a probe');
+console.log('  printing a claim it has not established is worse than printing nothing, because the');
+console.log('  summary is what a reader believes.');
+console.log(`\n${failures === 1 ? '1 expected failure: objective 3 is UNVERIFIED, deliberately' : failures + ' FAILURES (1 expected)'}`);
 if (failures > 0) process.exitCode = 1;
