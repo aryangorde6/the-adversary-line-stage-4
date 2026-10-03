@@ -12,13 +12,12 @@
 | 6 | Uncertain booking not shown | S2-003 | YES | **NOT RUN** | **CAUGHT** | `out_of_order_lost.py` | FAIL: OL-uncertain (uncertain not shown) |
 | 7 | Out-of-order responses not handled | S2-001 | YES | **NOT RUN** | **MISSED** | `out_of_order_lost.py` | 12/12 passed (not caught) |
 | 8 | Combination testid sorted | S2-021 | YES | **NOT RUN** | **MISSED** | `judgment_rows.py` | 11/11 passed (not caught) |
-| 9 | booking-uncertain not shown | S2-003 | YES | **NOT RUN** | **CAUGHT** | `out_of_order_lost.py` | FAIL: OL-uncertain |
 
 ## Summary
 
 **Supplied harness:** Not run against stage-2 mutants (would require full suite with UI checks)
 
-**Adversary probes caught:** 7 of 9 implemented mutants
+**Adversary probes caught:** 6 of 8 distinct mutants
 
 ### Gaps in Adversary Probes (2 mutants missed)
 
@@ -27,14 +26,14 @@
 | Out-of-order responses | S2-001 | Probe only checks final grid state; doesn't verify intermediate out-of-order handling |
 | Combination testid sorted | S2-021 | Probe checks visible text but not data-testid format |
 
-### Caught by Adversary Probes (7 mutants)
+### Caught by Adversary Probes (6 mutants)
 
 1. **Focus ring missing** (S2-042) - caught by `focus_lifecycle.py` FL-exit-blur-out/pagehide
 2. **Focus ring no re-arm** (S2-042) - caught by `focus_lifecycle.py` FL-exit-blurcall
 3. **States not distinct** (S2-043) - caught by `states_set.py` S043-set
 4. **no-slots not replacing grid** (S2-018) - caught by `closed_day.py` CD-grid-absent
 5. **Confirmation on failure** (S2-002) - caught by `out_of_order_lost.py` OL-refusal
-6. **Uncertain not shown** (S2-003) - caught by `out_of_order_lost.py` OL-uncertain (twice)
+6. **Uncertain not shown** (S2-003) - caught by `out_of_order_lost.py` OL-uncertain
 
 ## Isolation Method
 
@@ -42,7 +41,7 @@ Each mutant was:
 1. Built in its own scratch directory
 2. `docker build -t tk-mutX .`
 3. `docker run -d --rm -e PORT=8080 -p 8081:8080 --name tk-mutX tk-mutX`
-3. Wait 3s, `curl /health`
+4. Wait 3s, `curl /health`
 4. Run adversary probes with `TK_BASE=http://localhost:8081`
 5. `docker stop tk-mutX` before next mutant
 
@@ -148,25 +147,11 @@ Each mutant was:
 +          var cellId = 'slot-' + row.ids.slice().sort().join('+') + '-' + labelTime(slot.starts_at_local);
 ```
 
-### Mutant 9: Uncertain not shown (S2-003)
-```diff
--        }).catch(function () {
--          if (bookingSubmit) bookingSubmit.disabled = false;
--          removeConfirmation();
--          showMessage('booking-form', 'booking-uncertain', 'uncertain',
--            'We have not heard back about this booking, so we cannot say whether it went through. '
--            + 'Your details are still here. Press book again and we will check safely, without booking twice.');
-+        }).catch(function () {
-+          if (bookingSubmit) bookingSubmit.disabled = false;
-+          removeConfirmation();
-+          // MUTANT: Don't show uncertain message
-```
-
 ## Totals
 
 **Stage 1 (from previous report):** Harness 9/14, Probes 7/14, 2 by breakage
 
-**Stage 2 (this report):** Adversary probes 7/9 caught, 2 missed
+**Stage 2 (this report):** Adversary probes **6 of 8 distinct mutants caught**, 2 missed
 
 **Combined:** Stage-1 defects (7 probe gaps) carry into Stage 2 per S2-061 through S2-070
 
