@@ -6,7 +6,7 @@ in stage 2 and two in stage 3. Ordered by grading risk, not by route order. Ever
 none to read: `tablekeeper5/` contains `stage-1/`, `stage-2/`, `stage-3/`, `verification/`.
 
 **Standing precedent for this ledger: stages 1–3 are accepted** — stage 1 at `7598b0a` (14 probe files,
-189 rows), stage 2 at `f4fdcb0`, stage 3 at `9121b38`. The stage-4 service must not regress a single
+189 rows), stage 2 at `f4fdcb0`, stage 3 at `77c69f8`, with `a69e6ba` graded after acceptance. The stage-4 service must not regress a single
 accepted row, so **every stage-4 probe runs the stage-1/2/3 regression surface at the same hash, and a
 regression goes to the Foreman before it is characterised.**
 
@@ -65,6 +65,19 @@ a field.**
 now, as a stage-3 defect in an accepted build; fixtures that genuinely express policies, series,
 history and counters are **stage-4 work**. The Saboteur's stage-3 round plants against `9121b38` and is
 unaffected, since the fix lands after it.
+
+**Implemented at `a69e6ba` and graded directly: `S4-151` and `S4-152` are satisfied in stage 3**, with
+two findings that change how stage-4 rows must be written. First, **the refusal names the door that
+works, and I checked that it does**: all four keys → 422 `fixture_unsupported` naming the key and the
+import door; a document carrying the three stores **under `state`** imports 204 and **really seeds them**
+(policies 1, series 1, `batch_counters` 7); a refused fixture leaves the exported state **byte-equal**.
+Second, **the stores are absent from an export while empty**, so a stage-4 row asserting that the export
+carries them must seed them first — **absence against an empty state cannot be told from silence**, and
+that is a stage-4 version of the mistake this section exists because of.
+
+**A stage-4 fixture that genuinely expresses policies, series, history and counters is therefore still
+missing, and it is stage-4 work.** `S4-151` and `S4-152` are re-measured on a stage-4 build rather than
+banked; what stage 3 supplies is the refusal, not the capability.
 
 ## 0.2 The second arrival path, still able to express the fixed defect
 
@@ -183,7 +196,7 @@ because they have now failed to travel into a new file twice.**
 | Row | Requirement | What must be asserted | Risk if missed |
 |---|---|---|---|
 | `S4-150` | Seed and import must not be able to express the same inconsistent booking. Both halves: the import path derives policy-0 terms, **and** the seed path cannot produce `revision: 5` with `accepted_terms: null`. | Fixture-seed that state → **422**; and a differential row: seed a booking, export, import the export, compare the two bookings' `revision`/`accepted_terms`/terms-derived quantities field by field. | The `S3-121` defect returns through the other door. Fixing one arrival path and leaving the other able to express the state is the defect, not the fix. |
-| `S4-151` | `/_test/reset` must refuse the four keys it cannot seed (`policies`, `series`, `history`, `batch_counters`) with 422 `validation_failed`, naming the key. | Each key alone → 422 with the key in the body; all four → 422; **none of them** → 204 and the store seeded as declared. Then the positive control: a fixture that declares nothing about stage-3 stores and a row that reads a 15-minute grid — the grid must be **30-minute**, so a row cannot silently assert policy 0 believing it asserts a policy. | A probe author writing a stage-4 fixture gets 204 and believes it seeded a policy. Every downstream assertion is *about* policy 0 and nothing is red. |
+| `S4-151` (partly satisfied in stage 3) | `/_test/reset` must refuse the four keys it cannot seed (`policies`, `series`, `history`, `batch_counters`) with 422 `validation_failed`, naming the key. | Each key alone → 422 with the key in the body; all four → 422; **none of them** → 204 and the store seeded as declared. Then the positive control: a fixture that declares nothing about stage-3 stores and a row that reads a 15-minute grid — the grid must be **30-minute**, so a row cannot silently assert policy 0 believing it asserts a policy. | A probe author writing a stage-4 fixture gets 204 and believes it seeded a policy. Every downstream assertion is *about* policy 0 and nothing is red. |
 | `S4-152` | After the 422 lands, **no store may be half-seeded**: a refused fixture changes nothing at all. | Before/after export equality of the whole state on a refused reset. | A refusal that half-applies is worse than no refusal. |
 
 ## B. Preview and apply: revisions, atomicity, idempotency
