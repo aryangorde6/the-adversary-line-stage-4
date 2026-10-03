@@ -12,6 +12,26 @@ own suite; and the stage-2 regression surface green with **0 residual** (`closed
 `out_of_order_lost` 14/14, `focus_lifecycle` 48/48, `focus_reentry` 17/17, `states_set` 11/11).
 Nothing about the verdict moved, and stage 4 remains **unmeasured**.
 
+## The seam row, graded at `e6a0830` — it holds
+
+`e6a0830` is the Builder's `seam-check.mjs`: the grid and `explain` are two answers to one question
+and nothing compared them. I graded the hash directly rather than inheriting the verdict: from
+`git archive e6a0830`, `/health` ok, `/` 200 in 9917 bytes; supplied **120/120, 25/25, 7/7**, highest
+contiguous **3**; `api_core` **48/48**; `terms_history_series` **34/34**. The verdict is unchanged.
+
+**His two probe errors are the two new standing clauses, and both are green rows about something that
+was not measured.** His map indexed **only singles**, and a pair is explained as its own entry and
+rendered as its own cell — so the comparison silently skipped **every pair cell** and reported agreement
+over half the grid: *a row that iterates a subset and reports agreement over it is green about a
+population it never touched.* And he read "before" **after** publishing, so both readings were
+post-policy: *a differential row must assert that the difference occurred, otherwise it is a thing
+compared with itself.* The second half is the generalisable one and his row now **fails if the flip does
+not happen**, rather than passing quietly.
+
+**Carried into stage 4 as an exposure to assert, not to inherit** (`S4-160` in the stage-4 ledger):
+stage 4 changes availability underneath a grid that no stage-4 requirement mentions, so the seam is
+re-driven **after** a plan is applied — the state in which the two answers can actually drift.
+
 ## The original acceptance at `9121b38`
 
 Verdict: **PASS.** Every ledger row I hold has been checked at this hash and holds. The product change
