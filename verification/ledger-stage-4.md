@@ -406,6 +406,11 @@ because they have now failed to travel into a new file twice.**
     both leave the author stuck. One said `204` and seeded nothing; the other said `422` and refused
     something correct. **A refusal that is *wrong* is worse than no refusal**, because the author cannot
     distinguish it from the state being genuinely unsupported.
+34b. **A route's request shape is specified in the stage's own specification.** So: **read that section
+    before designing a payload**, and **treat inventing one as a defect measurable from outside** — a service
+    that answers `400 malformed_request` to the shape the specification prints, while accepting a shape
+    nobody wrote down, is a defect against a documented requirement and not a disagreement about taste.
+    **And declaring a blocker before looking for the written requirement is not caution.**
 35. **A row that asserts wording must also assert the condition that makes that wording true** — the
     precondition is part of the assertion, not a note beside it. A wording row with no precondition is a
     row about vocabulary, **and vocabulary is the part of a screen least likely to change and therefore
