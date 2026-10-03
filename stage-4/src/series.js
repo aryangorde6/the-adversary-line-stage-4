@@ -19,6 +19,7 @@ const { fail } = require('./errors');
 const time = require('./time');
 const store = require('./state');
 const domain = require('./domain');
+const policy = require('./policy');
 const { has } = require('./fields');
 
 const MIN_COUNT = 2;
@@ -229,66 +230,129 @@ function markException(state, reservation) {
 // The revision moves ONCE for the amendment however many occurrences moved. A no-op amendment, where
 // the new clock time is the one already in force, moves nothing and moves the revision zero times: the
 // caller asked for no change and got none, which is the only honest reading of a revision.
+// POST /series/{id}/amend, built to tablekeeper/spec/stage-4.md.
+//
+// The caller names WHICH occurrence moves (from_index), only the TIME OF DAY (local_time, exactly HH:MM),
+// and the revision they believe the series is at. Everything else is derived: each eligible occurrence keeps
+// its own reference, owner, party size and current table selection, and moves on its ORIGINAL SCHEDULED
+// local date -- not on whatever date it currently sits, because a seating repair may have moved an
+// occurrence and a series amendment is not a second repair.
+//
+// The revision precondition is checked BEFORE any occurrence is validated. That order is the
+// specification's and it is observable: a body that is both stale and out-of-range must answer stale, or a
+// caller cannot tell "the world moved" from "you sent nonsense".
+//
+// A no-op -- local_time already in force, or no eligible occurrence -- SUCCEEDS and changes no revision.
+// Refusing it would be refusing a true statement, and the same rule already governs a no-op patch on a
+// single booking. A reader who assumes refusal is the stricter and safer choice would get this backwards.
+function requirePositiveInteger(value, field) {
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < 1) {
+    fail('validation_failed', { field });
+  }
+  return value;
+}
+
+function readLocalTime(value) {
+  if (typeof value !== 'string' || !/^\d{2}:\d{2}$/.test(value)) {
+    fail('validation_failed', { field: 'local_time' });
+  }
+  const hours = Number(value.slice(0, 2));
+  const minutes = Number(value.slice(3, 5));
+  if (hours > 23 || minutes > 59) fail('validation_failed', { field: 'local_time' });
+  return hours * 60 + minutes;
+}
+
 function amendClockTime(state, seriesRecord, body, nowMs) {
   if (body === null || typeof body !== 'object' || Array.isArray(body)) {
     fail('malformed_request', { field: 'body' });
   }
-  const wanted = body.starts_at_local;
-  if (typeof wanted !== 'string') fail('malformed_request', { field: 'starts_at_local' });
+  const wantedRevision = requirePositiveInteger(body.expected_revision, 'expected_revision');
+  // Unknown fields are ignored, so a caller may send fields this service does not implement.
+  if (!Number.isInteger(body.from_index) || body.from_index < 0 || body.from_index >= seriesRecord.count) {
+    fail('validation_failed', { field: 'from_index' });
+  }
+  const fromIndex = body.from_index;
+  const minutes = readLocalTime(body.local_time);
+
+  // Stale before anything else, as the specification orders it.
+  if (wantedRevision !== seriesRecord.revision) {
+    fail('stale_revision', { series_id: seriesRecord.series_id, revision: seriesRecord.revision });
+  }
+
   const anchor = store.findReservation(state, seriesRecord.anchor_reference);
   if (!anchor) fail('not_found', { resource: 'reservation', reference: seriesRecord.anchor_reference });
-
-  const clockOf = (stamp) => {
-    const wall = time.parseWall(stamp);
-    return String(wall.h).padStart(2, '0') + ':' + String(wall.mi).padStart(2, '0');
-  };
-  // Only the time of day is the caller's. Each occurrence keeps its own date and moves to the new clock
-  // time on that date, so a series cannot be renumbered onto different days by an amendment that claimed
-  // to move a clock. The anchor's date is never rewritten either: it is the series' name in time.
-  const targetClock = clockOf(wanted);
   const anchorWall = time.parseWall(anchor.starts_at_local);
-  if (Number.isNaN(anchorWall.y) || Number.isNaN(clockOf(wanted).length)) {
-    fail('validation_failed', { field: 'starts_at_local' });
-  }
 
-  const moved = [];
-  for (const entry of seriesRecord.occurrences) {
-    // An exception has already been amended away from the series by the diner, so it does not travel
-    // with the series and is not an exception a second time. Moving every occurrence together is not an
-    // exception at all -- that flag means "this one diverged", and here none of them did.
-    if (entry.exception) continue;
+  const eligible = seriesRecord.occurrences.filter((entry) => (
+    entry.index >= fromIndex && !entry.exception
+  ));
+
+  // Every change is computed and checked BEFORE anything is written, so a conflict at index 3 leaves
+  // indices 0 to 2 untouched. Non-occupancy failures take precedence in occurrence-index order, and an
+  // occupancy conflict answers table_unavailable -- so the two passes are ordered, not interleaved.
+  const prepared = [];
+  for (const entry of eligible) {
     const reservation = store.findReservation(state, entry.reference);
     if (!reservation || reservation.status !== 'confirmed') continue;
-    if (clockOf(reservation.starts_at_local) === targetClock) continue;
-    const wall = time.parseWall(reservation.starts_at_local);
-    const [hours, minutes] = targetClock.split(':').map(Number);
-    const next = time.wallFromMinutes(wall.y, wall.mo, wall.d, hours * 60 + minutes);
-    // domain.amendReservation is the single write path: it re-derives the terms of the date the
-    // occurrence now lands on, re-checks capacity and the cutoff, and records the history entry. This
-    // function decides WHICH occurrences move; it does not write a booking itself, because a second
-    // writer is how two paths come to describe the same booking differently.
-    // seriesTravel: false, because these occurrences are moving together. The single-booking path would
-    // mark each one a permanent exception and bump the revision once per occurrence, which is the
-    // opposite of what a series changing its clock time means.
-    domain.amendReservation(state, reservation, { starts_at_local: time.wallToString(next) }, nowMs,
-      { seriesTravel: false });
-    moved.push(reservation.reference);
+    // The ORIGINAL SCHEDULED date, from the anchor and the interval, not the reservation's current date.
+    const days = entry.index * seriesRecord.interval_weeks * 7;
+    const scheduledDate = addLocalDays(anchor.starts_at_local, days).slice(0, 10);
+    const parts = scheduledDate.split('-').map(Number);
+    const wall = time.wallFromMinutes(parts[0], parts[1], parts[2], minutes);
+    const next = time.wallToString(wall);
+    // Identical resulting fields is a no-op and retains its terms -- checked here so a no-op is never
+    // written and never consumes a cutoff.
+    const unchanged = next === reservation.starts_at_local;
+    prepared.push({ entry, reservation, next, unchanged });
   }
 
-  // Once for the amendment, whatever the count.
-  //
-  // A no-op amendment -- amending to the clock time already in force -- is ACCEPTED and moves nothing,
-  // including the revision. The reason is worth stating because the opposite looks stricter: a reader
-  // assuming refusal is the safer choice would refuse this, and refusing it would be refusing a TRUE
-  // STATEMENT. The caller said the series starts at the time it already starts at, and that is correct.
-  // It is the same rule a no-op patch follows on a single booking (S3-058, S3-076), and consistency
-  // across the two amendment paths is the point: a series is one booking intent, so it answers the same
-  // way a booking does.
-  //
-  // This is the "+0" half of S4-154, and it is reachable ONLY with a second, no-op call -- which is why
-  // it needs a written reason. A branch no test would ever have taken otherwise reads as an oversight.
-  if (moved.length > 0) seriesRecord.revision += 1;
+  for (const step of prepared) {
+    if (step.unchanged) continue;
+    const wall = time.parseWall(step.reservation.starts_at_local);
+    const startMs = domain.resolveStartMs(requireRestaurantSafe(state, step.reservation), wall);
+    const selected = policy.policyForStart(state, requireRestaurantSafe(state, step.reservation), step.next);
+    const endMs = startMs + selected.reservation_duration_minutes * domain.MILLIS_PER_MINUTE;
+    if (domain.occupiedTableId(
+      state,
+      step.reservation.restaurant_id,
+      step.reservation.table_ids || [],
+      startMs,
+      endMs,
+      step.reservation.reference,
+    ) !== null) {
+      fail('table_unavailable', { reference: step.reservation.reference });
+    }
+    if (store.isTableClosed(
+      state,
+      step.reservation.restaurant_id,
+      (step.reservation.table_ids || [])[0],
+      startMs,
+      endMs,
+    )) {
+      fail('table_unavailable', { reference: step.reservation.reference });
+    }
+  }
+
+  let changed = 0;
+  for (const step of prepared) {
+    if (step.unchanged) continue;
+    domain.amendReservation(state, step.reservation, { starts_at_local: step.next }, nowMs,
+      { seriesTravel: false });
+    changed += 1;
+  }
+
+  // Once for the whole operation, and only if something really changed. Series amendments do not mark
+  // exceptions: the occurrences moved together, and none of them diverged from the series.
+  if (changed > 0) {
+    seriesRecord.revision += 1;
+    const restaurantId = seriesRecord.restaurant_id;
+    store.bumpRestaurantRevision(state, restaurantId);
+  }
   return seriesView(state, seriesRecord);
+}
+
+function requireRestaurantSafe(state, reservation) {
+  return store.findRestaurant(state, reservation.restaurant_id);
 }
 
 function bumpSeriesRevision(state, seriesId) {

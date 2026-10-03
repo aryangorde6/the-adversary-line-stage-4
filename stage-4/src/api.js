@@ -262,7 +262,10 @@ function adoptSeries(ctx) {
 // series is one booking intent.
 function amendSeries(ctx) {
   const found = series.requireOwnSeries(ctx.state, ctx.user, ctx.params.seriesId);
-  return { status: 200, body: series.amendClockTime(ctx.state, found, ctx.body, ctx.nowMs) };
+  // 201 on success, per the specification -- including for an all-no-op amendment, which succeeds and
+  // changes nothing. A replay of the successful key returns this original response with 200, which the
+  // idempotency layer handles before the handler runs.
+  return { status: 201, body: series.amendClockTime(ctx.state, found, ctx.body, ctx.nowMs) };
 }
 
 function getSeries(ctx) {
