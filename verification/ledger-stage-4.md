@@ -61,13 +61,41 @@ policy 0 and nothing would be red. **This is the absence-read-as-a-state family 
 standing in for four stores) **and the first instance where the lie is in the success code rather than in
 a field.**
 
-**Ruled by the Foreman, and recorded here as binding on stage 4:** the four keys are **refused with 422**
-now, as a stage-3 defect in an accepted build; fixtures that genuinely express policies, series,
-history and counters are **stage-4 work**. The Saboteur's stage-3 round plants against `9121b38` and is
-unaffected, since the fix lands after it.
+### What the defect actually was, and at which hash each half holds
 
-**Implemented at `a69e6ba` and graded directly: `S4-151` and `S4-152` are satisfied in stage 3**, with
-two findings that change how stage-4 rows must be written. First, **the refusal names the door that
+**Named by hash, because a ledger that describes a fix the round's build does not contain is the same
+class of error as a comment describing a shape the code does not emit — and clause 16 exists because of
+a defect nobody had to find.** Measured on both builds by the Builder, not inferred from commit order:
+
+| | `77c69f8` and earlier | `a69e6ba` |
+|---|---|---|
+| a fixture declaring `policies` | **204, silently dropped** | **422 `fixture_unsupported`** |
+| a seeded `revision: 5` with `accepted_terms: null` | **204, accepted** | **422 `fixture_unsupported`** |
+
+**So: the four keys are refused at `a69e6ba`**, with the sentence naming the working door
+(`/_test/import`) and `/_test/export` and `/_test/import` unchanged; **at `77c69f8` and earlier they were
+accepted and dropped, which is the defect.** `a69e6ba` is the hash the stage-3 defect round plants
+against, so the round does not test it — and neither does `S4-151`, which is about the stage-4 door.
+
+**The Builder's reframing of what the defect was, which replaces the Foreman's earlier phrase and is
+the more useful one:** it was **a fixture surface that never grew with the stage** — stage 1 and stage 2
+fixtures are complete for their stages, and stage 3 added four stores **without extending the door that
+seeds them**. The general form, and it is the shape stage 4 inherits:
+
+> **state without a surface to state it, or a surface that grew less than the state it serves.**
+
+**That is also why the fourth store is the one that shows it:** `idempotency` is seeded through booking
+calls, so nothing looked missing until policies and series arrived with no way in. **It is the same
+failure as `S3-105`'s occurrence reference existing one level too deep, and as `explain` being absent
+until stage 3 added it — and none of the three is visible from any single row.**
+
+**Both halves of `S4-150` are true only at `a69e6ba` or later**, which is what decided the round's hash:
+at `77c69f8` the seed half is open, so a round planted there would report a defect this room has already
+ruled on as a live finding — worse than not planting it, because it teaches the reader the checks found
+it. My §0.2 decided the hash question by being written first, which is the right way round.
+
+**`S4-151` and `S4-152` are satisfied in stage 3 at `a69e6ba`, graded directly**, with two findings that
+change how stage-4 rows must be written. First, **the refusal names the door that
 works, and I checked that it does**: all four keys → 422 `fixture_unsupported` naming the key and the
 import door; a document carrying the three stores **under `state`** imports 204 and **really seeds them**
 (policies 1, series 1, `batch_counters` 7); a refused fixture leaves the exported state **byte-equal**.
@@ -140,6 +168,27 @@ applied, which is the state where the two answers can drift.
    nothing moved, `restaurant_revision` on a preview, a plan with no assignments, `plan_id` after a
    409, and the whole 201 body on a replay.
 
+## The pattern behind four of this stage's rows, which is a row-authoring rule
+
+**`S4-154`, `S4-137`, and the terms-driven substitution in `S4-123` are the same species, and so is
+`S4-153d` below:** *a semantic that no single-item row can reach, because at the unit the wrong
+behaviour is indistinguishable from the right one.*
+
+- **a commit-once semantic** — one idempotency record per key, written once;
+- **a terms-driven substitution** — capacity checked against the booking's own terms, where
+  table-driven and terms-driven agree on every booking whose party size fits both;
+- **a whole-plan increment** — `S4-154`: a per-booking increment is invisible to any single-booking row;
+- **a per-series increment** — `S4-137`: indistinguishable from a per-occurrence increment unless a
+  second, no-op-for-that-series plan is in the test;
+- **two derivations of one value** — `S4-153d`: indistinguishable unless the case is one where a naive
+  implementation *would* diverge.
+
+**The rule that follows, and it is the reason each of those rows is written the way it is: a row that
+can only fail if the test contains a case where the wrong behaviour is indistinguishable from the right
+one is not a row yet.** It is an assertion that passes unless the fixture happens to contain the
+distinguishing case, and clause 6 applies to it in a new costume — the status is not the signature, and
+here neither is the value.
+
 ---
 
 ## Standing clauses, restated in my own words
@@ -188,14 +237,23 @@ because they have now failed to travel into a new file twice.**
 19. **A differential row must assert that the difference occurred; otherwise it is a thing compared with
     itself.** (Same source: "before" read after publishing, so the build agreed with itself.)
 20. **A fixture that reports success for state it did not seed is worse than one that lacks the
-    capability** — the refusal is legible and the 204 is not.
+    capability** — the refusal is legible and the 204 is not. The general form: **state without a
+    surface to state it, or a surface that grew less than the state it serves.**
+21. **Inert is not agreement.** A byte-equal export before and after an operation proves the operation
+    changed nothing; it does **not** prove two derivations of the same value would agree if either
+    changed. Those are different properties and only the second is the defect, so a row about two paths
+    must **compare the two derivations directly against an independent computation the probe makes
+    itself** — never against the other path's own output, and never against an unchanged state.
+22. **Assert that the two sides could differ.** A differential row whose two sides are trivially equal
+    passes for free and means nothing. The row must contain a case where a naive implementation *would*
+    diverge, and **fail if it does not** — otherwise it is a thing compared with itself (clause 19).
 ---
 
 ## A. Arrival paths (highest risk: two paths, one fact, and a 204 that lies)
 
 | Row | Requirement | What must be asserted | Risk if missed |
 |---|---|---|---|
-| `S4-150` | Seed and import must not be able to express the same inconsistent booking. Both halves: the import path derives policy-0 terms, **and** the seed path cannot produce `revision: 5` with `accepted_terms: null`. | Fixture-seed that state → **422**; and a differential row: seed a booking, export, import the export, compare the two bookings' `revision`/`accepted_terms`/terms-derived quantities field by field. | The `S3-121` defect returns through the other door. Fixing one arrival path and leaving the other able to express the state is the defect, not the fix. |
+| `S4-150` (**both halves true only at `a69e6ba`+**) | Seed and import must not be able to express the same inconsistent booking. Both halves: the import path derives policy-0 terms (true since `387ed26`), **and** the seed path cannot produce `revision: 5` with `accepted_terms: null` (true only at `a69e6ba`; **open at `77c69f8`**). | Fixture-seed that state → **422**; and a differential row: seed a booking, export, import the export, compare the two bookings' `revision`/`accepted_terms`/terms-derived quantities field by field. | The `S3-121` defect returns through the other door. Fixing one arrival path and leaving the other able to express the state is the defect, not the fix. |
 | `S4-151` (partly satisfied in stage 3) | `/_test/reset` must refuse the four keys it cannot seed (`policies`, `series`, `history`, `batch_counters`) with 422 `validation_failed`, naming the key. | Each key alone → 422 with the key in the body; all four → 422; **none of them** → 204 and the store seeded as declared. Then the positive control: a fixture that declares nothing about stage-3 stores and a row that reads a 15-minute grid — the grid must be **30-minute**, so a row cannot silently assert policy 0 believing it asserts a policy. | A probe author writing a stage-4 fixture gets 204 and believes it seeded a policy. Every downstream assertion is *about* policy 0 and nothing is red. |
 | `S4-152` | After the 422 lands, **no store may be half-seeded**: a refused fixture changes nothing at all. | Before/after export equality of the whole state on a refused reset. | A refusal that half-applies is worse than no refusal. |
 
