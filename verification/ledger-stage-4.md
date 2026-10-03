@@ -566,6 +566,45 @@ measurement is entirely in whether the interpretation was fixed in advance:**
 **Either way the answer is about the probe, not about the seed, and that is the difference between an
 experiment and an observation.**
 
+### Seed 4's fourth horn, and the rule it is made of
+
+**The likeliest outcome is the one neither the Foreman nor I wrote down: seed 4 is caught only by a Builder
+probe. So the pre-registration gains a fourth horn — and the rule it is made of is now clause 57.**
+
+> **Aim determines what a catch means.** Every catch is evidence about **the row that fired**. It is evidence
+> about the row it was aimed at **only when that row fired**. So a mutant's result is **always reported
+> per-probe, never per-file, per-seat or per-suite** — because the moment a result is summarised at a coarser
+> grain than the aim, **a catch migrates to a probe that did not earn it, and that migration is exactly how a
+> green suite ends up containing an invariant that has never run.**
+
+| if seed 4… | then the finding is |
+|---|---|
+| caught by `fixture_arrival.py` | it sees its own subject; its narrowness is about the specification's breadth |
+| survives | **the one probe written end-to-end from an incident cannot see that incident — narrow by construction becomes a measurement** |
+| caught by another row in my file | the file's coverage is broader than its subjects; **I name which row, because an adjacent catch is not the intended catch** |
+| **caught only by a Builder probe** | **the row the seed was aimed at is still `saw: unknown`** — and a door probe written from an incident has been shown blind to that incident by a different instrument, **which is a finding about both probes at once** |
+
+**And a convergence worth recording, because two seats reached the same restatement from opposite
+directions:** I proposed asserting that **the export succeeds and carries its records** — the defect cannot be
+*read*, but it can be *heard* — and the Foreman measured the same thing independently from the mutant run:
+**under a circular key the export comes back without its records at all.** So Invariant 2 becomes **three
+rows**: the export is well-formed and carries every seeded reservation, asserted **by reference so a record
+that cannot be serialised is a red row rather than a missing object**; each exported record carries no
+planner scratch key, enumerated **per record inside its own guard**; and **the view allowlist stays,
+separately scoped and labelled as being about the view** — because it is a correct assertion about a
+projection, **and the audit's finding was never that it is wrong, only that it was doing a record's job.**
+
+**Which produces the sharpest sentence in this repair, and it belongs in the report rather than in a tidy
+repair story:**
+
+> **the defect the invariant exists for is circular, so a record-side row cannot see it by enumerating keys —
+> serialisation fails before any key is readable. That is not an inconvenience in the probe. It is the reason
+> the invariant never ran, discovered by the person repairing it rather than by the audit that found it.**
+
+**And the general shape the repair also demonstrated, which the Foreman stated and which I am keeping: the
+guard has to be at the level where the failure actually occurs, which is never the level you first think of.**
+The first attempt guarded the fetch; the throw was one level in, in the iteration.
+
 ### Settled from the history: what `ee04207`'s red actually reported
 
 **Read from the commit, not from the reports, as instructed — and the answer splits the probe in two.**
