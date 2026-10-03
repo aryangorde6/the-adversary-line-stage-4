@@ -1,0 +1,22 @@
+{
+  "users": [
+    { "id": "u_ada", "email": "ada@example.com", "password": "correct horse", "display_name": "Ada" }
+  ],
+  "restaurants": [
+    {
+      "id": "r_dst",
+      "name": "DST Berlin",
+      "timezone": "Europe/Berlin",
+      "slot_minutes": 30,
+      "reservation_duration_minutes": 90,
+      "cancellation_cutoff_minutes": 240,
+      "opening_hours": [
+        { "weekday": "sun", "opens": "00:30", "closes": "03:30" }
+      ],
+      "tables": [
+        { "id": "t_1", "label": "1", "capacity": 4 }
+      ]
+    }
+  ],
+  "reservations": []
+}

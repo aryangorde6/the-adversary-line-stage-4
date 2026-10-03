@@ -1,0 +1,22 @@
+{
+  "users": [
+    { "id": "u_ada", "email": "ada@example.com", "password": "correct horse", "display_name": "Ada" }
+  ],
+  "restaurants": [
+    {
+      "id": "r_ny",
+      "name": "NY Spot",
+      "timezone": "America/New_York",
+      "slot_minutes": 30,
+      "reservation_duration_minutes": 90,
+      "cancellation_cutoff_minutes": 120,
+      "opening_hours": [
+        { "weekday": "sun", "opens": "18:00", "closes": "23:00" }
+      ],
+      "tables": [
+        { "id": "t_1", "label": "1", "capacity": 4 }
+      ]
+    }
+  ],
+  "reservations": []
+}
