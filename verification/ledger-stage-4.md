@@ -746,6 +746,28 @@ not a variation of the first — it took driving to find, and assertion 3 could 
 anyone reasoning from the row alone.** That is the return on clause 30: **the thinness was named in the row
 before the code, found by driving, and never became a defect.**
 
+### The same audit applied to `ui-grid.mjs` — read, not run, and two thinnesses found
+
+The Builder flagged that he had not audited the Finisher's per-cell population, and left it rather than
+assume. **I cannot run a browser from this seat either, so I read it — and reading is enough for a population
+question. Two findings, both specified rather than edited, because the file is the Finisher's:**
+
+1. **No reverse direction and no count equality.** `ui-grid.mjs` iterates the **painted** cells and looks each
+   one up in the service's answer, flagging a cell with no slot as a disagreement — **one direction only.** A
+   slot the service offers at a time the grid painted nothing for is never checked, and **the row compares no
+   counts.** The vacuity guards are good (`the service answered with a slot list`, `some cells are free`), but
+   **a guard against comparing nothing is not the same as a guard against comparing half of it** — which is
+   precisely the pair-indexing bug's shape, one level along. `S4-160` requires both directions and equal
+   populations; **the instrument meets the first half of the row and not the second.**
+2. **The answer map is keyed by local time** (`out[slot.starts_at_local.slice(11, 16)] = …`), so **two slots
+   sharing a local time silently collapse into one** and the population shrinks before any comparison. This is
+   the original defect's exact shape — **a map that silently drops a class of thing** — reappearing in the
+   comparison that was written to catch it. **Keying by (time, table set) or by index would make the collapse
+   impossible**, and the row cannot detect it because the population it compares has already been reduced.
+
+**Neither is a hole: both are thinnesses, and both look like coverage.** The first is closed by asserting the
+reverse direction and the counts; the second by keying the map so the loss cannot happen.
+
 ### Re-read of `S4-167`: is assertion 3 sufficient as the sole discriminator?
 
 **No — and the fix is a second producing configuration plus assertion 3b, not a clearer sentence about the
