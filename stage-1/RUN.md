@@ -88,17 +88,14 @@ Seeded users can sign in with the seeded password straight away.
 
 ## A first booking, end to end
 
-With the service running and the seed above posted, these three calls make one booking. The
-first returns a token; the second finds a free table; the third books it.
+With the service running and the seed above posted, these two calls make one booking. Use a fresh
+`Idempotency-Key` for each booking you make.
 
 ```sh
-curl -s -X POST http://localhost:8080/auth/signup \
+TOKEN=$(curl -s -X POST http://localhost:8080/auth/login \
   -H 'Content-Type: application/json' \
-  -d '{"email":"sam@example.com","password":"correct horse","display_name":"Sam"}'
-# {"user_id":"...","display_name":"Sam","token":"..."}
-
-curl -s "http://localhost:8080/availability?restaurant_id=r_anker&date=2026-09-24&party_size=4"
-# {"restaurant_id":"r_anker","date":"2026-09-24","timezone":"Europe/Berlin","slots":[...]}
+  -d '{"email":"ada@example.com","password":"correct horse"}' \
+  | sed 's/.*"token":"\([^"]*\)".*/\1/')
 
 curl -s -X POST http://localhost:8080/reservations \
   -H 'Content-Type: application/json' \
@@ -108,16 +105,16 @@ curl -s -X POST http://localhost:8080/reservations \
 # 201, with "reference" and "status":"confirmed"
 ```
 
-Replace `$TOKEN` with the token from the first call, and use a fresh `Idempotency-Key` for each
-booking you make. Copy `starts_at_local` from the availability reply into the booking unchanged.
-The seed is open Thursday and Friday; 2026-09-24 is a Thursday.
+`r_anker`, `t_2` and the date come from the seed above; `GET /availability` returns the start
+times to choose from. The seed is open Thursday and Friday, so 2026-09-24 books and 2026-09-23
+does not.
 
 ## Errors
 
-Every 4xx and 5xx body is `{"error":{"code":"...","message":"..."}}`. The `code` is fixed by the
-API and is what a program should branch on. The `message` is written for the person who made the
-request — it says what went wrong and what to do about it, in their terms — so it is safe to show
-a diner as it stands. Codes:
+Every 4xx and 5xx body is `{"error":{"code":"...","message":"..."}}`. The `code` is the stable
+part and is what a program should branch on. The `message` is a sentence for the person who made
+the request, worded in `src/messages.js` and free to change, so never parse it or branch on its
+wording. Codes:
 `malformed_request`, `missing_idempotency_key`, `unauthenticated`, `forbidden`,
 `not_found`, `idempotency_key_reuse`, `email_taken`, `table_unavailable`,
 `cutoff_passed`, `reservation_cancelled`, `validation_failed`,
