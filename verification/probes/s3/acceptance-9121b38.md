@@ -48,7 +48,20 @@ All ten stage-2 probes against the stage-3 build, **375 and 1280**: `closed_day`
 | probe | result |
 |---|---|
 | `api_core.py` — policies and availability explanations | **48 / 48** |
-| `terms_history_series.py` — terms, revision, history, decision, series | **31 / 31** |
+| `terms_history_series.py` — terms, revision, history, decision, series | **34 / 34** |
+
+### The case the reference is emitted for, driven
+
+The occurrence reference is taken from the **series record**, not from the reservation, so it must
+still name the occurrence when there is no reservation to read — and that state is reachable: export,
+drop the series' own reservations from the document, import (204), then read the series.
+
+    ROW S3-105b-missing-reservation PASS  GET /series with every reservation absent -> 200;
+      occurrences still carry their own reference with reservation=null = True
+      observed [(0, 'NNEJNHY5', None), (1, 'HOPOHGM0', None), (2, 'ODK5M62K', None)]
+
+A value copied from the nested reservation would be `null` on all three here. That is the design claim
+verified by driving it, not accepted from the report.
 
 ## Recorded as unmeasured rather than as results
 

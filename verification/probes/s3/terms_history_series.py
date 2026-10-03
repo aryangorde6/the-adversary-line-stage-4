@@ -312,6 +312,39 @@ def main():
               f"(expected the ordinary booking conflict: a failed adoption must leave no idempotency "
               f"claim, so the retry is evaluated afresh rather than replayed or refused as key reuse)")
 
+    # ---- the case the reference is emitted for: the reservation is ABSENT -------
+    # `seriesView` takes the occurrence's reference from the series record rather than from the
+    # reservation, so it must still name the occurrence when there is no reservation to read. That
+    # state is reachable: export, drop the series' own reservations from the document, import. No
+    # assertion above covers it, and a value copied from the nested reservation would be `null` here.
+    st_ex, doc = call("GET", "/_test/export")
+    check("S3-105b-setup", st_ex == 200 and isinstance(doc, dict) and "state" in doc,
+          f"GET /_test/export -> {st_ex}, carries a state key = "
+          f"{isinstance(doc, dict) and 'state' in doc} (asserted before anything is read from it)")
+    if st_ex == 200 and "state" in doc:
+        stripped = json.loads(json.dumps(doc))
+        wanted = {o.get("reference") for o in occ}
+        kept = [r for r in stripped["state"].get("reservations", [])
+                if r.get("reference") not in wanted]
+        stripped["state"]["reservations"] = kept
+        st_im, _ = call("POST", "/_test/import", stripped)
+        check("S3-105b-import", st_im == 204,
+              f"importing a document that keeps the series but drops its {len(wanted)} reservations -> "
+              f"{st_im} (the state is reachable, and the series record survives)")
+        if st_im == 204:
+            st_v, v = call("GET", "/series/" + series_id, token=ada_token)
+            occs = v.get("occurrences") if isinstance(v, dict) else None
+            shaped = bool(occs) and all(
+                set(o.keys()) == {"index", "reference", "exception", "reservation"}
+                and o.get("reservation") is None
+                and o.get("reference") in wanted
+                for o in occs)
+            check("S3-105b-missing-reservation", st_v == 200 and shaped,
+                  f"GET /series with every reservation absent -> {st_v}; occurrences still carry their "
+                  f"own reference with reservation=null = {shaped} "
+                  f"(observed {[(o.get('index'), o.get('reference'), o.get('reservation')) for o in occs] if occs else occs}) "
+                  f"— a value copied from the nested reservation would be null here")
+
     return rows()
 
 
