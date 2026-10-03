@@ -186,29 +186,51 @@ well, so a verifier reading one row sees the interpretation it is checking again
 Rows: 70 (S2-001 to S2-070). Ambiguities: 6 (S2-A1 to S2-A6), all six ruled by the Foreman from the
 specification text before any stage-2 code was written; each ruling is stated inside the row it
 settles as well as in the table below.
-## Teardown latency for the focus indicator (measured at `e0e10eb`, 375 and 1280)
+## The focus indicator: one rule, the poll, and the bounds (measured at `9d9dbfc`)
 
-The indicator is **recomputed** from where the focus actually is rather than stored, so a teardown is
-not instantaneous. Measured from the moment the exit is fired to the moment the indicator is gone:
+**The rule is containment and nothing else.** The indicator reports **where the keyboard is**. A
+design can satisfy that with two rules — clear on `window blur` and `pagehide`, restore on anything
+else — and such a design has a window in which the indicator is cleared and then put back. That
+window is invisible to a coarse sample and shows up only as a latency figure, so it is measured
+directly: **20 samples at 5ms from the instant `blur` is dispatched with the keyboard inside the
+field are present at 20 of 20 and painted at 20 of 20.** A clear-then-restore design cannot produce
+that trace. Assert it that way, because "no flicker window" is a property a sampling row can hold and
+a latency number cannot.
 
-| exit | cleared in |
-| --- | --- |
-| `focusin` landing on another control | 1–4ms |
-| `window` blur | 3–4ms |
-| `pagehide` | 1–4ms |
-| real mouse click elsewhere | 4–14ms |
-| **programmatic `.blur()`** | **229–283ms** |
-| silent return (`element.focus()`, no event) — the indicator coming *back* | 45–83ms |
+**The poll, in the two halves it actually has.**
 
-The 229–283ms figure is the one worth keeping, and it is the slow one **because** it fires no handler
-the mechanism listens to and therefore waits on the 500ms tick. That is the tick's necessity shown as
-a measured latency rather than argued as a principle: a path that needs the poll is also visible as
-the path that takes longest to settle. The rows must therefore assert the indicator is gone **within
-a stated bound** rather than instantly, or they will read a correct recompute as a stuck ring — which
-is the same false red as the eight earlier ones, in a new place.
+- *A design property:* the indicator must track focus on **every arrival that fires an event**,
+  verified **with the poll disabled** — `setInterval` stubbed to a no-op before any page script runs,
+  event handlers untouched. Measured: with the poll dead, a real click arrival and a keyboard
+  (`Shift+Tab`) arrival both leave the ring painted at **every observed internal stop of the field**,
+  including the `:focus`-mismatched one. `Shift+Tab` backwards from the search button reaches the
+  field after 2 presses. Nothing a person does waits for the poll.
+- *An API-surface property:* a focus return that fires **no event of all** must still be tracked
+  **within the stated bound**. This path exists in the product's own API surface and no person walks
+  it, which is why it is written as a property of the API rather than as a user requirement — and
+  because a poll that is load-bearing only for the probes should be labelled, not assumed.
+  **Measured elsewhere, and named as such:** the Builder drove this path with the poll stubbed and
+  found it untracked. My own construction (`blur()` then `focus()`) does **not** produce it —
+  `focus()` fires `focus` and `focusin` even from script — so that row reports what it can see and
+  explicitly does not claim the event-free path.
 
-Idle cost of the tick, measured: **0 DOM mutations** across four ticks on an idle page with focus
-outside the field, no residue after two navigations, no page errors, and a real click re-entry
-painted in **3–10ms** — so ordinary interaction never waits for it.
+**Bounds, and which path each applies to.** A row that asserts "instantly" reads a correct recompute
+as a defect; a row that asserts a stale bound reads a correct improvement as a regression. So:
+
+| path | bound asserted | measured at `9d9dbfc` |
+| --- | --- | --- |
+| focus moving to another control | gone within **250ms** | 3–9ms |
+| a real (trusted) mouse click elsewhere | gone within **250ms** | 3–9ms |
+| a programmatic `.blur()` | gone within **1000ms** | 334–341ms |
+| a silent return, no event at all | **back within 1000ms** | event-driven arrivals 7–10ms; the event-free path is the poll's, inside one 500ms tick |
+| an OS window-manager focus change | **not measurable in a headless harness** | recorded as unreachable, not as coverage |
+
+**Idle cost of the poll**, measured: **0 DOM mutations** across three seconds idle with focus outside
+the field, no residue after two navigations, no page errors, and a busy loop of ~3.2M iterations
+completing with the main thread responsive. It reads state; it does not accumulate it.
+
+**The falsifiable number, quoted instead of any derived count:** **18 of 18 internal date-field stops
+painted, 4 of which do not match `:focus`.** If a later change makes the 4 something else, the
+mechanism has moved and this row is re-opened on that basis.
 
 Judgment rows: S2-008, S2-042 (contrast half), S2-043, S2-044, S2-045, S2-046.

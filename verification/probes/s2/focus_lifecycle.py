@@ -103,6 +103,9 @@ def ratio(a, b):
     return (max(la, lb) + 0.05) / (min(la, lb) + 0.05)
 
 
+IN_WRAPPER = "()=>{const a=document.activeElement;return !!(a && a.closest && a.closest('.kb-focus'));}"
+
+
 def settled(page, timeout=1.6):
     """Wait for the indicator to reach its resting state, and say how long it took.
 
@@ -234,20 +237,41 @@ def main():
                  "focus moved to another control: kb-focus class present = %s, cleared in %dms" % (after_out, ms_out)))
 
             # exit 2: window blur
+            # S2-042's settled semantics (Adversary, 0e331ee): the indicator reports WHERE THE
+            # KEYBOARD IS. A dispatched `blur` with the keyboard still inside the field is not the
+            # keyboard leaving, so the indicator must stay. These two rows asserted the opposite and
+            # reported four false reds against `9d9dbfc` — the stale-probe fault, in the one place
+            # where the product had deliberately moved. Both halves are asserted instead.
             focus_field()
             page.evaluate("()=>window.dispatchEvent(new Event('blur'))")
+            page.wait_for_timeout(250)
+            inside_now, held_now = page.evaluate(IN_WRAPPER), page.evaluate("()=>!!document.querySelector('.kb-focus')")
+            (good if held_now == inside_now else bad).append(
+                ("FL-exit-blur-" + tag, held_now == inside_now,
+                 "dispatched window blur with the keyboard inside the field: inside=%s indicator=%s "
+                 "— containment, not window state" % (inside_now, held_now)))
+            page.focus('[data-testid="search-button"]')
             after_blur, ms_blur = settled(page)
             (good if not after_blur else bad).append(
-                ("FL-exit-blur-" + tag, not after_blur,
-                 "window blur: kb-focus class present = %s, cleared in %dms" % (after_blur, ms_blur)))
+                ("FL-exit-blur-gone-" + tag, not after_blur,
+                 "once the focus genuinely left: kb-focus present = %s, cleared in %dms"
+                 % (after_blur, ms_blur)))
 
             # exit 3: pagehide
             focus_field()
             page.evaluate("()=>window.dispatchEvent(new Event('pagehide'))")
+            page.wait_for_timeout(250)
+            inside_now, held_now = page.evaluate(IN_WRAPPER), page.evaluate("()=>!!document.querySelector('.kb-focus')")
+            (good if held_now == inside_now else bad).append(
+                ("FL-exit-pagehide-" + tag, held_now == inside_now,
+                 "dispatched pagehide with the keyboard inside the field: inside=%s indicator=%s "
+                 "— containment, not window state" % (inside_now, held_now)))
+            page.focus('[data-testid="search-button"]')
             after_hide, ms_hide = settled(page)
             (good if not after_hide else bad).append(
-                ("FL-exit-pagehide-" + tag, not after_hide,
-                 "pagehide: kb-focus class present = %s, cleared in %dms" % (after_hide, ms_hide)))
+                ("FL-exit-pagehide-gone-" + tag, not after_hide,
+                 "once the focus genuinely left: kb-focus present = %s, cleared in %dms"
+                 % (after_hide, ms_hide)))
 
             # and the ring must still be there afterwards — each exit re-arms it
             rearmed = focus_field()
