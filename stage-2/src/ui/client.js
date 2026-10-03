@@ -178,7 +178,6 @@
     var noSlots = pick('no-slots');
     var searchStatus = pick('search-status');
     var authErrorBox = pick('auth-error');
-    var searchButton = pick('search-button');
 
     var bookingSection = pick('booking-section');
     var bookingForm = document.querySelector('[data-testid="booking-form"]');
@@ -421,7 +420,6 @@
       event.preventDefault();
       hide(authErrorBox);
       var mine = issued += 1;
-      searchButton.disabled = true;
       hide(searchStatus);
       if (grid) grid.hidden = false;
       show(gridLoading, 'Looking for tables' + String.fromCharCode(8230));
@@ -434,7 +432,6 @@
           + '&party_size=' + encodeURIComponent(partyInput.value)).then(function (result) {
           if (mine <= applied) return;
           applied = mine;
-          searchButton.disabled = false;
           if (result.status !== 200) {
             grid.hidden = true;
             hide(gridLoading);
@@ -446,7 +443,6 @@
       }).catch(function () {
         if (mine <= applied) return;
         applied = mine;
-        searchButton.disabled = false;
         grid.hidden = true;
         hide(gridLoading);
         show(searchStatus, 'We could not reach the restaurant service. Please try again.');
