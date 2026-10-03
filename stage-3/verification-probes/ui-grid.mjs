@@ -3,7 +3,7 @@
 //   node verification/probes/s2/ui-grid.mjs [baseUrl]
 import { chromium } from 'playwright-core';
 import { BASE, SHOTS, ok, section, report, SHORT_WINDOW, baseFixture, baseFixtureWithHours,
-  bookedDay, seed } from './ui-lib.mjs';
+  bookedDay, oneTableTaken, seed } from './ui-lib.mjs';
 
 // Presence, not visibility: a hidden container satisfies a visibility check and fails a presence
 // check, and only a driven check finds the difference.
@@ -146,6 +146,70 @@ async function main() {
     ok('no booking form exists on a day with nothing to book',
       await present(page, '[data-testid="booking-form"]') === false);
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/grid-shortwindow-${width}.png`, fullPage: true });
+    await page.close();
+  }
+
+  // Every cell, checked against the service's own answer for that slot and party. A stage-3 policy
+  // can change what is free, and this is where that shows: a cell that disagrees with the service
+  // about the same slot is a diner shown a table the kitchen has given away.
+  await seed({ ...baseFixture(), reservations: oneTableTaken('t_1') });
+  for (const party of [2, 6]) {
+    section(`every cell agrees with the service at party ${party}`);
+    const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+    page.setDefaultTimeout(6000);
+    await page.goto(BASE + '/', { waitUntil: 'networkidle' });
+    await page.fill('#date-input', '2026-12-01');
+    await page.fill('#party-size-input', String(party));
+    await page.click('[data-testid="search-button"]');
+    await page.waitForTimeout(700);
+
+    const answer = await page.evaluate(async (n) => {
+      const r = await fetch(`/availability?restaurant_id=r_anker&date=2026-12-01&party_size=${n}`);
+      const body = await r.json();
+      const out = {};
+      for (const slot of body.slots || []) {
+        out[slot.starts_at_local.slice(11, 16)] = {
+          tables: slot.available_table_ids,
+          pairs: (slot.available_options || []).map((o) => o.table_ids.join('+')),
+        };
+      }
+      return out;
+    }, party);
+    ok('the service answered with a slot list to compare against', Object.keys(answer).length > 0,
+      { slots: Object.keys(answer).length });
+
+    const painted = await page.evaluate(() => [...document.querySelectorAll('[data-available]')]
+      .map((c) => {
+        const id = c.getAttribute('data-testid') || '';
+        const time = id.slice(id.lastIndexOf('-') + 1);
+        const ids = id.slice('slot-'.length, id.lastIndexOf('-')).split('+');
+        return { ids, time, available: c.getAttribute('data-available') === 'true' };
+      }));
+
+    const disagreements = [];
+    let freeSeen = 0;
+    for (const cell of painted) {
+      const slot = answer[cell.time];
+      if (!slot) { disagreements.push({ cell: cell.ids, time: cell.time, why: 'slot not in the answer' }); continue; }
+      const said = cell.ids.length > 1
+        ? slot.pairs.indexOf(cell.ids.join('+')) !== -1
+        : slot.tables.indexOf(cell.ids[0]) !== -1;
+      if (said !== cell.available) {
+        disagreements.push({ cell: cell.ids, time: cell.time, painted: cell.available, service: said });
+      }
+      if (cell.available) freeSeen += 1;
+    }
+    ok(`every cell matches the service's answer at party ${party}`, disagreements.length === 0,
+      disagreements.slice(0, 4));
+    if (party === 2) {
+      ok('some cells are free, so the comparison is not vacuous', freeSeen > 0, { freeSeen });
+    } else {
+      // Only one table seats six, so every free cell must be that table and nothing else: the
+      // comparison at this party is about not offering a table the kitchen cannot seat.
+      const wrongSeat = painted.filter((c) => c.available && c.ids.join('+') !== 't_4').map((c) => c.ids);
+      ok('at a party of six only the table that seats six is offered', wrongSeat.length === 0,
+        { wrongSeat });
+    }
     await page.close();
   }
 
