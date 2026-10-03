@@ -169,46 +169,102 @@ function tableSetChanged(before, after) {
 // The failure looked like a planning dead end and was a type error two functions apart.
 function planFor(state, restaurant, closure, considered, byReference) {
   const consideredReferences = considered.map((reservation) => reservation.reference);
-  const chosen = new Map();
-  let movedCount = 0;
-  let unusedSeats = 0;
-  let ranks = [];
+  // Per-booking candidate options, in rank order. A booking that can keep the exact table set it holds is
+  // the only one that is not "moved", and objective 1 counts those, so the flag is computed here rather
+  // than inferred later from a diff.
+  const optionsFor = considered.map((reservation) => ({
+    reservation,
+    options: rankedOptions(state, restaurant, reservation, closure)
+      .map((option) => {
+        const candidate = { ...reservation, table_ids: option.table_ids };
+        return {
+          option,
+          usable: !fixedOverlaps(state, restaurant, candidate, consideredReferences)
+            && freeDuring(state, restaurant, option.table_ids,
+              reservation.starts_at_ms, reservation.ends_at_ms, reservation.reference),
+        };
+      })
+      .filter((entry) => entry.usable)
+      .map((entry) => ({
+        table_ids: entry.option.table_ids,
+        capacity: entry.option.capacity,
+        rank: entry.option.rank,
+        moved: tableSetChanged(reservation.table_ids || [], entry.option.table_ids) ? 1 : 0,
+      })),
+  }));
 
-  for (const reservation of considered) {
-    const options = rankedOptions(state, restaurant, reservation, closure)
-      .filter((option) => !fixedOverlaps(state, restaurant, { ...reservation, table_ids: option.table_ids }, consideredReferences))
-      .filter((option) => freeDuring(
-        state,
-        restaurant,
-        option.table_ids,
-        reservation.starts_at_ms,
-        reservation.ends_at_ms,
-        reservation.reference,
-      ))
-      // A table another considered booking has just been given is no longer free, so each booking is
-      // placed against the assignments made so far and not merely against the fixed bookings.
-      .filter((option) => !conflictsWithChosen(chosen, option.table_ids, reservation, byReference));
-
-    if (options.length === 0) return null;
-    // An unchanged assignment is preferred over any change, so a booking that can stay exactly where it
-    // is takes rank 0 of the objective and is not counted as moved.
-    const staying = options.find((option) => !tableSetChanged(reservation.table_ids || [], option.table_ids));
-    const pick = staying || options[0];
-    if (!staying) movedCount += 1;
-    unusedSeats += pick.capacity - reservation.party_size;
-    ranks.push(pick.rank);
-    chosen.set(reservation.reference, pick.table_ids);
+  for (const entry of optionsFor) {
+    if (entry.options.length === 0) return null;
   }
 
-  return { chosen, movedCount, unusedSeats, ranks };
+  // The three objectives are LEXICOGRAPHIC, so they cannot be satisfied by picking each booking's favourite
+  // option in turn. A previous version did exactly that -- it took the lowest-ranked option per booking,
+  // which minimises objectives 1 and 3 and ignores objective 2 entirely, so a party of 2 was moved onto a
+  // six-seat table while a two-seat table stood free. Objective order is a property of the whole plan, so
+  // the plan is the unit that is searched.
+  //
+  // Depth-first with branch-and-bound. Both leading counters are monotonically non-negative, so a partial
+  // (moved, unused) already worse than the best complete plan cannot be improved by its descendants and is
+  // cut. The number of considered bookings is capped at six by the specification, which is what makes an
+  // exhaustive search of the product affordable at all.
+  let best = null;
+  const chosen = [];
+  const walk = (at, moved, unused, ranks) => {
+    if (best !== null) {
+      if (moved > best.moved) return;
+      if (moved === best.moved && unused > best.unused) return;
+    }
+    if (at === optionsFor.length) {
+      const candidate = {
+        chosen: chosen.slice(),
+        moved,
+        unused,
+        ranks: ranks.slice(),
+      };
+      if (best === null || betterThan(candidate, best)) best = candidate;
+      return;
+    }
+    for (const option of optionsFor[at].options) {
+      if (conflictsWithChosen(chosen, option.table_ids, optionsFor[at].reservation, byReference)) continue;
+      chosen.push({ reference: optionsFor[at].reservation.reference, table_ids: option.table_ids });
+      walk(at + 1, moved + option.moved, unused + (option.capacity - optionsFor[at].reservation.party_size),
+        ranks.concat([option.rank]));
+      chosen.pop();
+    }
+  };
+  walk(0, 0, 0, []);
+
+  if (best === null) return null;
+  const assigned = new Map();
+  for (const step of best.chosen) assigned.set(step.reference, step.table_ids);
+  return {
+    chosen: assigned,
+    movedCount: best.moved,
+    unusedSeats: best.unused,
+    ranks: best.ranks,
+  };
 }
 
+// Strictly the specification's order: fewest changed table sets, then fewest unused seats, then the vector
+// of option ranks compared element by element in ascending reference order. A plan that ties on all three
+// is a plan we did not need to distinguish, and returning false for it keeps the search from thrashing.
+function betterThan(candidate, best) {
+  if (candidate.moved !== best.moved) return candidate.moved < best.moved;
+  if (candidate.unused !== best.unused) return candidate.unused < best.unused;
+  for (let index = 0; index < candidate.ranks.length; index += 1) {
+    if (candidate.ranks[index] !== best.ranks[index]) return candidate.ranks[index] < best.ranks[index];
+  }
+  return false;
+}
+
+// `chosen` is a list of {reference, table_ids} assignments made so far. A candidate option conflicts when a
+// booking already placed on a shared table overlaps it in time.
 function conflictsWithChosen(chosen, tableIds, reservation, byReference) {
-  for (const [reference, assigned] of chosen) {
-    if (reference === reservation.reference) continue;
-    const other = byReference[reference];
+  for (const step of chosen) {
+    if (step.reference === reservation.reference) continue;
+    const other = byReference[step.reference];
     if (!other) continue;
-    const shared = assigned.some((tableId) => tableIds.indexOf(tableId) !== -1);
+    const shared = step.table_ids.some((tableId) => tableIds.indexOf(tableId) !== -1);
     if (shared && other.starts_at_ms < reservation.ends_at_ms && reservation.starts_at_ms < other.ends_at_ms) return true;
   }
   return false;
