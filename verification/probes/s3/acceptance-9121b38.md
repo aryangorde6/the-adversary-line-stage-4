@@ -1,4 +1,16 @@
-# Stage-3 acceptance at `9121b38` — PASS
+# Stage-3 acceptance — `9121b38`, re-confirmed at `77c69f8` — PASS
+
+**The accepted hash is `77c69f8`.** `git diff 9121b38 77c69f8 -- stage-3/src` is **empty**: the
+commit is row-only, the Builder's own words, so I graded it directly rather than letting the verdict
+rest on its parent. At `77c69f8`, from `git archive`: `/health` ok, `/` 200 in 9917 bytes;
+supplied stage 1 **120/120**, stage 2 **25/25**, stage 3 **7/7**, highest contiguous **3**;
+`api_core` **48/48**; `terms_history_series` **34/34** — including `S3-105b-missing-reservation`, the
+case the occurrence reference's emission exists for, which the Builder's commit makes permanent in his
+own suite; and the stage-2 regression surface green with **0 residual** (`closed_day` 26/26,
+`out_of_order_lost` 14/14, `focus_lifecycle` 48/48, `focus_reentry` 17/17, `states_set` 11/11).
+Nothing about the verdict moved, and stage 4 remains **unmeasured**.
+
+## The original acceptance at `9121b38`
 
 Verdict: **PASS.** Every ledger row I hold has been checked at this hash and holds. The product change
 is seven lines in `stage-3/src/series.js`; everything else in the range is verification.

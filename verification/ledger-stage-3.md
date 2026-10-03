@@ -113,6 +113,16 @@ method this project arrived at; none of them was anticipated at the start.
     commit whose message was about a different defect, so nobody announced an omission. **A comment is a
     claim about code; a row is a check.** Where a shape is stated, assert the shape's *keys* exactly —
     reading a value out of a nested object passes whether or not the outer object carries it.
+17. **Assert the reason a design exists, not only its behaviour.** If a field is emitted rather than
+    looked up, the row must exercise the case the emission was for, or a lookup of the nested object
+    would pass every assertion in the file. Stage 3's own example: the occurrence reference is taken
+    from the series record so it still names an occurrence whose reservation is absent — and
+    **every other row in that file had a reservation behind every occurrence**, so a future edit could
+    have replaced the emission with a lookup and turned the whole suite green. Reach the case the way a
+    caller can: export, delete the generated reservations while keeping the series record that names
+    them, import, read the series. This is clause 16's second half — a comment documenting a shape the
+    code does not emit, and a design whose justification nothing tests, are the same gap at different
+    altitudes.
 
 **Standing convention: every row states both halves of its assertion.** Where a requirement says
 something must appear, the row also says what must *not* appear, and vice versa.
