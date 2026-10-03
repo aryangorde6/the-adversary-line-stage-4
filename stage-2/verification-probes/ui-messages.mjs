@@ -95,11 +95,50 @@ async function main() {
     await page.locator('[data-testid="reservation-cancel-button"]').count() === 0);
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/lookup-cancelled.png`, fullPage: true });
 
+  section('a booking that fails');
+  await signIn(page);
+  await page.goto(BASE + '/', { waitUntil: 'networkidle' });
+  await page.fill('#date-input', '2026-12-01');
+  await page.fill('#party-size-input', '2');
+  await page.click('[data-testid="search-button"]');
+  await page.waitForTimeout(700);
+  await page.locator('[data-available="true"]').first().click();
+  await page.waitForTimeout(300);
+  await page.fill('#booking-party-size', '2');
+  await page.click('[data-testid="booking-submit"]');
+  await page.waitForTimeout(800);
+  ok('a booking that works shows a confirmation',
+    await page.locator('[data-testid="confirmation"]').count() === 1);
+
+  // Now make the next attempt fail at the service, and check that the earlier confirmation does not
+  // stay on the page beside the error: it belongs to an attempt that is not this one.
+  await page.route('**/reservations', async (route) => {
+    if (route.request().method() !== 'POST') return route.continue();
+    route.fulfill({
+      status: 409,
+      contentType: 'application/json',
+      body: JSON.stringify({ error: { code: 'table_unavailable',
+        message: 'That table was taken a moment ago. Pick another time, or another table.' } }),
+    });
+  });
+  await page.locator('[data-available="true"]').nth(1).click();
+  await page.waitForTimeout(300);
+  await page.click('[data-testid="booking-submit"]');
+  await page.waitForTimeout(800);
+  ok('booking-error present after a failed attempt',
+    await page.locator('[data-testid="booking-error"]').count() === 1);
+  ok('booking-error says what was wrong and what to do',
+    /taken|Pick another/i.test(await page.locator('[data-testid="booking-error"]').textContent() || ''),
+    await page.locator('[data-testid="booking-error"]').textContent());
+  ok('no confirmation for that attempt', await page.locator('[data-testid="confirmation"]').count() === 0);
+  await page.unroute('**/reservations');
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/booking-failed.png`, fullPage: true });
+
   section('message integrity');
   // Each inserted message appears exactly once, and its host exists at the moment of insertion:
   // a host that cannot be found would drop the message silently.
   const integrity = await page.evaluate(() => {
-    const wanted = ['search-status', 'grid-loading', 'no-slots', 'grid-empty'];
+    const wanted = ['search-status', 'grid-loading', 'no-slots', 'grid-empty', 'booking-error'];
     const out = {};
     for (const id of wanted) {
       out[id] = document.querySelectorAll(`[data-testid="${id}"]`).length;

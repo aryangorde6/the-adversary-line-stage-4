@@ -64,17 +64,7 @@ with a tick are free for your whole visit.</p>
     </div>
   </form>
 </section>
-
-<section aria-labelledby="confirmed-heading" data-testid="confirmation" hidden>
-  <h2 id="confirmed-heading">Booked</h2>
-  <div class="card">
-    <p>Your reference is</p>
-    <p class="ref" data-testid="confirmation-reference"></p>
-    <p data-testid="confirmation-tables"></p>
-    <p data-testid="confirmation-details"></p>
-    <p class="msg good" data-testid="confirmation-note">Keep this reference. You can look the booking up any time.</p>
-  </div>
-</section>`;
+`;
 
   return layout({
     title: 'Find a table',

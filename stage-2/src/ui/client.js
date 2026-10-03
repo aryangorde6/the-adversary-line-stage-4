@@ -217,10 +217,6 @@
     var bookingSummary = pick('booking-summary');
     var bookingParty = pick('booking-party-size');
     var bookingSubmit = pick('booking-submit');
-    var confirmation = pick('confirmation');
-    var confirmationRef = pick('confirmation-reference');
-    var confirmationTables = pick('confirmation-tables');
-    var confirmationDetails = pick('confirmation-details');
 
     var issued = 0;
     var applied = 0;
@@ -231,8 +227,51 @@
     function resetBooking() {
       selection = null;
       if (bookingSection) bookingSection.hidden = true;
+      removeConfirmation();
       clearMessage('booking-form', 'booking-error');
       clearMessage('booking-form', 'booking-uncertain');
+    }
+
+    // A confirmation that belongs to an attempt which did not go through is not a confirmation: it
+    // is built when a booking succeeds and torn out when an attempt fails or is abandoned, so the
+    // two can never be on the page together.
+    function removeConfirmation() {
+      var existing = pick('confirmation');
+      if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
+    }
+
+    function buildConfirmation() {
+      removeConfirmation();
+      var section = document.createElement('section');
+      section.setAttribute('aria-labelledby', 'confirmed-heading');
+      section.setAttribute('data-testid', 'confirmation');
+      var heading = document.createElement('h2');
+      heading.setAttribute('id', 'confirmed-heading');
+      heading.textContent = 'Booked';
+      var card = document.createElement('div');
+      card.className = 'card';
+      var lead = document.createElement('p');
+      lead.textContent = 'Your reference is';
+      var reference = document.createElement('p');
+      reference.className = 'ref';
+      reference.setAttribute('data-testid', 'confirmation-reference');
+      var tables = document.createElement('p');
+      tables.setAttribute('data-testid', 'confirmation-tables');
+      var details = document.createElement('p');
+      details.setAttribute('data-testid', 'confirmation-details');
+      var note = document.createElement('p');
+      note.className = 'msg good';
+      note.setAttribute('data-testid', 'confirmation-note');
+      note.textContent = 'Keep this reference. You can look the booking up any time.';
+      [lead, reference, tables, details, note].forEach(function (node) { card.appendChild(node); });
+      section.appendChild(heading);
+      section.appendChild(card);
+      searchForm.parentNode.appendChild(section);
+      return {
+        reference: reference,
+        tables: tables,
+        details: details,
+      };
     }
 
     function signatureOf(choice) {
@@ -327,6 +366,11 @@
                 restaurantName: restaurant.name,
               });
             });
+          } else {
+            // A cell that is not free is inert: it cannot be activated by a click, a tap or a key,
+            // so it can never open a booking form for a table the diner cannot have.
+            button.disabled = true;
+            button.setAttribute('aria-disabled', 'true');
           }
           td.appendChild(button);
           tr.appendChild(td);
@@ -338,6 +382,15 @@
         + ' for ' + partySize + ' ' + (partySize === 1 ? 'person' : 'people') + '.';
     }
 
+    // A day with no slots is a day the restaurant is not serving, which is a different thing from a
+    // day whose tables are all taken. Saying "no tables are free" when the doors are shut would be
+    // a claim about the restaurant that is not true.
+    function closedDayText(restaurant) {
+      var name = restaurant && restaurant.name ? restaurant.name : 'The restaurant';
+      return name + ' is closed on ' + longDate(dateInput.value) + ', so there is nothing to book that day. '
+        + 'Try another date, or a smaller party on a day it is open.';
+    }
+
     function apply(restaurant, result) {
       var slots = (result.body && result.body.slots) || [];
       currentRestaurant = restaurant;
@@ -347,8 +400,7 @@
         if (gridEmpty) gridEmpty.hidden = true;
         clearMessage('availability-panel', 'grid-loading');
         if (gridTable) gridTable.hidden = true;
-        showMessage('availability-panel', 'no-slots', 'empty',
-          'No tables are free on this date. Try another date, or a smaller party, and we will find you something.');
+        showMessage('availability-panel', 'no-slots', 'empty', closedDayText(restaurant));
         resetBooking();
         return;
       }
@@ -376,7 +428,7 @@
     function openBooking(choice) {
       clearMessage('booking-form', 'booking-error');
       clearMessage('booking-form', 'booking-uncertain');
-      hide(confirmation);
+      removeConfirmation();
       selection = choice;
       selection.signature = signatureOf(choice);
       selection.key = newKey();
@@ -426,12 +478,14 @@
             renderConfirmation(attempt, result.body);
             return;
           }
+          removeConfirmation();
           showMessage('booking-form', 'booking-error', 'error', messageOf(result, 'We could not complete that booking.'));
           if (codeOf(result) === 'table_unavailable' || result.status === 409) {
             refreshAvailability();
           }
         }).catch(function () {
           if (bookingSubmit) bookingSubmit.disabled = false;
+          removeConfirmation();
           showMessage('booking-form', 'booking-uncertain', 'uncertain',
             'We have not heard back about this booking, so we cannot say whether it went through. '
             + 'Your details are still here. Press book again and we will check safely, without booking twice.');
@@ -445,11 +499,11 @@
       var when = longDate(attempt.startsAtLocal) + ' at ' + labelTime(attempt.startsAtLocal);
       clearMessage('booking-form', 'booking-error');
       clearMessage('booking-form', 'booking-uncertain');
-      confirmationRef.textContent = reference;
-      confirmationTables.textContent = 'Table' + (labels.length > 1 ? 's' : '') + ' ' + joinList(labels);
-      confirmationDetails.textContent = attempt.restaurantName + ' · ' + joinList(labels) + ' · ' + when
+      var parts = buildConfirmation();
+      parts.reference.textContent = reference;
+      parts.tables.textContent = 'Table' + (labels.length > 1 ? 's' : '') + ' ' + joinList(labels);
+      parts.details.textContent = attempt.restaurantName + ' · ' + joinList(labels) + ' · ' + when
         + ' · ' + attempt.partySize + (attempt.partySize === 1 ? ' person' : ' people');
-      confirmation.hidden = false;
     }
 
     searchForm.addEventListener('submit', function (event) {

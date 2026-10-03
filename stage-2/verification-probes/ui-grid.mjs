@@ -66,6 +66,22 @@ async function main() {
       await vis(page, '[data-testid="no-slots"]') === 'absent');
     ok('no sideways scrolling', await page.evaluate(() => document.documentElement.scrollWidth)
       <= width, await page.evaluate(() => document.documentElement.scrollWidth));
+
+    section(`an unavailable cell is inert at ${width}`);
+    const cell = await page.evaluate(() => {
+      const el = document.querySelector('[data-testid="slot-t_1-17:00"]');
+      if (!el) return null;
+      el.click();
+      return { available: el.getAttribute('data-available'), disabled: el.disabled };
+    });
+    ok('a cell the service says is taken is disabled', cell && cell.available === 'false'
+      && cell.disabled === true, cell);
+    await page.waitForTimeout(300);
+    ok('clicking it opens no booking form',
+      await page.locator('[data-testid="booking-form"]').count() === 0
+      || !(await page.locator('[data-testid="booking-section"]').isVisible()));
+    ok('clicking it leaves the grid alone',
+      await vis(page, '[data-testid="availability-grid"]') === 'visible');
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/grid-booked-${width}.png`, fullPage: true });
 
     section(`day with no slots at ${width}`);
@@ -76,6 +92,12 @@ async function main() {
       await vis(page, '[data-testid="availability-grid"]') !== 'visible');
     ok('no-slots explains the next step',
       /another date|smaller party/i.test(await text(page, '[data-testid="no-slots"]') || ''),
+      await text(page, '[data-testid="no-slots"]'));
+    ok('no-slots says the restaurant is closed, not that no tables are free',
+      /closed/i.test(await text(page, '[data-testid="no-slots"]') || ''),
+      await text(page, '[data-testid="no-slots"]'));
+    ok('the closed day is named as a person reads it',
+      /Sunday/.test(await text(page, '[data-testid="no-slots"]') || ''),
       await text(page, '[data-testid="no-slots"]'));
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/grid-noslots-${width}.png`, fullPage: true });
 
