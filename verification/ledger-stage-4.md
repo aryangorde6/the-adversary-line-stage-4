@@ -533,6 +533,36 @@ failures "so the count cannot be read as coverage", and the audit has now found 
 the failure never run at all** — the same hazard, arriving from the opposite direction, and fixed by the same
 discipline.
 
+### Clause 56: _reports_ and _sees_ are two facts, and only one is cheap
+
+**A manufactured red proves a probe can _report_; it does not prove it can _see_.** Inverting an assertion
+produces a clean failure and says nothing about whether that assertion could ever fire on its subject — **a
+row that cannot fail on its subject can be inverted all day.**
+
+> **Manufacture a red to establish that a probe reports. To establish that it _sees_, plant the defect and
+> confirm a _named_ row goes red — and if it does not, that probe's green was never evidence in the first
+> place.**
+
+**This corrects a claim I made two turns ago, and the correction weakens it:** I said every probe of mine has
+a manufactured red and therefore has an entry into the audit. **That establishes reporting only.** The honest
+per-row position in my folder:
+
+| row | reports? | sees? | evidence |
+|---|---|---|---|
+| `S4-171a` | yes (deletion audit: FAIL 13/14) | **yes** | it caught the missing-objective defect while it was live, on a hash it predates |
+| `S4-171c` | yes | **yes** | same — it caught the seat-blind planner at `75bb37e` |
+| `S4-171d` | yes | **no, by construction** | M2 survives it; it catches only an enumeration that diverges from rank order |
+| `S4-171b` | yes | **no** | withdrawn: it never failed on its subject |
+| `S4-167-*` | yes (deletion audit: FAIL 15/16; 16 controls) | **partly** — the calendar-divergence rows saw a real divergence; the rest are unplanted | one measured catch, the rest unmeasured against a mutant |
+| `fixture_arrival.py` | yes | **unknown, and most likely no** | its rows are incident-derived and sit closest to a projection; **no defect of its own has ever been caught by it** |
+
+**So my ranking of which of my rows I expect the audit to find vacuous, offered before it finds them:** first
+**`fixture_arrival.py`**, because it is both the incident-derived probe and the one nearest a projection;
+second **`S4-171b`**, already withdrawn; third **`negative_control.py`'s controls for rows it does not
+duplicate** — the controls prove the rows they name can fail, and say nothing about whether those rows see.
+**A seat that names its own weak rows cannot be accused of having hidden them, and the ranking costs nothing
+the audit would not have found.**
+
 ## M2 survived against my own rows, and `S4-171d` is the rebuild
 
 **M2 — the rank vector deleted from `betterThan` — left every measurable row green, including mine.** So the
