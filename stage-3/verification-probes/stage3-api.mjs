@@ -681,6 +681,23 @@ async function run() {
     assert.equal(occurrences.length, 4, 'occurrences length equals count');
     assert.deepEqual(occurrences.map((o) => o.index), [0, 1, 2, 3], 'index is 0..count-1 in order');
     assert.equal(occurrences[0].reservation.reference, anchor.body.reference, 'occurrence zero is the anchor');
+    // S3-105/S3-111: the shape, not just the value. An occurrence names its reference beside index and
+    // exception, so a probe reading the level the specification shows must find it there. Reading the
+    // nested reservation instead would pass while the field a client reads is absent.
+    for (const occurrence of occurrences) {
+      assert.deepEqual(
+        Object.keys(occurrence).sort(),
+        ['exception', 'index', 'reference', 'reservation'],
+        'an occurrence carries exactly index, reference, exception and reservation',
+      );
+      assert.equal(typeof occurrence.reference, 'string', 'the occurrence-level reference is a string');
+      assert.equal(
+        occurrence.reference,
+        occurrence.reservation.reference,
+        'the occurrence-level reference is the same value as the nested reservation\'s',
+      );
+    }
+    assert.equal(new Set(occurrences.map((o) => o.reference)).size, 4, 'the occurrence references are distinct');
     assert.equal(new Set(occurrences.map((o) => o.reservation.reference)).size, 4, 'references are distinct');
     // The dates are recomputed here from the anchor's local date, not read back from the service.
     const expected = [0, 14, 28, 42].map((days) => new Date(Date.UTC(2026, 11, 24) + days * 86400000).toISOString().slice(0, 10));

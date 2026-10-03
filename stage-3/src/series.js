@@ -174,11 +174,18 @@ function requireOwnSeries(state, user, seriesId) {
 
 // The shape reports current reservation states, not adoption-time states: a cancelled occurrence is
 // still in the array with its current status (S3-113, S3-115).
+// The occurrence carries its own reference beside index and exception, and it is the same value as
+// the nested reservation's. It was stored on the record all along and simply was not copied into the
+// view, so a client reading the shape the specification shows found the information one level down
+// instead of where it was told to look — a value in the wrong place rather than a wrong value. The
+// reference is emitted from the record, not read back off the reservation, so it still names the
+// occurrence if the reservation is ever absent.
 function seriesView(state, seriesRecord) {
   const occurrences = seriesRecord.occurrences.map((entry) => {
     const reservation = store.findReservation(state, entry.reference);
     return {
       index: entry.index,
+      reference: entry.reference,
       exception: entry.exception,
       reservation: reservation ? store.reservationView(state, reservation) : null,
     };
