@@ -1,5 +1,11 @@
 # Tablekeeper stage-4 verification ledger
 
+> **The stages' specifications live OUTSIDE the result repository.** `tablekeeper/spec/stage-1.md` …
+> `stage-4.md`, `docs/participant-guide.md` and `kickoff-manifest.json` are **not tracked files**, so they
+> never surface when a seat reads a folder or lists a tree — **which is precisely why this ledger read as
+> though it were the specification.** It is not: **a ledger records what a seat must not miss; it does not
+> define the product.** Read the specification for the stage you are working in, then this ledger.
+
 **Written and committed before any stage-4 code exists**, in the order that produced four real defects
 in stage 2 and two in stage 3. Ordered by grading risk, not by route order. Every row here is
 **unmeasured** until it says otherwise, and no stage-4 product code has been read, because there is
@@ -460,6 +466,10 @@ because they have now failed to travel into a new file twice.**
     preferred option first** — which is a fact about ordering, not about data, and would change if the order
     did. **A clean bill of health on question 4 is weaker evidence than a found loss, and the difference is
     recorded rather than smoothed.**
+46. **An alias resolves two specifications; it cannot resolve a specification and a filename.** Where a
+    room-held name and a written requirement differ, **the requirement wins, and the name is evidence about
+    intent rather than a claim about behaviour.** And the wider form, which cost two stages to learn twice:
+    **reasoning from intent is not caution — it is a substitute for reading, and it looks exactly like rigour.**
 44. **A comment load-bearing across stages is an instruction nobody re-reads.** Clause 25's finding was that
     a comment becomes a design's apparent intent; **the symmetric case is a comment quietly _holding_ a
     design together** — a `seam-check` index keyed by table-set *and* time for one reason only, because a
@@ -693,12 +703,13 @@ settled by reading code.
   bookings; **larger** inputs may return 422 `planning_limit`" reads as 6 allowed and 7 refused. The word
   *may* also permits a build to refuse at 6. Recorded: whichever the build does, the boundary is
   asserted on both sides so the choice is visible rather than assumed.
-- **A7 — the write family's request shape, where two room-held sources disagree.** The stage-4 specification
-  prints `{table_id, from, to}` and `{local_time}`; the Foreman ruled `{closure: {date, table_ids[]}}` and
-  `{clock_time}` from the check's identity, which clause 27 puts in the room's hands. **Ruled: both spellings
-  are accepted as aliases of one field, and the conflict is recorded rather than resolved by preference** —
-  because a build that satisfies one room-held source is red against the other, and because **an alias is not
-  a second claim.** See the specification table above for what each alias may and may not express.
+- **A7 — VOIDED, and kept as a record because the correction is the finding.** The write family's request
+  shape looked like two room-held sources disagreeing — the specification printing `{table_id, from, to}` and
+  `local_time`, a ruling from a check's *name* saying `{closure: {date, table_ids[]}}` and `clock_time`. **A
+  check's identity is evidence about intent; it is not a specification.** So there was never a conflict of
+  sources, only a ruling from the wrong one. **The requirement wins, and the shape is the specification table
+  above, single-spelled.** My alias ruling is recorded here as the thing it was: **an alias resolves two
+  specifications, and cannot resolve a specification and a filename.**
 - **A3 — the meaning of `changed` on an assignment.** Most likely "this booking's table set differs from
   the one it held before the plan" — but "differs from the table set the closure would force" is not
   excluded by the text. Asserted via `moved_count` agreement (`S4-121`) and recorded if they disagree.
