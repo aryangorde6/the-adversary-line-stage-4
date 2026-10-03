@@ -139,14 +139,56 @@ console.log('\nINVARIANT 2: stored records carry no scratch keys');
     ok(`reservation ${reservation.reference} carries no planner scratch key`, stashed.length === 0, stashed);
   }
 
-  // And the export, which is what a stage 1-3 document round-trips through.
-  const exported = (await call('GET', '/_test/export')).body.state;
-  const RECORD = new Set([...VIEW, 'starts_at_ms', 'ends_at_ms']);
-  for (const reservation of exported.reservations) {
-    const extra = Object.keys(reservation).filter((key) => !RECORD.has(key));
-    ok(`exported reservation ${reservation.reference} carries no unexpected field`, extra.length === 0, extra);
-    const stashed = Object.keys(reservation).filter((key) => SCRATCH.includes(key));
-    ok(`exported reservation ${reservation.reference} carries no planner scratch key`, stashed.length === 0, stashed);
+  // THE RECORD, restated as its CONSEQUENCE rather than as a key.
+  //
+  // The audit's finding, and this rewrite exists because of it. The view rows above PASS while the
+  // planner's scratch key is planted: the view is a fixed projection and a key stashed on the stored
+  // record is not in it. Worse, the defect the invariant exists for is CIRCULAR, so serialisation fails
+  // before any key is readable -- a key-enumerating row cannot see it either, and asserting the status
+  // alone would be satisfied by a build carrying the exact defect.
+  //
+  // So the observable is not the key. It is that the service can still produce its own document WITH the
+  // records in it. That is a property of the record and of nothing else, and no projection can satisfy
+  // it, which is what clause 55's first half asks for.
+  const exportResponse = await call('GET', '/_test/export');
+  const seededReferences = list.map((reservation) => reservation.reference).sort();
+  ok('EXPORT-SERIALISES: /_test/export answers 200', exportResponse.status === 200,
+    { status: exportResponse.status });
+  const exportedState = exportResponse.status === 200 && exportResponse.body
+    ? exportResponse.body.state
+    : undefined;
+  ok('EXPORT-SERIALISES: the export carries a reservations array',
+    Boolean(exportedState) && Array.isArray(exportedState.reservations),
+    exportedState === undefined ? 'the export carried no state at all' : 'state present but no reservations array');
+  if (exportedState && Array.isArray(exportedState.reservations)) {
+    const exportedReferences = exportedState.reservations.map((reservation) => reservation.reference).sort();
+    // Compared by reference against what the service itself reports, never sampled: an export that
+    // succeeds while omitting records is the failure this row exists for.
+    ok('EXPORT-SERIALISES: it carries EVERY seeded reference',
+      JSON.stringify(exportedReferences) === JSON.stringify(seededReferences),
+      { seeded: seededReferences, exported: exportedReferences });
+    // Key-level, each record inside its OWN guard. A guard belongs where the failure actually occurs,
+    // which is never the level you first think of: guarding only the fetch left the throw one level in.
+    const RECORD = new Set([...VIEW, 'starts_at_ms', 'ends_at_ms']);
+    let inspected = 0;
+    for (const [index, reservation] of exportedState.reservations.entries()) {
+      let keys;
+      try {
+        keys = Object.keys(reservation);
+      } catch (cause) {
+        ok(`RECORD[${index}] could be inspected, and the rows after it still ran`, false,
+          { error: cause && cause.message });
+        continue;
+      }
+      inspected += 1;
+      const label = reservation && reservation.reference ? reservation.reference : `index ${index}`;
+      const stashed = keys.filter((key) => SCRATCH.includes(key));
+      ok(`RECORD ${label} carries no planner scratch key`, stashed.length === 0, stashed);
+      const extra = keys.filter((key) => !RECORD.has(key));
+      ok(`RECORD ${label} carries no unexpected field`, extra.length === 0, extra);
+    }
+    ok('the record-side rows ran rather than threw', inspected === exportedState.reservations.length,
+      { inspected, of: exportedState.reservations.length });
   }
 }
 
