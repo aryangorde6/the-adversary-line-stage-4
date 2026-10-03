@@ -125,11 +125,16 @@ function requireManager(state, restaurant, user) {
   }
 }
 
+// A wrong type is a validation failure here, not a malformed request. The distinction stage 1 draws
+// between "the body was not JSON of the right shape" and "a field holds the wrong kind of value"
+// does not survive here: a policy whose slot_minutes is the string "30" is a well-formed request
+// carrying an unacceptable value, and S3-033 and S3-035 both ask for 422 on exactly those inputs.
 function requireIntegerInRange(value, field, min, max) {
-  if (typeof value !== 'number') fail('malformed_request', { field });
-  // A boolean is not an integer here even though JavaScript says otherwise, because a policy that
-  // set slot_minutes to true would otherwise be accepted and silently mean 1.
-  if (typeof value === 'boolean' || !Number.isInteger(value)) fail('validation_failed', { field });
+  // A boolean is not an integer even though JavaScript says typeof true === 'boolean' and
+  // Number.isInteger(true) is false anyway; the explicit check documents that it was considered.
+  if (typeof value !== 'number' || typeof value === 'boolean' || !Number.isInteger(value)) {
+    fail('validation_failed', { field });
+  }
   if (value < min || value > max) fail('validation_failed', { field });
   return value;
 }
