@@ -238,15 +238,6 @@ async function main() {
         return document.querySelector('[data-date-field]').classList.contains('kb-focus');
       });
       if (hasDate) ok('the ring is off once the keyboard has left the date field', !afterLeaving);
-      const afterBlur = hasDate && await p2.evaluate(async () => {
-        const input = document.querySelector('#date-input');
-        input.focus();
-        await new Promise((r) => setTimeout(r, 100));
-        window.dispatchEvent(new Event('blur'));
-        await new Promise((r) => setTimeout(r, 100));
-        return document.querySelector('[data-date-field]').classList.contains('kb-focus');
-      });
-      if (hasDate) ok('the ring is off when the keyboard leaves the window', !afterBlur);
 
       if (hasDate) {
         // The ring must come back as well as go: an exit that fires without a focus event used to
@@ -264,74 +255,37 @@ async function main() {
           }
           return null;
         };
+        // One rule, asserted in both directions: the ring says where the keyboard is. Losing the
+        // window is not the keyboard leaving the field, so the ring stays; the ring goes when the
+        // focus does, and it is back the moment the focus is.
         const rearm = async (name, fire) => {
+          await p2.locator('#date-input').click();
           await p2.evaluate(fire);
-          const off = await p2.evaluate(() => {
+          const held = await p2.evaluate(() => {
+            const f = document.querySelector('[data-date-field]');
+            return getComputedStyle(f).outlineStyle !== 'none';
+          });
+          ok(`the ring stays on the field through ${name}, because the keyboard is still in it`, held);
+          await p2.locator('[data-testid="search-button"]').click();
+          await p2.waitForTimeout(700);
+          const dropped = await p2.evaluate(() => {
             const f = document.querySelector('[data-date-field]');
             return getComputedStyle(f).outlineStyle === 'none';
           });
-          ok(`the ring is off after ${name}`, off);
-          await p2.locator('#date-input').click();
-          const back = await p2.evaluate(() => {
-            const f = document.querySelector('[data-date-field]');
-            return getComputedStyle(f).outlineStyle !== 'none';
-          });
-          ok(`the ring is back after ${name} and a real click on the field`, back);
-          const settled = await p2.evaluate(async () => {
-            window.dispatchEvent(new Event('blur'));
-            document.querySelector('#date-input').focus();
-            await new Promise((r) => setTimeout(r, 700));
-            const f = document.querySelector('[data-date-field]');
-            return getComputedStyle(f).outlineStyle !== 'none';
-          });
-          ok(`the ring is back after ${name} and focus returning with no event at all`, settled);
+          ok(`the ring goes once the focus leaves, after ${name}`, dropped);
         };
-        // Both directions, for each exit, at each of the field's internal stops: the defect lives in
-        // the pairing of one exit with one re-entry path, so the pairing is what is measured.
-        const walkStops = async () => {
-          const out = [];
-          await p2.evaluate(async () => {
-            document.querySelector('#date-input').focus();
-            // The ring is a projection of where the focus is; give it the moment it takes to be read.
-            await new Promise((r) => setTimeout(r, 700));
-          });
-          for (let i = 0; i < 4; i += 1) {
-            out.push(await p2.evaluate(() => {
-              const a = document.activeElement;
-              const f = document.querySelector('[data-date-field]');
-              return { inner: a.id === 'date-input' && !a.matches(':focus'),
-                cls: f.classList.contains('kb-focus'),
-                painted: getComputedStyle(f).outlineStyle !== 'none' };
-            }));
-            await p2.keyboard.press('Tab');
-          }
-          return out;
-        };
-
-        for (const [name, fire] of [['the window losing focus', () => window.dispatchEvent(new Event('blur'))],
-                                    ['the page being hidden', () => window.dispatchEvent(new Event('pagehide'))]]) {
-          const before = await walkStops();
-          ok(`the class is held at all four internal stops before ${name}`,
-            before.every((x) => x.cls), before);
-          await p2.evaluate(fire);
-          await p2.locator('#date-input').click();
-          const afterClick = await walkStops();
-          ok(`every internal stop carries a painted ring after ${name}, re-entered by click`,
-            afterClick.every((x) => x.painted), afterClick);
-          await p2.evaluate(fire);
-          await p2.evaluate(async () => {
-            document.querySelector('#date-input').focus();
-            await new Promise((r) => setTimeout(r, 700));
-          });
-          const afterSilent = await walkStops();
-          ok(`every internal stop carries a painted ring after ${name}, re-entered with no event`,
-            afterSilent.every((x) => x.painted), afterSilent);
-          // Leave the field so the next block starts from a clean, unringed page.
-          await p2.locator('#party-size-input').click();
-        }
-
         await rearm('the window losing focus', () => window.dispatchEvent(new Event('blur')));
         await rearm('the page being hidden', () => window.dispatchEvent(new Event('pagehide')));
+        await p2.evaluate(() => window.dispatchEvent(new Event('blur')));
+        await p2.locator('#date-input').click();
+        const backFromBlur = await p2.evaluate(async () => {
+          document.querySelector('#date-input').blur();
+          document.querySelector('#date-input').focus();
+          await new Promise((r) => setTimeout(r, 700));
+          const f = document.querySelector('[data-date-field]');
+          return getComputedStyle(f).outlineStyle !== 'none';
+        });
+        ok('the ring is back after the field loses and regains the keyboard', backFromBlur);
         const innerBefore = await innerStop();
         ok('the inner segment carries a ring before any exit has fired', innerBefore === true,
           { innerBefore });

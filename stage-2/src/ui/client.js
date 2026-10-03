@@ -230,22 +230,21 @@
     // ring dead after the two exits which fire without any focus event -- the window losing focus,
     // and the page being hidden -- because coming back fires no focus event either, so nothing put
     // the class back. Recomputing means no path can leave it stale.
+    //
+    // One rule, not two: the ring says where the keyboard is, and nothing else. Losing the window
+    // is not the keyboard leaving the field, so nothing clears the ring when the window goes; the
+    // ring goes when the focus goes and comes back when the focus comes back.
     var dateField = document.querySelector('[data-date-field]');
     if (dateField) {
       var syncDateRing = function () {
         var inside = dateField.contains(document.activeElement);
         dateField.classList.toggle('kb-focus', inside);
       };
-      var clearDateRing = function () {
-        dateField.classList.remove('kb-focus');
-      };
       ['focusin', 'focus', 'pointerdown', 'keydown', 'touchstart'].forEach(function (name) {
         document.addEventListener(name, syncDateRing, true);
       });
       document.addEventListener('visibilitychange', syncDateRing);
       window.addEventListener('focus', syncDateRing);
-      window.addEventListener('blur', clearDateRing);
-      window.addEventListener('pagehide', clearDateRing);
       // One event-free path remains: focus can return to a field the document already considers
       // focused, and then no event of any kind is fired. A cheap recurring check is the only way to
       // notice that, so the ring is also recomputed on a timer: one class toggle, twice a second.
