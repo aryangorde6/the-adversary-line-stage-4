@@ -23,6 +23,7 @@ every response's shape is asserted before a count is taken from it.
 
 import json
 import os
+import time as _time
 import sys
 import threading
 import time
@@ -54,7 +55,10 @@ FIXTURE = {
 }
 
 RECORDED = []
-RULES = {"delay_paths": set(), "drop_paths": set(), "status": {}}
+DELAYED = []          # requests the proxy actually held
+RELEASED = []          # (time, path) in the order responses were written back
+RULES = {"delay_paths": set(), "delay_tokens": {}, "delay_seconds": 2.0,
+         "drop_paths": set(), "status": {}}
 
 
 class Proxy(BaseHTTPRequestHandler):
@@ -68,9 +72,16 @@ class Proxy(BaseHTTPRequestHandler):
 
     def do_GET(self):
         path = self.path.split("?")[0]
-        if path in RULES["delay_paths"]:
-            time.sleep(2.0)
+        # Delay by a PREDICATE over the query, never by an exact string. The first version keyed on
+        # `"/availability?restaurant_id=r_anker&date=2026-12-08&party_size=2"`; if the request that
+        # actually goes out differs in ANY parameter the key silently does not match, no delay
+        # happens, and the probe stops exercising the race at all — a green row measuring nothing.
+        for rule in RULES["delay_paths"]:
+            if rule in path and all(token in self.path for token in RULES["delay_tokens"].get(rule, [])):
+                DELAYED.append(self.path)
+                time.sleep(RULES["delay_seconds"])
         self._relay("GET", b"")
+        RELEASED.append((time.time(), self.path))
 
     def do_POST(self):
         length = int(self.headers.get("content-length") or 0)
@@ -157,7 +168,9 @@ def main():
         page.wait_for_function("() => document.cookie.indexOf('tk_token=') !== -1", timeout=10000)
 
         # --- 1. out-of-order searches ---------------------------------------
-        RULES["delay_paths"] = {"/availability?restaurant_id=r_anker&date=2026-12-08&party_size=2"}
+        DELAYED.clear(); RELEASED.clear()
+        RULES["delay_paths"] = {"/availability"}
+        RULES["delay_tokens"] = {"/availability": ["restaurant_id=r_anker", "date=2026-12-08"]}
         page.goto(P + "/", wait_until="domcontentloaded")
         page.select_option('[data-testid="restaurant-select"]', "r_anker")
         page.fill('[data-testid="date-input"]', "2026-12-08")
@@ -167,15 +180,39 @@ def main():
         page.fill('[data-testid="date-input"]', "2026-12-09")
         page.click('[data-testid="search-button"]')          # B: wins
         page.wait_for_timeout(4000)
+        # Clause 1, applied to my own harness: the fault must be asserted before the reaction is.
+        # Without this the row below passes on a run where no delay ever happened, which is exactly
+        # how the Saboteur's out-of-order mutant went unseen: the grid was observably wrong and my
+        # rows reported green because the race had never been staged.
+        (good if DELAYED else bad).append(
+            ("OL-staged", bool(DELAYED),
+             "the proxy held %d availability request(s) matching r_anker/2026-12-08: %s. Zero means the "
+             "race was never staged and every ordering row below is vacuous." % (
+                 len(DELAYED), json.dumps([d[:70] for d in DELAYED]))))
+        order = [p for _, p in RELEASED if "/availability" in p]
+        a_after_b = bool(order) and "r_anker" in order[-1] and "r_dock" in order[0]
+        (good if a_after_b else bad).append(
+            ("OL-order-staged", a_after_b,
+             "responses released in order %s — the first search's must land LAST for the row to mean "
+             "anything" % json.dumps([p[:60] for p in order])))
+
         grid_html = page.inner_html('[data-testid="availability-grid"]')
-        leftover_a = "2026-12-08" in grid_html or "Window" in grid_html
-        (good if not leftover_a else bad).append(
-            ("OL-order", not leftover_a,
-             "after the late A response the grid still names A: %s" % leftover_a))
+        # A cell testid carries the table ids and the TIME, never the date, and the label lives in
+        # aria-label rather than in text — so the original substring test ("2026-12-08" or "Window"
+        # in the grid HTML) could not distinguish right from wrong and was vacuous. Assert on which
+        # restaurant's tables are on screen instead.
+        prefixes = sorted({c.rsplit("-", 1)[0] for c in
+                           page.eval_on_selector_all('[data-testid^="slot-"]',
+                                                     "e=>e.map(x=>x.getAttribute('data-testid'))")})
+        a_prefixes = [p for p in prefixes if p.startswith("slot-t_")]
+        (good if not a_prefixes else bad).append(
+            ("OL-order", not a_prefixes,
+             "after the late A response the grid still shows A's tables: prefixes=%s%s" % (
+                 json.dumps(prefixes), "" if not a_prefixes else "; A's tables present -> "
+                 "the late response was applied")))
         # Absence of A is not evidence that B is shown: a grid emptied by the late response would
         # satisfy the row above. So assert B positively -- its cells, and B's own date.
         cells_b = page.query_selector_all('[data-testid^="slot-d_1-"]')
-        grid_text = page.inner_text('[data-testid="availability-grid"]')
         # A cell testid carries the table and the TIME, not the date, so the date string is not in
         # the grid's HTML by design. Assert what the page actually shows: B's cells, and the date
         # the person is looking at in the form.
