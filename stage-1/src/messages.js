@@ -117,6 +117,16 @@ function longDate(value) {
   return `${WEEKDAYS[back.getUTCDay()]} ${day} ${MONTHS[month - 1]} ${year}`;
 }
 
+function localMoment(value) {
+  const found = /^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})/.exec(word(value));
+  if (!found) return "";
+  const hours = Number(found[2]);
+  const minutes = Number(found[3]);
+  if (hours > 23 || minutes > 59) return "";
+  const when = longDate(found[1]);
+  return when ? `${when} at ${found[2]}:${found[3]}` : "";
+}
+
 const MESSAGES = {
   malformed_request: () =>
     "We could not read what you sent. Check the details you entered and try again.",
@@ -193,12 +203,10 @@ const MESSAGES = {
 
   table_unavailable: (ctx) => {
     const label = word(ctx.table);
-    const when = longDate(ctx.date);
-    const time = word(ctx.starts_at_local);
-    const whenText = [when, time].filter(Boolean).join(" at ");
+    const when = localMoment(ctx.starts_at_local) || longDate(ctx.date);
     return label
-      ? `Table ${label} is already booked${forWhen(whenText)}. Pick another table, or another time.`
-      : `That table is already booked${forWhen(whenText)}. Pick another table, or another time.`;
+      ? `Table ${label} is already booked${forWhen(when)}. Pick another table, or another time.`
+      : `That table is already booked${forWhen(when)}. Pick another table, or another time.`;
   },
 
   not_on_slot_grid: (ctx) => {

@@ -5,7 +5,7 @@ when the container stops.
 
 ## Run
 
-From the `stage-1/` directory:
+From the directory that holds this file — the one containing the `Dockerfile`:
 
 ```sh
 docker build -t tablekeeper .
@@ -13,6 +13,10 @@ docker run --rm -e PORT=8080 -p 8080:8080 tablekeeper
 ```
 
 Base URL: `http://localhost:8080`
+
+`PORT` is not required. If you leave `-e PORT` out the service listens on 8080. To use a
+different port, change it on both sides of the mapping, `-e PORT=9000 -p 9000:9000`, and
+the base URL becomes `http://localhost:9000`.
 
 Health check:
 
