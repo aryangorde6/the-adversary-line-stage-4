@@ -231,6 +231,19 @@
       dateField.addEventListener('focusout', function () {
         dateField.classList.remove('kb-focus');
       });
+      // The ring is added by an event and taken away by an event, and an event can fail to arrive:
+      // the keyboard can leave the window, or the field can be removed while it holds the ring. So
+      // the ring is also taken away whenever the keyboard is demonstrably somewhere else, rather
+      // than waiting for a notice that might not come.
+      document.addEventListener('focusin', function (event) {
+        if (!dateField.contains(event.target)) dateField.classList.remove('kb-focus');
+      }, true);
+      window.addEventListener('blur', function () {
+        dateField.classList.remove('kb-focus');
+      });
+      window.addEventListener('pagehide', function () {
+        dateField.classList.remove('kb-focus');
+      });
     }
 
     var issued = 0;

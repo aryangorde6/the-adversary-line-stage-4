@@ -222,6 +222,32 @@ async function main() {
       const faint = stops.filter((s) => s.ratio < 3);
       ok('every focus ring is visible against what is behind it', faint.length === 0,
         faint.map((s) => `${s.tag}#${s.id} ${s.ratio}`).slice(0, 4));
+      // The ring is added and taken away by events, so it is checked both ways: present while the
+      // keyboard is inside the field, gone once the keyboard has demonstrably left it.
+      const hasDate = await p2.locator('#date-input').count() === 1;
+      const insideRing = !hasDate || await p2.evaluate(async () => {
+        const input = document.querySelector('#date-input');
+        input.focus();
+        await new Promise((r) => setTimeout(r, 100));
+        return document.querySelector('[data-date-field]').classList.contains('kb-focus');
+      });
+      if (hasDate) ok('the ring is on while the keyboard is inside the date field', insideRing);
+      const afterLeaving = hasDate && await p2.evaluate(async () => {
+        document.querySelector('#party-size-input').focus();
+        await new Promise((r) => setTimeout(r, 100));
+        return document.querySelector('[data-date-field]').classList.contains('kb-focus');
+      });
+      if (hasDate) ok('the ring is off once the keyboard has left the date field', !afterLeaving);
+      const afterBlur = hasDate && await p2.evaluate(async () => {
+        const input = document.querySelector('#date-input');
+        input.focus();
+        await new Promise((r) => setTimeout(r, 100));
+        window.dispatchEvent(new Event('blur'));
+        await new Promise((r) => setTimeout(r, 100));
+        return document.querySelector('[data-date-field]').classList.contains('kb-focus');
+      });
+      if (hasDate) ok('the ring is off when the keyboard leaves the window', !afterBlur);
+
       const dateStops = stops.filter((s) => s.id === 'date-input');
       console.log(`        (${stops.length} stops pressed, ${dateStops.length} inside the date field:`
         + ` ${dateStops.map((s) => s.on).join(',')})`);
