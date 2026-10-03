@@ -73,6 +73,8 @@ def main():
         browser = p.chromium.launch()
         page = browser.new_page(viewport={"width": 1280, "height": 900})
 
+        triples = {}
+
         # The set is asserted over EVERY state the run can reach, not the seven the requirement
         # names. A collision nobody predicted -- `loading` and `empty` sharing one paint -- is
         # exactly what a set over the observed values catches and a list of seven does not.
@@ -106,6 +108,46 @@ def main():
         el = page.query_selector('[data-testid^="slot-"][data-available="false"]')
         triples["unavailable"] = page.eval_on_selector('[data-testid^="slot-"][data-available="false"]', TRIPLE) if el else None
 
+        # `taken` and `chosen` must be tellable apart without relying on colour alone: two of the
+        # marks now carry meaning through ARIA, so assert both channels disagree.
+        marks = page.evaluate("""() => {
+          const cell = (sel) => {
+            const el = document.querySelector(sel);
+            if (!el) return null;
+            return { testid: el.getAttribute('data-testid'),
+                     text: (el.textContent || '').trim(),
+                     label: el.getAttribute('aria-label') || '',
+                     disabled: el.disabled === true,
+                     ariaDisabled: el.getAttribute('aria-disabled'),
+                     ariaSelected: el.getAttribute('aria-selected'),
+                     ariaPressed: el.getAttribute('aria-pressed'),
+                     available: el.getAttribute('data-available') };
+          };
+          return { unavailable: cell('[data-testid^="slot-"][data-available="false"]'),
+                   available: cell('[data-testid^="slot-"][data-available="true"]') };
+        }""")
+        if marks.get("unavailable") and marks.get("available"):
+            a, u = marks["available"], marks["unavailable"]
+            # the ARIA channel must separate them, whether by disabled or by aria-disabled
+            aria_differs = (a["disabled"] != u["disabled"]) or (a["ariaDisabled"] != u["ariaDisabled"]) \
+                or (a["ariaSelected"] != u["ariaSelected"]) or (a["ariaPressed"] != u["ariaPressed"])
+            (good if aria_differs else bad).append(
+                ("S043-taken-aria", aria_differs,
+                 "taken cell %s vs free cell %s: the ARIA channel distinguishes them = %s"
+                 % (json.dumps(u), json.dumps(a), aria_differs)))
+            # The non-colour channel that actually carries this is the accessible name, not the
+            # cell's text: the tick and the filled diamond are painted, and `textContent` is empty
+            # for BOTH cells by design. Reading textContent here reported a red against a product
+            # that names the state twice over.
+            label_differs = u["label"] != a["label"]
+            says_which = ("taken" in (u["label"] or "").lower()) and ("free" in (a["label"] or "").lower())
+            (good if (label_differs and says_which) else bad).append(
+                ("S043-taken-mark", label_differs and says_which,
+                 "the accessible name differs as well as the colour: taken %r vs free %r"
+                 % (u["label"], a["label"])))
+
+
+
         # selected cell: click an available one
         page.fill('[data-testid="party-size-input"]', "2")
         page.click('[data-testid="search-button"]')
@@ -129,6 +171,13 @@ def main():
                 break
         page.wait_for_timeout(2500)
         page.unroute("**/availability*")
+
+        # The loading search rebuilt the grid, so the form chosen from it is gone: choose again
+        # before measuring the in-flight submit, or the click below is waiting on a stale element.
+        slot = page.query_selector('[data-testid^="slot-"][data-available="true"]')
+        if slot is not None:
+            page.click('[data-testid="%s"]' % slot.get_attribute("data-testid"))
+            page.wait_for_selector('[data-testid="booking-submit"]', timeout=10000)
 
         # in-flight submit: hold the request open at the proxy
         page.route("**/reservations", lambda route: (page.wait_for_timeout(1500), route.continue_()))
@@ -197,38 +246,6 @@ def main():
              "%d states observed, %d distinct triples (every observed state must differ from every "
              "other) %s" % (len(observed), distinct,
                             json.dumps({n: v for n, v in observed}, indent=None))))
-
-        # `taken` and `chosen` must be tellable apart without relying on colour alone: two of the
-        # marks now carry meaning through ARIA, so assert both channels disagree.
-        marks = page.evaluate("""() => {
-          const cell = (sel) => {
-            const el = document.querySelector(sel);
-            if (!el) return null;
-            return { testid: el.getAttribute('data-testid'),
-                     text: (el.textContent || '').trim(),
-                     disabled: el.disabled === true,
-                     ariaDisabled: el.getAttribute('aria-disabled'),
-                     ariaSelected: el.getAttribute('aria-selected'),
-                     ariaPressed: el.getAttribute('aria-pressed'),
-                     available: el.getAttribute('data-available') };
-          };
-          return { unavailable: cell('[data-testid^="slot-"][data-available="false"]'),
-                   available: cell('[data-testid^="slot-"][data-available="true"]') };
-        }""")
-        if marks.get("unavailable") and marks.get("available"):
-            a, u = marks["available"], marks["unavailable"]
-            # the ARIA channel must separate them, whether by disabled or by aria-disabled
-            aria_differs = (a["disabled"] != u["disabled"]) or (a["ariaDisabled"] != u["ariaDisabled"]) \
-                or (a["ariaSelected"] != u["ariaSelected"]) or (a["ariaPressed"] != u["ariaPressed"])
-            (good if aria_differs else bad).append(
-                ("S043-taken-aria", aria_differs,
-                 "taken cell %s vs free cell %s: the ARIA channel distinguishes them = %s"
-                 % (json.dumps(u), json.dumps(a), aria_differs)))
-            mark_differs = u["text"] != a["text"]
-            (good if mark_differs else bad).append(
-                ("S043-taken-mark", mark_differs,
-                 "the mark inside the cell differs as well as the colour: taken %r vs free %r"
-                 % (u["text"][:12], a["text"][:12])))
 
         browser.close()
 
