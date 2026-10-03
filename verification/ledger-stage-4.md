@@ -107,19 +107,21 @@ that is a stage-4 version of the mistake this section exists because of.
 missing, and it is stage-4 work.** `S4-151` and `S4-152` are re-measured on a stage-4 build rather than
 banked; what stage 3 supplies is the refusal, not the capability.
 
-## 0.2 The second arrival path, still able to express the fixed defect
+## 0.2 The second arrival path — measured **open at `77c69f8`**, closed at `a69e6ba`
 
-A reservation may be **seeded** with `revision: 5` and `accepted_terms: null`, and the fixture
-validator accepts it:
+At `77c69f8` and earlier a reservation could be **seeded** with `revision: 5` and `accepted_terms: null`,
+and the fixture validator accepted it:
 
 ```
 revision honoured -> revision=5   terms=null
 ```
 
 That is precisely the inconsistent state `S3-121` found in the **import** path and the Builder fixed
-**there** — so the two arrival paths can still be made to disagree, from a fixture, without either of
-them being wrong about what it was asked. **One path was fixed; the other can still express the same
-defect.** Row `S4-150` carries both halves, because *"the import path derives policy-0 terms"* and
+**there** — so at `77c69f8` the two arrival paths could still be made to disagree, from a fixture,
+without either of them being wrong about what it was asked. **One path was fixed; the other could still
+express the same defect.** Closed at `a69e6ba`: `revision: 5` with null terms, `revision: 2`,
+`revision: 0`, `series_id` and `series_index` are each refused, and terms differing from the derived
+policy-0 ones by one field are refused rather than coerced. Row `S4-150` carries both halves, because *"the import path derives policy-0 terms"* and
 *"the seed path cannot produce a booking the import path would refuse"* are **one requirement about two
 paths**, and stage 2's `booking-form` lesson applies: **the state that does not exist must not be
 expressible.**
