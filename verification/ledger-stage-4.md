@@ -349,9 +349,12 @@ it is no evidence at all.**
 
 **Three things open, recorded rather than absorbed, and all three are debts with a named owner:**
 
-1. **The optimiser fixtures for levels 2 and 3 are owed as rows.** `S4-170` asserts level 1 genuinely and
-   levels 2 and 3 only for presence and internal consistency, so **a build ignoring the seat total and the rank
-   vector would pass every row I wrote.** A thinness, and a thinness looks like coverage.
+1. **The optimiser fixtures for levels 2 and 3 — PAID at `da687bd`'s successor, as `S4-171a` and `S4-171b`.**
+   `S4-171a` makes level 1 and level 2 point at **different plans**, so a build optimising the seat total
+   alone returns the other one and the row is red; `S4-171b` is a full tie on both terms decided by the rank
+   vector. **Both assert the plan by reference, not the totals.** Each has a negative control whose wrong
+   answer is **the plan the other reading produces**, not an invented one: `NC-005` (the seat-greedy plan)
+   and `NC-006` (the mirrored vector).
 2. **`S4-152`'s path debt is owed to the next defect round** — a refusal must not mutate, asserting is not
    mutating — **and stage 3's fixture-refusal half-application debt travels with it**, still unpaid.
 3. **The browser half is self-verified and is recorded under limits, not results.** The Builder's suites are
@@ -599,6 +602,15 @@ because they have now failed to travel into a new file twice.**
     is not where this product reads hours from. **Implementing it as ruled would have reported `shut` over
     seven bookable times: the row producing the defect it exists to prevent.** A carefully reasoned
     requirement is still a guess until something drives it.
+51. **A negative list is not coverage, and a list of reported numbers is not coverage either.** For every
+    invariant the rows must name **what moves and what does not**; for every objective they must name **the
+    plan that must come out, not the totals that describe it.** **A row that checks a number is small checks a
+    report; a row that checks which tables were chosen checks an optimisation** — and one question separates
+    them: **would this row fail if the optimiser returned a worse plan with honest numbers?** If not, it is a
+    display assertion **and should be labelled as one**, because calling it coverage is what makes the gap
+    invisible. **And a negative control's wrong answer must be the wrong answer a stale, pre-fix or
+    differently-optimising build actually returns — inventing one tests the author's imagination, not the
+    row's sensitivity.**
 31. **A measurement whose failure mode is silence must have its setup checked first**, because silence is
     indistinguishable from slowness **and slowness is the more comfortable story.** All four screen suites
     read their base URL from `process.argv[2]` with **no connection timeout**, so a wrong URL produces

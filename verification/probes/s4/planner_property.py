@@ -50,8 +50,9 @@ BAD = []
 HOURS = [{"weekday": w, "opens": "00:00", "closes": "23:30"}
          for w in ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]]
 TABLES = [{"id": "t_1", "label": "1", "capacity": 2},
-          {"id": "t_2", "label": "2", "capacity": 4},
-          {"id": "t_3", "label": "3", "capacity": 6}]
+          {"id": "t_2", "label": "2", "capacity": 2},
+          {"id": "t_3", "label": "3", "capacity": 4},
+          {"id": "t_4", "label": "4", "capacity": 4}]
 DATE = "2026-09-28"
 
 
@@ -249,6 +250,58 @@ def main():
               "same references and none cancelled: the specification says no booking may disappear or be "
               "cancelled, and the population is asserted by reference rather than sampled)"
               % (before_refs, after_refs, len(cancelled)))
+
+    # =====================================================================
+    # Property 3, levels 2 and 3 -- the fixtures the Foreman required, asserting
+    # THE PLAN BY REFERENCE and not the totals that describe it. Both were designed so that the
+    # greedy-by-tables answer and the greedy-by-seats answer are DIFFERENT PLANS, which is the only
+    # way a row can tell an optimisation from a report.
+    # =====================================================================
+
+    # ---- Level 2: a tie on changed table sets is impossible here; rather, level 1 and level 2 point
+    # at DIFFERENT plans, so an implementation that optimises only the seat total picks the other one.
+    #   t_1 is closed. AAAAAAA (party 2) holds t_3 (cap 4, wastes 2 if it stays).
+    #   BBBBBBB (party 4) is on the closed t_1 and can only be seated at t_3 or t_4 (cap 4).
+    #   plan L1-first : A stays on t_3, B goes to t_4      -> 1 changed, 2 unused seats
+    #   plan L2-first : A moves to t_2, B goes to t_3      -> 2 changed, 0 unused seats
+    # Level 1 comes first in the specification, so the correct plan is the one that changes ONE
+    # booking, even though it wastes two seats.
+    token = setup(fixture([booking("AAAAAA", ["t_3"], 2, 19),
+                           booking("BBBBBB", ["t_1"], 4, 19)]))
+    if token:
+        st, body = plan(token, "p3d")
+        by_ref = {a.get("reference"): a.get("table_ids") for a in body.get("assignments", [])} \
+            if st == 201 else {}
+        expected = {"AAAAAA": ["t_3"], "BBBBBB": ["t_4"]}
+        check("S4-171a", st == 201 and by_ref == expected,
+              "level 1 must beat level 2 -> the plan is %s (expected %s: A keeps t_3 and B takes t_4, "
+              "changing ONE booking, even though moving A to t_2 would waste no seats at all. A build "
+              "that optimises the seat total alone returns the other plan and this row is red)"
+              % (by_ref, expected))
+
+    # ---- Level 3: a full tie on both terms, decided by the rank vector in ascending reference order.
+    #   Both bookings are party 2, both can use t_2 or t_3, and both assignments are feasible either
+    #   way, so the two plans tie on changed sets AND on unused seats. The specification's third term
+    #   is the vector of option ranks compared in ascending reference order, with singles in fixture
+    #   order -- so the lower reference takes the lower-ranked table.
+    # BOTH bookings sit on the closed table, so neither can stay and both must move. (The first
+    # version of this fixture put BBBBBB on t_2, which it could simply keep -- so the two candidate
+    # plans were not a tie at all: keeping was a third, strictly better plan and level 1 decided it
+    # before the vector was ever consulted. The fixture was wrong, not the build, and the row caught
+    # it -- which is what a row asserting the plan rather than the totals is for.)
+    token = setup(fixture([booking("AAAAAA", ["t_1"], 2, 19),
+                           booking("BBBBBB", ["t_1"], 2, 19)]))
+    if token:
+        st, body = plan(token, "p3e")
+        by_ref = {a.get("reference"): a.get("table_ids") for a in body.get("assignments", [])} \
+            if st == 201 else {}
+        expected = {"AAAAAA": ["t_2"], "BBBBBB": ["t_3"]}
+        check("S4-171b", st == 201 and by_ref == expected,
+              "level 3 must decide a full tie -> the plan is %s (expected %s: singles are ranked in "
+              "fixture order, so t_2 ranks before t_3, and the vector is compared in ascending "
+              "reference order -- the lower reference takes the lower-ranked option. Either "
+              "assignment is feasible and both tie on the first two terms, so only the vector "
+              "separates them)" % (by_ref, expected))
 
     return rows()
 

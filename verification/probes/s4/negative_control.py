@@ -122,6 +122,57 @@ def main():
     expect_fail("NC-004", "a day whose policy omits Sunday is NOT reported open (got %r)"
                 % av.get("day_state"), av.get("day_state") == "open")
 
+    # ---- controls for the optimiser rows (S4-171a, S4-171b). The wrong answer asserted here is the
+    # plan the OTHER reading of the objective produces -- not an invented one -- so a control that
+    # cannot fail is impossible by construction.
+    opt_tables = [{"id": "t_1", "label": "1", "capacity": 2},
+                  {"id": "t_2", "label": "2", "capacity": 2},
+                  {"id": "t_3", "label": "3", "capacity": 4},
+                  {"id": "t_4", "label": "4", "capacity": 4}]
+
+    def opt_fixture(reservations):
+        return {"users": [{"id": "u_ada", "email": "ada@example.com", "password": "correct horse",
+                           "display_name": "Ada"}],
+                "restaurants": [{"id": "r_anker", "name": "Zum Anker", "timezone": "Europe/Berlin",
+                                 "manager_user_ids": ["u_ada"], "slot_minutes": 30,
+                                 "reservation_duration_minutes": 90,
+                                 "cancellation_cutoff_minutes": 120, "opening_hours": HOURS,
+                                 "tables": opt_tables}],
+                "reservations": reservations}
+
+    def book(ref, tables, party):
+        return {"id": "res_" + ref.lower(), "reference": ref, "user_id": "u_ada",
+                "restaurant_id": "r_anker", "table_ids": list(tables), "party_size": party,
+                "starts_at_local": "2026-09-28T19:00"}
+
+    def opt_plan(key, table="t_1"):
+        call("POST", "/_test/reset", opt_fixture(RESERVATIONS))
+        st, lg = call("POST", "/auth/login", {"email": "ada@example.com", "password": "correct horse"})
+        tok = lg.get("token")
+        return call("POST", "/restaurants/r_anker/replans",
+                    {"table_id": table, "from": "2026-09-28T18:00:00+02:00",
+                     "to": "2026-09-28T23:00:00+02:00"}, token=tok, key=key)
+
+    # Level 2 control: the plan an implementation optimising the SEAT TOTAL alone returns.
+    RESERVATIONS = [book("AAAAAA", ["t_3"], 2), book("BBBBBB", ["t_1"], 4)]
+    st, body = opt_plan("nco-1")
+    by_ref = {a.get("reference"): a.get("table_ids") for a in body.get("assignments", [])} \
+        if st == 201 else {}
+    seat_greedy = {"AAAAAA": ["t_2"], "BBBBBB": ["t_3"]}
+    expect_fail("NC-005", "the level-1-beats-level-2 plan is NOT the seat-greedy plan %s (got %s) -- "
+                          "if it were, S4-171a would be asserting a report rather than an optimisation"
+                          % (seat_greedy, by_ref), by_ref == seat_greedy)
+
+    # Level 3 control: the mirror of the rank vector, which is the other feasible plan.
+    RESERVATIONS = [book("AAAAAA", ["t_1"], 2), book("BBBBBB", ["t_1"], 2)]
+    st, body = opt_plan("nco-2")
+    by_ref = {a.get("reference"): a.get("table_ids") for a in body.get("assignments", [])} \
+        if st == 201 else {}
+    mirror = {"AAAAAA": ["t_3"], "BBBBBB": ["t_2"]}
+    expect_fail("NC-006", "the full-tie plan is NOT the mirrored vector %s (got %s) -- if it were, "
+                          "S4-171b would be asserting one of two feasible answers rather than the "
+                          "optimisation's" % (mirror, by_ref), by_ref == mirror)
+
     good = [r for r, ok in RESULTS if ok]
     bad = [r for r, ok in RESULTS if not ok]
     print("SUMMARY %d/%d passed" % (len(good), len(RESULTS)))
