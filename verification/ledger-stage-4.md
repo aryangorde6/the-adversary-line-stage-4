@@ -603,13 +603,41 @@ therefore be changing blind.** **A discriminator that grows every existing row's
 change to rows this ledger's author did not write, and it is not mine to make quietly** — so the ruling is
 conditional, and the cost is on the record for whoever revisits it.
 
+### Re-read of `S4-167`: is assertion 3 sufficient as the sole discriminator?
+
+**No — and the fix is a second producing configuration plus assertion 3b, not a clearer sentence about the
+first.** Assertion 3 as written proves the field is *terms-derived* by moving a date between states with a
+policy change; **it does not by itself prove the `shut` / `terms_exclude_all` distinction is being made for
+the right reason**, because a build that answers `shut` whenever `slots` is empty can still satisfy a
+terms-driven movement between `open` and `nothing_free`. **So the row now carries 3b, which reads
+"not shut" from the service's own calendar** — `GET /restaurants/{id}` must show an `opening_hours` entry
+for that weekday **while `slots` is empty and `day_state` says `terms_exclude_all`** — **which makes the
+implementation's shortcut falsifiable rather than merely unlikely.**
+
+**And the standing thinness, recorded rather than absorbed:** `terms_exclude_all` still has **one**
+producing configuration. **The honest strengthening is a second one reached by a different route** — for
+example terms that admit no slot because of the party's terms rather than a table's capacity — **because a
+row with one producing path cannot distinguish "derived" from "the only case anyone tried".** If a second
+configuration cannot be built, that is written beside the row as a known thinness, **not inside its green.**
+
 ### Instrument ruling on the four screen suites (`1e56016`)
 
 **Proposal accepted, and it is assigned rather than taken.** `ui-lib.mjs` should accept
-**`argv[2]` and `process.env.BASE`**, and the README should show both. **I am not making that edit myself:
-the file lives in the Builder's folder, and more importantly I cannot run the suite to verify the change** —
-**`playwright-core` is not installed anywhere in this environment, so I cannot re-run `ui-grid` or its three
-siblings at all.** **So I am not reporting `210/0` as verified by me. It is reported by the seat that ran
+**`argv[2]` and `process.env.BASE`**, and the README should show both. **I could not make the edit myself, for a reason worth recording: `stage-4/` is
+read-only to this seat** — the write failed with `EROFS`, not with a policy refusal. **So the change is
+assigned to the seat that can write it, with the patch written out here so nothing is lost in the handover:**
+
+```js
+// ui-lib.mjs -- three changes, each tied to a clause
+export const BASE = process.argv[2] || process.env.BASE || 'http://localhost:18099';   // cl. 32
+export const REQUEST_TIMEOUT_MS = Number(process.env.PROBE_TIMEOUT_MS || 15000);    // cl. 31
+// ... and in req(): signal: AbortSignal.timeout(timeoutMs ?? REQUEST_TIMEOUT_MS)
+// plus, called by a suite before its first row:                                  // cl. 31
+export async function assertReachable() { /* GET /health, one line, ok() on failure */ }
+```
+
+**And I cannot verify it either: `playwright-core` is not installed anywhere in this environment, so I
+cannot re-run `ui-grid` or its three siblings at all.** **So I am not reporting `210/0` as verified by me. It is reported by the seat that ran
 it, and the honest record says so** — an instrument's result is only as good as the seat's ability to
 reproduce it, and mine cannot currently reproduce this one.
 
