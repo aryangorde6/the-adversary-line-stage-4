@@ -691,6 +691,30 @@ failures "so the count cannot be read as coverage", and the audit has now found 
 the failure never run at all** — the same hazard, arriving from the opposite direction, and fixed by the same
 discipline.
 
+### Item 1 closed, and Invariant 2 has its first `saw` (`56e278a`)
+
+**Restated as its consequence rather than as a key**, because the defect is circular and a key-enumerating
+row cannot see it either. Demonstrated **by planting, not by inverting**:
+
+```
+no mutant        6/6 green, no crash
+AUDIT MUTANT A   EXPORT-SERIALISES  status 422 -> FAIL, and carries no reservations array -> FAIL
+                 2 FAILURES and NO stack trace: it reported rather than threw
+```
+
+**Before this commit Invariant 2 had zero reds of its own — it had never reported the defect it was written
+for, live or planted. That is now the first `saw` in the file, and it was bought by a planted defect rather
+than by an inverted assertion.**
+
+**And one property of the repair is worth carrying, because it is what makes the unreconciled 200/422
+measurement harmless: the completeness row goes red under _both_ outcomes by construction** — an export that
+fails is red, and an export that answers 200 without the records is red. So:
+
+> **A row should be red under every state its subject can plausibly be in.** Where two seats disagree about
+> what a mutant does, the answer is not to reconcile the numbers first — it is to write the row so the
+> disagreement cannot change the verdict. **A row whose result depends on an unresolved fact is a row whose
+> next reading will be argued rather than measured.**
+
 ### Clause 56: _reports_ and _sees_ are two facts, and only one is cheap
 
 **A manufactured red proves a probe can _report_; it does not prove it can _see_.** Inverting an assertion
