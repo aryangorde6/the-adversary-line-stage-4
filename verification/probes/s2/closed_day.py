@@ -81,16 +81,29 @@ def get(path, token=None):
 def main():
     good, bad = [], []
 
-    # --- the arrangement that cannot exist, asserted rather than assumed ----------
+    # --- a second way to arrange a day with no slots ---------------------------
+    # An opening window shorter than the reservation duration was reported to be impossible:
+    # "rejected by POST /_test/reset with 400, so it can never be shown". Measured, the reset
+    # accepts it (204). Asserted here as what it is rather than as what it was reported to be: if
+    # the arrangement exists, then it is a second closed day and the row must cover it, and if a
+    # future build refuses it the row says so instead of failing.
     short_window = json.loads(json.dumps(FIXTURE))
     for h in short_window["restaurants"][0]["opening_hours"]:
         if h["weekday"] == "tue":
             h["opens"], h["closes"] = "18:00", "18:30"
     status, _ = post("/_test/reset", short_window)
-    (good if status >= 400 else bad).append(
-        ("CD-unarrangeable", status >= 400,
-         "an opening window shorter than the 90-minute duration -> reset %s (a closed-day row "
-         "must not try to arrange the closed day this way)" % status))
+    if status == 204:
+        _, availability = get("/availability?restaurant_id=r_anker&date=%s&party_size=2" % DATE)
+        slots_len = len(availability.get("slots", [])) if "slots" in availability else None
+        (good if slots_len == 0 else bad).append(
+            ("CD-window-unarrangeable", slots_len == 0,
+             "an 18:00-18:30 window on a 90-minute reservation: reset 204, slots length %s "
+             "(0 means this is a second closed day and the rows below cover it too)" % slots_len))
+    else:
+        (good if status >= 400 else bad).append(
+            ("CD-window-unarrangeable", status >= 400,
+             "an 18:00-18:30 window on a 90-minute reservation -> reset %s, so the service refuses "
+             "to create this state and no closed-day row should try to arrange it" % status))
 
     # --- `opening_hours: []` behaves identically to the no-entry-per-weekday shape ---
     empty = json.loads(json.dumps(FIXTURE))
@@ -159,6 +172,29 @@ def main():
             (good if bf is None else bad).append(
                 ("CD-form-absent-" + tag, bf is None,
                  "%s: booking-form in document = %s" % (where, bf is not None)))
+
+            # ---- the same day closed by a window shorter than the duration -----
+            status, _ = post("/_test/reset", short_window)
+            if status == 204:
+                page.goto(BASE + "/", wait_until="domcontentloaded")
+                page.fill('[data-testid="date-input"]', DATE)
+                page.click('[data-testid="search-button"]')
+                page.wait_for_timeout(1500)
+                _, availability = get("/availability?restaurant_id=r_anker&date=%s&party_size=2" % DATE)
+                slots_len = len(availability.get("slots", [])) if "slots" in availability else None
+                grid = page.query_selector('[data-testid="availability-grid"]')
+                ns = page.query_selector('[data-testid="no-slots"]')
+                text = ns.inner_text().strip() if ns is not None else None
+                where = ("signed %s, short-window day, searched %s, slots length %s"
+                         % (tag, DATE, slots_len))
+                (good if slots_len == 0 and grid is None and ns is not None and ns.is_visible()
+                 and bool(text) and "closed" in text.lower() else bad).append(
+                    ("CD-short-window-" + tag,
+                     slots_len == 0 and grid is None and ns is not None and ns.is_visible()
+                     and bool(text) and "closed" in text.lower(),
+                     "%s: grid in document=%s ; no-slots present=%s visible=%s ; text=%r"
+                     % (where, grid is not None, ns is not None,
+                        ns is not None and ns.is_visible(), (text or "")[:90])))
 
             # ---- the open day, on load: the blocking item ------------------------
             status, _ = post("/_test/reset", FIXTURE)

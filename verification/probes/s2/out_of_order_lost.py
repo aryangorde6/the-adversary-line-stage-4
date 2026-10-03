@@ -172,6 +172,40 @@ def main():
         (good if not leftover_a else bad).append(
             ("OL-order", not leftover_a,
              "after the late A response the grid still names A: %s" % leftover_a))
+        # Absence of A is not evidence that B is shown: a grid emptied by the late response would
+        # satisfy the row above. So assert B positively -- its cells, and B's own date.
+        cells_b = page.query_selector_all('[data-testid^="slot-d_1-"]')
+        grid_text = page.inner_text('[data-testid="availability-grid"]')
+        # A cell testid carries the table and the TIME, not the date, so the date string is not in
+        # the grid's HTML by design. Assert what the page actually shows: B's cells, and the date
+        # the person is looking at in the form.
+        date_field = page.input_value('[data-testid="date-input"]')
+        (good if (len(cells_b) > 0 and date_field == "2026-12-09") else bad).append(
+            ("OL-order-shows-b", len(cells_b) > 0 and date_field == "2026-12-09",
+             "after A lands late: %d of B's cells present, date field shows %r (B's date)"
+             % (len(cells_b), date_field)))
+        # The region must stay present and visible throughout, including while a search is in
+        # flight, because a second search now rebuilds it before showing the loading message.
+        region = page.query_selector('[data-testid="availability-grid"]')
+        (good if (region is not None and region.is_visible()) else bad).append(
+            ("OL-region-present", region is not None and region.is_visible(),
+             "after both searches settled: availability-grid present=%s visible=%s"
+             % (region is not None, region is not None and region.is_visible())))
+        RULES["delay_paths"] = set()
+
+        # The loading state: a search in flight must leave the region visible, not remove it.
+        RULES["delay_paths"] = {"/availability?restaurant_id=r_anker&date=2026-12-12&party_size=2"}
+        page.fill('[data-testid="date-input"]', "2026-12-12")
+        page.click('[data-testid="search-button"]')
+        page.wait_for_timeout(700)
+        mid = page.query_selector('[data-testid="availability-grid"]')
+        loading = page.query_selector('[data-testid="grid-loading"]')
+        (good if (mid is not None and mid.is_visible()) else bad).append(
+            ("OL-region-in-flight", mid is not None and mid.is_visible(),
+             "with a search in flight: availability-grid present=%s visible=%s ; grid-loading in "
+             "document=%s" % (mid is not None, mid is not None and mid.is_visible(),
+                              loading is not None)))
+        page.wait_for_timeout(2500)
         RULES["delay_paths"] = set()
 
         # --- 2. lost booking response ---------------------------------------
