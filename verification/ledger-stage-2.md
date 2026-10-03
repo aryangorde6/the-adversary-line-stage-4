@@ -56,7 +56,28 @@ the client received nothing, and only then is `booking-uncertain` evidence about
 is the sharpest form of clause 2, because the step that can fail silently is the step that
 manufactures the condition.
 
-All six clauses, plus the both-halves convention, are here because each was added after a real
+**Standing clause 7: a comparison that cannot distinguish the two cases is vacuous however green it
+is.** Assert that the mutant and the real build produce *different* results, not merely that both were
+run. A row comparing local-time strings where two bookings share the string is equal for the wrong
+reason and would pass the exact defect it exists to catch. The defence is to make the discrimination
+explicit — label each case so the two orders can be seen to differ, and print what the wrong
+implementation *would* have produced.
+
+**Standing clause 8: reasoning about a path is the same error wearing better manners.** A derived
+claim about what a platform must do, made without driving it, is this evening's fault in its most
+respectable form: no red number and no broken instrument, just a plausible story agreeing with the
+conclusion already held — and it was held *while the instrumented trace that would have shown the
+error was already collected*. Anything that will be graded, or that will justify keeping or removing a
+mechanism, must come from a trace.
+
+**Standing clause 9: every mechanism added on a story about why it was needed must have that story
+re-derived when the mechanism's surroundings change.** This build added a poll on a story and removed
+it when the story turned out to be false; nothing was wrong in between, the evidence simply expired.
+A mechanism defended by a story rather than a trace will eventually meet someone who drives the path
+the story describes — and a measurement that justifies a decision must be re-derived when the
+mechanism it measured changes, since the same stale number would have argued either way.
+
+All nine clauses, plus the both-halves convention, are here because each was added after a real
 reading error on this build, not because they were anticipated. They cost one line each and each
 one removes a whole class of confident wrong numbers.
 
@@ -186,48 +207,42 @@ well, so a verifier reading one row sees the interpretation it is checking again
 Rows: 70 (S2-001 to S2-070). Ambiguities: 6 (S2-A1 to S2-A6), all six ruled by the Foreman from the
 specification text before any stage-2 code was written; each ruling is stated inside the row it
 settles as well as in the table below.
-## The focus indicator: one rule, the poll, and the bounds (measured at `9d9dbfc`)
+## The focus indicator: event-completeness, and one recorded residual (measured at `3af2a2f`)
 
-**The rule is containment and nothing else.** The indicator reports **where the keyboard is**. A
-design can satisfy that with two rules — clear on `window blur` and `pagehide`, restore on anything
-else — and such a design has a window in which the indicator is cleared and then put back. That
-window is invisible to a coarse sample and shows up only as a latency figure, so it is measured
-directly: **20 samples at 5ms from the instant `blur` is dispatched with the keyboard inside the
-field are present at 20 of 20 and painted at 20 of 20.** A clear-then-restore design cannot produce
-that trace. Assert it that way, because "no flicker window" is a property a sampling row can hold and
-a latency number cannot.
+**There is no poll.** `grep setInterval stage-2/src/` returns nothing in the browser; the only
+interval in the product is a `.unref()`'d shutdown timer in `src/main.js`. Nothing runs in the
+background. The earlier version recomputed the indicator twice a second on the belief that focus
+could return without firing any event; that belief was **re-derived and found false** — every arrival
+fires something the handler list already hears — and the mechanism was removed rather than defended.
+A poll that fixes nothing is a mechanism nobody can later justify.
 
-**The poll, in the two halves it actually has.**
+**So the row is a property, not a bound: the design is event-complete.** The indicator must be
+correct on **every arrival and departure that fires an event**, asserted **immediately** after the
+causing event — no settle time, no wait, no bound. A bound in a row is a hedge: it weakens into
+"true eventually" and keeps passing a mechanism that has been removed. Measured: `focusin` onto
+another control **3–11ms**; a real trusted click **3–9ms**; four internal date-field stops holding the
+indicator including the `:focus`-mismatched one; rebuild with the keyboard inside correct both ways; a
+lifecycle freeze holding inside the field and, outside it, creating nothing.
 
-- *A design property:* the indicator must track focus on **every arrival that fires an event**,
-  verified **with the poll disabled** — `setInterval` stubbed to a no-op before any page script runs,
-  event handlers untouched. Measured: with the poll dead, a real click arrival and a keyboard
-  (`Shift+Tab`) arrival both leave the ring painted at **every observed internal stop of the field**,
-  including the `:focus`-mismatched one. `Shift+Tab` backwards from the search button reaches the
-  field after 2 presses. Nothing a person does waits for the poll.
-- *An API-surface property:* a focus return that fires **no event of all** must still be tracked
-  **within the stated bound**. This path exists in the product's own API surface and no person walks
-  it, which is why it is written as a property of the API rather than as a user requirement — and
-  because a poll that is load-bearing only for the probes should be labelled, not assumed.
-  **Measured elsewhere, and named as such:** the Builder drove this path with the poll stubbed and
-  found it untracked. My own construction (`blur()` then `focus()`) does **not** produce it —
-  `focus()` fires `focus` and `focusin` even from script — so that row reports what it can see and
-  explicitly does not claim the event-free path.
+**The residual, as a measured state and not as a caveat.** "The ring is always correct" is **not**
+true, and the counter-example is recorded here rather than denied:
 
-**Bounds, and which path each applies to.** A row that asserts "instantly" reads a correct recompute
-as a defect; a row that asserts a stale bound reads a correct improvement as a regression. So:
+> A programmatic `.blur()` from the field's **first** stop leaves `kb-focus` on while
+> `document.activeElement` is `BODY` and containment is false. `blur` is not in the handler list and
+> there is no poll, so nothing recomputes. From an **inner** segment the same call leaves
+> `activeElement` on the input, containment still holds, and the indicator correctly stays — so the
+> row must blur from the first stop or it cannot reach the state it names.
 
-| path | bound asserted | measured at `9d9dbfc` |
-| --- | --- | --- |
-| focus moving to another control | gone within **250ms** | 3–9ms |
-| a real (trusted) mouse click elsewhere | gone within **250ms** | 3–9ms |
-| a programmatic `.blur()` | gone within **1000ms** | 334–341ms |
-| a silent return, no event at all | **back within 1000ms** | event-driven arrivals 7–10ms; the event-free path is the poll's, inside one 500ms tick |
-| an OS window-manager focus change | **not measurable in a headless harness** | recorded as unreachable, not as coverage |
+This is the `372e879` failure class in the opposite direction and is reachable only through script.
+My probes report it as `RESIDUAL` and count it for neither pass nor fail: a FAIL would be a red for a
+condition the ledger records, and a PASS would claim it closed. **Open question with the Finisher:**
+a `blur` listener would close it with no timer, but on this control `blur` may fire while the keyboard
+moves *between* inner segments, which would reintroduce the premature-teardown defect from `6f056f4`.
+That trade is the owner's to make; this row records the state as it stands.
 
-**Idle cost of the poll**, measured: **0 DOM mutations** across three seconds idle with focus outside
-the field, no residue after two navigations, no page errors, and a busy loop of ~3.2M iterations
-completing with the main thread responsive. It reads state; it does not accumulate it.
+**Unmeasurable here, recorded as unreachable rather than as coverage:** an OS window-manager focus
+change — headless has no window manager — and any DOM surgery a caller performs on the wrapper, which
+neither the poll nor the handlers repaired.
 
 **The falsifiable number, quoted instead of any derived count:** **18 of 18 internal date-field stops
 painted, 4 of which do not match `:focus`.** If a later change makes the 4 something else, the

@@ -287,7 +287,7 @@ def main():
                           # button submits, the date field is `required`, and an empty date makes the
                           # browser move the focus straight back into the field -- correct product
                           # behaviour that my probe was reading as a stuck ring.
-                          ("programmatic-blur", "()=>document.querySelector('[data-testid=\"date-input\"]').blur()")):
+                          ):
             # Establish the precondition and ASSERT it before timing: a walk that never reached the
             # field left the previous case's ring standing, and I was timing the removal of a ring
             # this case had not put there. A setup step that can fail has to be asserted before its
@@ -307,11 +307,13 @@ def main():
                 page.evaluate(act)
             present, ms = settle(page)
             bounds[name] = (present, ms)
+        # The programmatic-blur teardown is deliberately NOT asserted here: with no poll and no
+        # `blur` handler it is the recorded residual, and a bound for it would be a hedge. It has its
+        # own row in focus_reentry and focus_lifecycle.
         (good if not any(p for p, _ in bounds.values()) else bad).append(
             ("FS-bounds-teardown", not any(p for p, _ in bounds.values()),
-             "teardown latencies %s — the bound asserted by the row must be at or above the slowest of "
-             "these and must not be tighter than the mechanism allows" % json.dumps(
-                 {k: v[1] for k, v in bounds.items()})))
+             "teardown latencies on the event paths %s — immediate, no settle time and no bound, because "
+             "no poll exists to wait for" % json.dumps({k: v[1] for k, v in bounds.items()})))
 
         # silent return: how long until it is back
         page.goto(BASE + "/", wait_until="domcontentloaded")

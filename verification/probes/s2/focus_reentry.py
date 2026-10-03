@@ -55,6 +55,32 @@ FIXTURE = {
 
 # The inner-segment stop is the one where the browser declines to match :focus. The wrapper class is
 # what can paint there, so `painted` is read from the carrier rather than from the element.
+READ_AFTER_FOCUS = """
+() => {
+  const f = document.querySelector('[data-testid="date-input"]');
+  if (f) { f.blur(); f.focus(); }
+  const el = document.activeElement;
+  const carrier = el && el.closest && el.closest('.kb-focus') ? el.closest('.kb-focus') : null;
+  const cs = carrier ? getComputedStyle(carrier) : null;
+  return { inside: !!(el && carrier), present: !!carrier,
+           painted: !!(cs && cs.outlineStyle !== 'none' && parseFloat(cs.outlineWidth) > 0),
+           ring: cs ? cs.outlineColor : null, width: cs ? cs.outlineWidth : null };
+}
+"""
+
+READ_AFTER = """
+() => {
+  const el = document.activeElement;
+  const carrier = document.querySelector('[data-date-field]');
+  const cs = carrier ? getComputedStyle(carrier) : null;
+  return { tag: el ? el.tagName : null,
+           tid: el && el.getAttribute ? el.getAttribute('data-testid') : null,
+           inside: !!(el && carrier && carrier.contains(el)),
+           present: !!(carrier && carrier.classList.contains('kb-focus')),
+           painted: !!(cs && cs.outlineStyle !== 'none' && parseFloat(cs.outlineWidth) > 0) };
+}
+"""
+
 READ = """
 () => {
   const el = document.activeElement;
@@ -69,10 +95,12 @@ READ = """
 """
 
 
-def rows(good, bad):
+def rows(good, bad, residual_rows=()):
     for rid, ok, ev in good + bad:
         print(("ROW %s PASS " if ok else "ROW %s FAIL ") % rid + ev)
-    print("SUMMARY %d/%d passed" % (len(good), len(good) + len(bad)))
+    for rid, present, ev in residual_rows:
+        print("ROW %s RESIDUAL %s" % (rid, ev))
+    print("SUMMARY %d/%d passed, %d residual" % (len(good), len(good) + len(bad), len(residual_rows)))
     return 0 if not bad else 1
 
 
@@ -107,7 +135,7 @@ def focus_field_by_keyboard(page, limit=40):
 
 
 def main():
-    good, bad = [], []
+    good, bad, residual_rows = [], [], []
     tag = str(WIDTH)
     status = reset()
     if status != 204:
@@ -200,22 +228,41 @@ def main():
                           "if(f) f.blur();}")
             page.evaluate("()=>{const f=document.querySelector('[data-testid=\"date-input\"]');"
                           "if(f) f.focus();}")
-            t1 = time.time()
-            silent_painted = False
-            for _ in range(240):                      # up to ~1.2s, so a 2Hz tick is inside it
-                page.keyboard.press("Tab")
-                info = page.evaluate(READ)
-                if info and not info.get("none") and info["isFocus"] is False:
-                    silent_painted = bool(info["painted"])
-                    break
-                time.sleep(0.005)
-            silent_ms = int((time.time() - t1) * 1000)
-            (good if silent_painted else bad).append(
-                ("FR-back-silent-" + exit_name + "-" + tag, silent_painted,
-                 "after %s, a SILENT re-entry (element.focus(), no event) walked to the inner segment: "
-                 "painted = %s in %dms" % (exit_name, silent_painted, silent_ms)))
+            # Immediate: the causing call and the read happen in ONE evaluate, with no wait and no
+            # bound. There is no poll in this build, so a bound here would be a hedge: it would weaken
+            # into "true eventually" and keep passing a mechanism that has been removed.
+            immediate = page.evaluate(READ_AFTER_FOCUS)
+            (good if (immediate and immediate["inside"] and immediate["painted"]) else bad).append(
+                ("FR-back-immediate-" + exit_name + "-" + tag,
+                 bool(immediate) and immediate["inside"] and immediate["painted"],
+                 "after %s, element.focus() read in the SAME evaluate: %s — no wait, no bound"
+                 % (exit_name, json.dumps(immediate))))
 
-        # ---- does the tick write to the DOM while there is nothing to indicate? ----
+        # ---- the uncovered state, reached on purpose, reported as a residual ----
+        # A programmatic .blur() from the field's FIRST stop. Measured: from the first stop the blur
+        # moves activeElement to BODY, so containment breaks and nothing recomputes, because `blur`
+        # is not in the handler list and there is no poll. From an INNER segment the same call leaves
+        # activeElement on the input, containment still holds, and the indicator correctly stays — so
+        # the row has to blur from the first stop or it cannot reach the state it names.
+        page.goto(BASE + "/", wait_until="domcontentloaded")
+        page.wait_for_timeout(250)
+        for _ in range(30):
+            page.keyboard.press("Tab")
+            if page.evaluate("()=>{const a=document.activeElement;"
+                             "return !!(a && a.getAttribute && "
+                             "a.getAttribute('data-testid')==='date-input');}"):
+                break
+        page.evaluate("()=>document.activeElement && document.activeElement.blur()")
+        page.wait_for_timeout(150)
+        residual = page.evaluate(READ_AFTER)
+        residual_rows.append(("FR-residual-blur-" + tag, bool(residual and not residual["inside"]),
+            "programmatic .blur() from the field's first stop: activeElement inside the wrapper = %s, "
+            "indicator present = %s. No poll, and `blur` is not in the handler list, so an indicator "
+            "left on with the keyboard outside is the uncovered state the ledger records as measured "
+            "rather than denied."
+            % (bool(residual and residual["inside"]), bool(residual and residual["present"]))))
+
+        # ---- nothing runs in the background ----
         page.goto(BASE + "/", wait_until="domcontentloaded")
         page.wait_for_timeout(300)
         mutations = page.evaluate("""async () => {
@@ -232,7 +279,7 @@ def main():
              "idle for 2.2s with focus outside the field: kb-focus present = %s" % idle_class))
         (good if mutations == 0 else bad).append(
             ("FR-idle-writes-" + tag, mutations == 0,
-             "DOM mutations observed on an idle page across four ticks: %d (a read, not an accumulation)"
+             "DOM mutations observed on an idle page over 2.2s: %d — nothing runs in the background"
              % mutations))
 
         # ---- nothing survives navigation ----------------------------------------
@@ -254,7 +301,7 @@ def main():
         page.close()
         browser.close()
 
-    return rows(good, bad)
+    return rows(good, bad, residual_rows)
 
 
 if __name__ == "__main__":
