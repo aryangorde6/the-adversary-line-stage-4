@@ -631,6 +631,29 @@ count does not change under a policy** — **but nothing asserts that every expl
 existing instrument does not yet meet**, and that is a coverage thinness in the seam instrument itself, of the
 thinness-not-a-hole kind: **the suites can be green with an unexplained slot nobody rendered.**
 
+**The reverse assertion, specified here because I cannot write it into `stage-4/`, assigned with the reason
+attached so the direction reads as chosen rather than accidental:**
+
+```js
+// seam-check.mjs -- after the per-cell agreement loop, the reverse direction.
+// The loop above already fails when a rendered cell has no explain entry. This fails when an
+// explain entry has no rendered cell. Both directions are required: the first catches a cell the
+// service does not explain, this catches a slot the grid never showed -- the mirror of the
+// pair-indexing bug (an omission in the map) and the mirror of that row's own failure (an omission
+// in the assertion). A row that asserts a count cannot see either, so the instrument must.
+for (const [key] of explained) {
+  if (!domCells.has(key)) throw new Error('explain entry with no rendered cell: ' + key);
+}
+if (domCells.size !== explained.size) {
+  throw new Error(`populations differ: ${domCells.size} cells, ${explained.size} explain entries`);
+}
+```
+
+**The loop is the diagnosis; the count line is the requirement.** Equality of the two sets is what is being
+asserted, and **recording the direction in a comment is part of the assertion** — otherwise the next reader
+cannot tell whether the asymmetry was chosen or merely forgotten, **which is exactly how a population error
+becomes invisible in the first place.**
+
 ### Re-read of `S4-167`: is assertion 3 sufficient as the sole discriminator?
 
 **No — and the fix is a second producing configuration plus assertion 3b, not a clearer sentence about the
