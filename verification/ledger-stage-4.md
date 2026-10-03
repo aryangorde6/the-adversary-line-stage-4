@@ -432,6 +432,46 @@ and `S4-167-a1` (FAIL 15/16), and `negative_control.py` is eight rows proven cap
 answers real builds returned. **So my entry into the audit exists, and it is in the ledger rather than in a
 claim.**
 
+### M2 is an equivalent mutant, and that is a different and better finding than a survivor
+
+**M2 (rank vector deleted) survives every row — including `S4-171d` and `NC-008` — because it is not a defect
+survivor. It is indistinguishable from the correct build.**
+
+> **options are enumerated in rank order and `betterThan` keeps a strictly-better plan, so the first complete
+> plan the search finds is already the rank-vector minimum. The tie-break is implemented redundantly: the
+> enumeration order performs it.** Deleting the rank vector therefore changes no reachable behaviour — **no
+> black-box probe can detect it, and two rows failing to detect it is not a weakness of the rows.**
+
+**Measured both ways, which is what makes it a finding rather than an argument:**
+
+```
+M2   rank vector deleted, enumeration order REVERSED   ->  planner_property 14/15   S4-171d FAILS
+M2'  enumeration reversed, rank vector INTACT          ->  planner_property 15/15   S4-171d PASSES
+```
+
+**So `S4-171d` kills a rank-blind planner, and M2 is the one planner it cannot kill because M2 changes
+nothing.** The row is therefore reclassified honestly: **not coverage of objective 3, but the probe that
+catches a future build in which enumeration order and rank order diverge** — and `M2'` is that build,
+measured.
+
+**Clause 54, and it is the round's most useful output:**
+
+> **A property can be implemented redundantly, and a redundant implementation is unobservable by
+> construction — so a driver cannot distinguish "correct" from "absent" when something else already performs
+> the same work.** So **before asking whether a row covers a property, ask what else in the system already
+> decides it.** If the answer is "the enumeration order", then coverage of that property is not a fixture
+> problem at all; **it is a question about whether the redundancy should exist.** And the standing
+> consequence: **a tie-break that is currently redundant is insurance, not waste** — the specification's
+> third term stated explicitly, costing nothing, and the only thing between the build and `M2'`. **The report
+> should say it is insurance, or a future seat will delete it as unreachable.**
+
+**Objective 3's status, stated as the honest record rather than as a gap or a green: implemented, unobservable,
+and now provably so.** The round's entry stands as **M1 caught, M2 equivalent, M2' caught, M3 caught** — **the
+surface is not blind at objective 3; it is blind only to a mutant that changes nothing.** `S4-152` and stage
+3's fixture-refusal half-application remain **unplanted**, because the read-only mount prevented mutant
+commits; they get planted on a seat with write access, on the accepted hash, with the commit discipline this
+round could not honour.
+
 ## M2 survived against my own rows, and `S4-171d` is the rebuild
 
 **M2 — the rank vector deleted from `betterThan` — left every measurable row green, including mine.** So the
