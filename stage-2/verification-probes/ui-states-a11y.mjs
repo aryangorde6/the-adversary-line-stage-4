@@ -286,6 +286,50 @@ async function main() {
           });
           ok(`the ring is back after ${name} and focus returning with no event at all`, settled);
         };
+        // Both directions, for each exit, at each of the field's internal stops: the defect lives in
+        // the pairing of one exit with one re-entry path, so the pairing is what is measured.
+        const walkStops = async () => {
+          const out = [];
+          await p2.evaluate(async () => {
+            document.querySelector('#date-input').focus();
+            // The ring is a projection of where the focus is; give it the moment it takes to be read.
+            await new Promise((r) => setTimeout(r, 700));
+          });
+          for (let i = 0; i < 4; i += 1) {
+            out.push(await p2.evaluate(() => {
+              const a = document.activeElement;
+              const f = document.querySelector('[data-date-field]');
+              return { inner: a.id === 'date-input' && !a.matches(':focus'),
+                cls: f.classList.contains('kb-focus'),
+                painted: getComputedStyle(f).outlineStyle !== 'none' };
+            }));
+            await p2.keyboard.press('Tab');
+          }
+          return out;
+        };
+
+        for (const [name, fire] of [['the window losing focus', () => window.dispatchEvent(new Event('blur'))],
+                                    ['the page being hidden', () => window.dispatchEvent(new Event('pagehide'))]]) {
+          const before = await walkStops();
+          ok(`the class is held at all four internal stops before ${name}`,
+            before.every((x) => x.cls), before);
+          await p2.evaluate(fire);
+          await p2.locator('#date-input').click();
+          const afterClick = await walkStops();
+          ok(`every internal stop carries a painted ring after ${name}, re-entered by click`,
+            afterClick.every((x) => x.painted), afterClick);
+          await p2.evaluate(fire);
+          await p2.evaluate(async () => {
+            document.querySelector('#date-input').focus();
+            await new Promise((r) => setTimeout(r, 700));
+          });
+          const afterSilent = await walkStops();
+          ok(`every internal stop carries a painted ring after ${name}, re-entered with no event`,
+            afterSilent.every((x) => x.painted), afterSilent);
+          // Leave the field so the next block starts from a clean, unringed page.
+          await p2.locator('#party-size-input').click();
+        }
+
         await rearm('the window losing focus', () => window.dispatchEvent(new Event('blur')));
         await rearm('the page being hidden', () => window.dispatchEvent(new Event('pagehide')));
         const innerBefore = await innerStop();
