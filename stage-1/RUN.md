@@ -136,6 +136,7 @@ src/snapshot.js  export and import
 src/accounts.js  scrypt hashing, bearer tokens
 src/fields.js    request field validation
 src/http.js      request and response plumbing
+src/idempotency.js  idempotency keys and their stored replies
 src/errors.js    error codes and statuses
 src/text.js      user-facing message lookup
 src/messages.js  the message catalogue
