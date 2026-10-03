@@ -357,8 +357,27 @@ returned** — the audit covers the rows I wrote *about a shape* and the rows I 
 mine: `error-layer.mjs` is the first probe in this project that has been _red before it was committed_.** It
 failed once, on its own one-table fixture, and the fixture was fixed rather than the assertion — so its green
 is **a green it has been wrong about once.** `invariants.mjs` by contrast was introduced red, then green, then
-one later red, and has been green far more often than red. **So the criterion for which probe leads the audit
-is not size or thoroughness: it is whether the probe's green has ever cost it a fix.** A probe that has been
+one later red, and has been green far more often than red. **The criterion is corrected, because the Builder's own correction inverted it and the Foreman ruled against
+the offer on the evidence that followed.** As written it selected `error-layer.mjs`; from the history, **that
+probe has one commit, was never committed red, and its three-table fixture shipped in the same commit as its
+green** — so **there is no committed red in its record at all.** The corrected rule has three parts:
+
+> **Lead with a probe that has a _committed_ red; where none exists, the audit must _manufacture_ one** — by
+> inverting an assertion deliberately and confirming the suite reports it. **A criterion that cannot be
+> answered from the record disqualifies the candidate rather than qualifying it**, because a probe with no red
+> in its history has been tested by nothing but its own author.
+
+**And a red is not one thing. A _gap-red_ asserts that the probe does not establish something — it is the
+instrument reporting honestly about itself, and it says nothing about coverage. A _failure-red_ asserts that
+the product does not do something — it is evidence the probe is aimed, and it says nothing about whether the
+probe knows what it does not know.** `optimiser.mjs` now exits 1 to announce that objective 3 is unverified:
+that is a gap-red, and it is the correct state for an unestablished property.
+
+**The audit therefore leads with `invariants.mjs`**, which has a committed red at `ee04207`, is the folder's
+largest probe, and **has been measured blind to objective 2 while green throughout** — a known, documented
+blindness rather than a suspected one.
+
+**The original criterion is not discarded but demoted, because it was right about a different thing:** A probe that has been
 wrong while green has nothing to protect; **a probe that has been right while green may be right by
 construction.**
 
@@ -390,6 +409,28 @@ only a mutant establishes that it is aimed.**
     down. **"I watched it fail" is the most available and least informative sentence in this project**, and
     "I built the net and the butterfly in the same commit and watched the butterfly hit it" is what it looks
     like when the author means well. **A probe's coverage is unknown until something is removed.**
+
+### The audit's second question, answered for my own rows from their subjects rather than from memory
+
+> **Which of a probe's rows were written about a defect rather than about a requirement? A row written from a
+> remembered defect is narrow by construction — it can only ever find that defect again.**
+
+| my probe | written from | the honest reading |
+|---|---|---|
+| `s4/planner_property.py` | **the specification** — every assertion is a sentence of `stage-4.md`, and the three that failed did so because the build did not implement it | requirement-derived |
+| `s4/write_family.py` | **the specification's request shape**, after the invented-payload episode | requirement-derived, with one row (`S4-150-plan`) written because of the conditional-apply defect |
+| `s4/discriminator.py` | **the specification's discriminator**, after the shut-day silence was measured | requirement-derived |
+| `s3/fixture_arrival.py` | **a defect** — the four keys accepted and dropped, then the derived-terms gate | **incident-derived throughout**, and it shows: every key it names is a key that had already gone wrong |
+| `s4/negative_control.py` | **a caution**, not a defect and not a requirement | the only row in the folder written from "the count is not a coverage claim" |
+| `s3/api_core.py` · `terms_history_series.py` | requirements, plus a handful of rows written beside specific defects | mixed |
+
+**So one of my six probes is incident-derived end to end, and it is the one whose coverage I would defend
+least** — for exactly the reason the Builder gives for `invariants.mjs`: **a seat listing what has already gone
+wrong cannot find a fifth thing.** The mitigation available to me and not to a probe with no history at all:
+**every probe of mine has a manufactured red on record** — the deletion audit inverted `S4-171a` (FAIL 13/14)
+and `S4-167-a1` (FAIL 15/16), and `negative_control.py` is eight rows proven capable of failing against wrong
+answers real builds returned. **So my entry into the audit exists, and it is in the ledger rather than in a
+claim.**
 
 ## M2 survived against my own rows, and `S4-171d` is the rebuild
 
