@@ -1,17 +1,27 @@
 // Browser suite for the surfaces a person sees, run against a built container.
 //
-//   node --experimental-default-type=commonjs verification/probes/s2/ui-states.mjs [baseUrl]
+//   node ui-states.mjs [baseUrl]
 //
-// Requires playwright-core and a running service on BASE (default http://localhost:18099).
-// Playwright is installed outside the repository: nothing here is a runtime dependency of the
-// product, and the image stays dependency-free.
+// The base URL is read as argv[2], then process.env.BASE, then the default. Both forms are
+// documented in the README because an undocumented second convention is learnable only by reading
+// this file -- which is the trap that cost two wrong diagnoses of one wrong invocation.
+//
+// Requires playwright-core and a running service. Playwright is installed outside the repository:
+// nothing here is a runtime dependency of the product, and the image stays dependency-free.
 //
 // Every row here is an observable a person can see, not a description of a change. Where a row
 // covers a state, both halves are asserted: the state that applies and the state that must not.
 import { chromium } from 'playwright-core';
 
-export const BASE = process.argv[2] || 'http://localhost:18099';
+// One convention for one argument: argv[2] wins, then BASE, then the default. The suites in this
+// folder used to disagree about this -- one read an env var, five read argv -- and a suite pointed
+// at a dead port produced silence rather than an error, which was then read as a slow suite.
+export const BASE = process.argv[2] || process.env.BASE || 'http://localhost:18099';
 export const SHOTS = process.env.SHOTS || '';
+
+// Every request is bounded. Without this a wrong URL is not a failure, it is a silence, and silence
+// is indistinguishable from slowness -- the more comfortable of the two readings.
+export const REQUEST_TIMEOUT_MS = Number(process.env.REQUEST_TIMEOUT_MS || 5000);
 
 let failures = 0;
 let passes = 0;
@@ -36,11 +46,29 @@ export async function req(path, body) {
     method: body === undefined ? 'GET' : 'POST',
     headers: body === undefined ? {} : { 'Content-Type': 'application/json' },
     body: body === undefined ? undefined : JSON.stringify(body),
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
   const text = await r.text();
   let parsed = null;
   try { parsed = JSON.parse(text); } catch { parsed = null; }
   return { status: r.status, body: parsed, raw: text };
+}
+
+// Reachability is asserted at import, not by each suite remembering to call something. A precheck a
+// suite can forget is not a precheck, and "I could not start it" must never look like "it found
+// nothing". This throws, so a suite pointed at a dead port exits in seconds with this message
+// instead of hanging until someone kills it.
+try {
+  const probe = await fetch(BASE + '/health', { signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
+  if (!probe.ok) throw new Error('HTTP ' + probe.status);
+} catch (cause) {
+  console.error(
+    `FATAL: cannot reach the service at ${BASE}.\n`
+    + `  Pass it as argv[2] or set BASE. Checked GET ${BASE}/health within ${REQUEST_TIMEOUT_MS}ms.\n`
+    + `  Cause: ${cause && cause.message ? cause.message : cause}\n`
+    + `  Nothing was measured. This is a setup failure, not a result.`,
+  );
+  process.exit(1);
 }
 
 const HOURS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat']

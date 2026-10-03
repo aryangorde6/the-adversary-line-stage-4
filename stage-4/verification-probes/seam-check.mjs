@@ -1,7 +1,18 @@
 // The seam the Foreman named: the grid a person reads and the service's own explanation for the
 // same slot. This is the seam row of 0.4, re-driven against the stage-4 build: stage 4 changes
 // availability underneath the grid, so the two answers are compared in the state where they drift.
-const BASE = process.argv[2] || 'http://localhost:8080';
+const BASE = process.argv[2] || process.env.BASE || 'http://localhost:8080';
+const REQUEST_TIMEOUT_MS = Number(process.env.REQUEST_TIMEOUT_MS || 5000);
+
+// Same precheck as the screen suites, and for the same reason: a seam row that could not run must
+// not be able to report agreement. It runs before the rows rather than inside one.
+try {
+  const probe = await fetch(BASE + '/health', { signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
+  if (!probe.ok) throw new Error('HTTP ' + probe.status);
+} catch (cause) {
+  console.error(`FATAL: cannot reach the service at ${BASE} (GET /health). Pass it as argv[2] or set BASE.\n  Cause: ${cause && cause.message ? cause.message : cause}\n  Nothing was measured. This is a setup failure, not a result.`);
+  process.exit(1);
+}
 import { chromium } from 'playwright-core';
 let pass = 0, fail = 0;
 const row = async (name, fn) => {
@@ -13,7 +24,7 @@ const call = async (method, path, { body, token, key } = {}) => {
   if (body !== undefined) headers['Content-Type'] = 'application/json';
   if (token) headers.Authorization = 'Bearer ' + token;
   if (key) headers['Idempotency-Key'] = key;
-  const r = await fetch(BASE + path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
+  const r = await fetch(BASE + path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
   const t = await r.text();
   let p = null; try { p = t ? JSON.parse(t) : null; } catch { p = t; }
   return { status: r.status, body: p };
@@ -31,6 +42,27 @@ const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 375, height: 900 } });
 const errors = [];
 page.on('pageerror', (e) => errors.push(String(e)));
+
+// The two populations are compared as sets, in BOTH directions, and both counts are printed when they
+// disagree. Comparing only cells -> explain leaves an explain entry with no rendered cell uncompared,
+// so this suite could go green with a slot nobody explained on screen. That is the mirror of the
+// pair-indexing bug this file already carries a comment about: that one dropped every pair cell from
+// the map, this one would drop every unrendered cell from the assertion. A row that compares counts
+// cannot see either, so the direction is stated here rather than left to look accidental.
+function assertPopulationsMatch(dom, explained, label) {
+  const rendered = new Set(dom.map((cell) => cell.id));
+  const explainedIds = new Set(explained.keys());
+  const unexplained = [...rendered].filter((id) => !explainedIds.has(id));
+  const unrendered = [...explainedIds].filter((id) => !rendered.has(id));
+  if (unexplained.length > 0 || unrendered.length > 0) {
+    throw new Error(
+      `populations differ (${label}): ${rendered.size} rendered cells, ${explainedIds.size} explained entries.`
+      + ` cells with no explain entry: ${unexplained.join(', ') || 'none'}`
+      + ` | explain entries with no rendered cell: ${unrendered.join(', ') || 'none'}`,
+    );
+  }
+  console.log(`     populations equal in both directions (${label}): ${rendered.size} cells, ${explainedIds.size} explain entries`);
+}
 
 // Read every cell's data-available and compare with explain for the same slot and table.
 const cellsVs = async (date, party) => {
@@ -68,6 +100,7 @@ await row('SEAM the grid agrees with explain under policy 0', async () => {
     if (want !== cell.available) throw new Error(`${cell.id}: grid says ${cell.available}, explain says ${want}`);
     if (cell.disabled === cell.available) throw new Error(`${cell.id}: disabled ${cell.disabled} but available ${cell.available}`);
   }
+  assertPopulationsMatch(dom, explained, 'policy 0');
 });
 
 await row('SEAM the grid follows a policy that flips a cell, and still agrees with explain', async () => {
@@ -90,6 +123,7 @@ await row('SEAM the grid follows a policy that flips a cell, and still agrees wi
   const flipped = [...after.explained.entries()].filter(([k, v]) => availableBefore.includes(k) && v === false).map(([k]) => k);
   if (flipped.length === 0) throw new Error('no cell flipped, so the agreement above is vacuous');
   console.log('     cells that flipped under the policy: ' + flipped.join(', '));
+  assertPopulationsMatch(after.dom, after.explained, 'after the policy');
 });
 
 await row('SEAM the detail endpoint still reports the fixture under a published policy', async () => {

@@ -18,6 +18,21 @@ node stage3-api.mjs     # policies, explain, accepted terms, history and series
 docker rm -f tk-fin
 ```
 
+## Pointing a suite at a service
+
+Every suite reads its base URL the same way, in this order:
+
+    node ui-grid.mjs http://localhost:18099     # argv[2] wins
+    BASE=http://localhost:18099 node ui-grid.mjs   # or the environment
+
+and falls back to its own default if neither is given. **All three forms work in every suite**,
+including `stage3-api.mjs`, which also still accepts `TK_BASE_URL`.
+
+**Every request is bounded** (`REQUEST_TIMEOUT_MS`, default 5000ms) and **every suite asserts
+`GET /health` before its first row** -- at import for the screen suites, before the rows for
+`seam-check.mjs`. So a suite pointed at a port with nothing on it **exits in seconds naming the URL
+it tried**, rather than hanging until someone kills it and the silence being read as a slow suite.
+
 `playwright-core` is installed outside the repository and linked in as `node_modules` here; it is
 not a dependency of the product and the image stays dependency-free. Set `SHOTS=<dir>` to write
 screenshots.

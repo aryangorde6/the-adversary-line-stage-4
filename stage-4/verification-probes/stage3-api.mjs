@@ -25,7 +25,9 @@
 
 import { strict as assert } from 'node:assert';
 
-const BASE = process.env.TK_BASE_URL || 'http://localhost:8080';
+// argv[2] first, then BASE, then the name this file used before the folder had one convention,
+// then the default. Kept so an existing invocation does not silently start pointing somewhere else.
+const BASE = process.argv[2] || process.env.BASE || process.env.TK_BASE_URL || 'http://localhost:8080';
 
 let failures = 0;
 let rows = 0;
@@ -36,6 +38,7 @@ async function call(method, path, { body, token, key } = {}) {
   if (token) headers.Authorization = `Bearer ${token}`;
   if (key) headers['Idempotency-Key'] = key;
   const response = await fetch(`${BASE}${path}`, {
+    signal: AbortSignal.timeout(Number(process.env.REQUEST_TIMEOUT_MS || 5000)),
     method,
     headers,
     body: body === undefined ? undefined : JSON.stringify(body),
