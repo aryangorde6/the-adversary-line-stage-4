@@ -428,6 +428,17 @@ because they have now failed to travel into a new file twice.**
     preferred option first** — which is a fact about ordering, not about data, and would change if the order
     did. **A clean bill of health on question 4 is weaker evidence than a found loss, and the difference is
     recorded rather than smoothed.**
+44. **A comment load-bearing across stages is an instruction nobody re-reads.** Clause 25's finding was that
+    a comment becomes a design's apparent intent; **the symmetric case is a comment quietly _holding_ a
+    design together** — a `seam-check` index keyed by table-set *and* time for one reason only, because a
+    comment written two stages earlier said so, in code written this stage. **Where a comment is load-bearing
+    for correctness rather than for explanation, assert the property instead of trusting the comment** —
+    otherwise correctness depends on a future reader's memory. **Same fix, opposite direction: assert it.**
+45. **A seat blocked by a missing specification should spend its turn making the specification cheap to
+    supply, not making the argument louder.** The Builder's menu — *here is exactly what I built, here are the
+    two shapes I would accept, rule on any line* — resolved in one exchange what two refusals had not, **and
+    the naming evidence was preferred over the implementer's own design by the implementer**, which is the
+    disposition this stage has been trying to produce.
 35. **A row that asserts wording must also assert the condition that makes that wording true** — the
     precondition is part of the assertion, not a note beside it. A wording row with no precondition is a
     row about vocabulary, **and vocabulary is the part of a screen least likely to change and therefore
