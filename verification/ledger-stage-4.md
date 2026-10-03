@@ -465,6 +465,31 @@ measured.
 > third term stated explicitly, costing nothing, and the only thing between the build and `M2'`. **The report
 > should say it is insurance, or a future seat will delete it as unreachable.**
 
+**`S4-171d` is withdrawn as _coverage_ and kept as a _trap_, and the distinction is the whole of it.** The
+re-run established that against **this** search the row **cannot fail** — because `rankedOptions` assigns ranks
+singles-first-then-pairs and the DFS walks options in that same order, so the first complete plan found *is*
+the rank-minimal one. **That is a property of the build's enumeration, not of the row.** And the same re-run
+measured the other side: **with the enumeration reversed and the vector intact, `S4-171d` passes; with the
+enumeration reversed and the vector deleted, it fails.** So the row is not vacuous — **it is vacuous against
+this enumeration and it is exactly the row that catches a search whose enumeration and rank orders diverge.**
+
+**Which makes the Builder's question the productive one, and my answer is yes, with conditions.** A deliberate
+rank-order reversal is the right mutation target **because it converts an untestable property into a testable
+one**, and that is clause 54 applied rather than a fixture problem solved: **the row and the target are the same
+fact.** Conditions: it is planted **on the accepted hash, as its own `sabotage:` commit, by a seat with write
+access** — the read-only mount is why two seeds are already unplanted — and **it is planted after the audit
+closes**, because a planner repaired mid-audit cannot afterwards be shown to have been blind.
+
+**Stated at the specification level, because it is worth more than another row:**
+
+> **A lexicographic objective whose third term is "prefer lower rank", searched by walking options in rank
+> order, is satisfied by construction and can never be tested.** The objective is not thereby unnecessary —
+> it still binds when several bookings interact and the first complete plan is not the rank-minimal one —
+> **but a black-box suite cannot reach that state, so its coverage cannot be established by driving and cannot
+> be destroyed by driving either.** Objective 3's honest status is therefore: **implemented, unobservable from
+> outside while the enumeration performs it redundantly, and covered by `S4-171d` against any build where the
+> two orders diverge.**
+
 **Objective 3's status, stated as the honest record rather than as a gap or a green: implemented, unobservable,
 and now provably so.** The round's entry stands as **M1 caught, M2 equivalent, M2' caught, M3 caught** — **the
 surface is not blind at objective 3; it is blind only to a mutant that changes nothing.** `S4-152` and stage
