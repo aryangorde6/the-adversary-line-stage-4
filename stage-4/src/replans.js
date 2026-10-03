@@ -150,7 +150,13 @@ function tableSetChanged(before, after) {
 // at six by the specification. Exhaustive is deliberate: a greedy pass would be cheaper and would not be
 // the specified optimum, and the whole point of the third objective is that it is the LAST tie-break --
 // which is only meaningful if the first two are actually minimised.
+// `considered` is an array of RESERVATIONS, in reference order. An earlier version was handed an array
+// of reference strings instead, and every filter below then ran against a string: `reservation.table_ids`
+// was undefined, the overlap arithmetic compared undefined, and the whole search collapsed to "no options"
+// -- so a closure on t_1 reported 409 no_feasible_plan for a booking sitting on t_2 that could simply stay.
+// The failure looked like a planning dead end and was a type error two functions apart.
 function planFor(state, restaurant, closure, considered, byReference) {
+  const consideredReferences = considered.map((reservation) => reservation.reference);
   const chosen = new Map();
   let movedCount = 0;
   let unusedSeats = 0;
@@ -158,7 +164,7 @@ function planFor(state, restaurant, closure, considered, byReference) {
 
   for (const reservation of considered) {
     const options = rankedOptions(state, restaurant, reservation, closure)
-      .filter((option) => !fixedOverlaps(state, restaurant, { ...reservation, table_ids: option.table_ids }, considered))
+      .filter((option) => !fixedOverlaps(state, restaurant, { ...reservation, table_ids: option.table_ids }, consideredReferences))
       .filter((option) => freeDuring(
         state,
         restaurant,
@@ -214,7 +220,7 @@ function previewReplan(state, user, restaurant, body, nowMs) {
   const byReference = {};
   for (const reservation of considered) byReference[reservation.reference] = reservation;
 
-  const solution = planFor(state, restaurant, closure, considered.map((reservation) => reservation.reference), byReference);
+  const solution = planFor(state, restaurant, closure, considered, byReference);
   if (!solution) fail('no_feasible_plan', { table_id: closure.table_id });
 
   const assignments = considered.map((reservation) => {
