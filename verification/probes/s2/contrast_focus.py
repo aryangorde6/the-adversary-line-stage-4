@@ -103,7 +103,11 @@ FOCUS = """
   };
   const el = document.activeElement;
   if (!el || el === document.body) return null;
-  const cs = getComputedStyle(el);
+  // The indicator may be painted on a WRAPPER around the control rather than on the control, so
+  // read the carrier. This probe predates that change and was reporting a false red on the date
+  // field: the ring was there, drawn one element out, exactly where the fix put it.
+  const carrier = el.closest('.kb-focus') || el;
+  const cs = getComputedStyle(carrier);
   // The ring may be drawn as an outline or as a box-shadow; take whichever is visible.
   let ring = null;
   const shadow = cs.boxShadow && cs.boxShadow !== 'none' ? cs.boxShadow : '';
@@ -118,7 +122,7 @@ FOCUS = """
   // compared against the nearest non-transparent ANCESTOR background, never the element's own.
   // Reading bgOf(el) compares the ring with the button it surrounds and reports 1.00:1 for a
   // perfectly visible focus ring -- which is how this probe first reported eight false failures.
-  const bg = bgOf(el.parentElement || el);
+  const bg = bgOf(carrier.parentElement || carrier);
   const label = el.getAttribute('data-testid') || el.getAttribute('name') || el.id || el.tagName.toLowerCase();
   if (!ring && !hasShadow) return { label, indicator: false,
                                     outline: cs.outlineStyle + ' ' + cs.outlineWidth,
