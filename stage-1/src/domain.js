@@ -79,10 +79,11 @@ function requireSlotInsideOpeningHours(restaurant, wall) {
   }
 }
 
-function isOccupied(state, tableId, startMs, endMs, ignoredReference) {
+function isOccupied(state, restaurantId, tableId, startMs, endMs, ignoredReference) {
   return state.reservations.some(
     (reservation) =>
       reservation.status === 'confirmed' &&
+      reservation.restaurant_id === restaurantId &&
       reservation.table_id === tableId &&
       reservation.reference !== ignoredReference &&
       reservation.starts_at_ms < endMs &&
@@ -120,7 +121,7 @@ function createReservation(state, user, body, nowMs) {
     fail('party_exceeds_capacity', Object.assign(placeContext(restaurant, table, wall), { capacity: table.capacity }));
   }
   const endMs = startMs + restaurant.reservation_duration_minutes * MILLIS_PER_MINUTE;
-  if (isOccupied(state, table.id, startMs, endMs, null)) {
+  if (isOccupied(state, restaurant.id, table.id, startMs, endMs, null)) {
     fail('table_unavailable', placeContext(restaurant, table, wall));
   }
   const reservation = {
@@ -154,6 +155,7 @@ function planAmendment(state, reservation, restaurant, changes) {
     fail('party_exceeds_capacity', Object.assign(placeContext(restaurant, table, wall), { capacity: table.capacity }));
   }
   return {
+    restaurant_id: restaurant.id,
     table_id: table.id,
     party_size: partySize,
     starts_at_local: time.wallToString(wall),
@@ -182,7 +184,7 @@ function amendReservation(state, reservation, body, nowMs) {
     party_size: optionalPartySize(body),
   };
   const plan = planAmendment(state, reservation, restaurant, changes);
-  if (isOccupied(state, plan.table_id, plan.starts_at_ms, plan.ends_at_ms, reservation.reference)) {
+  if (isOccupied(state, restaurant.id, plan.table_id, plan.starts_at_ms, plan.ends_at_ms, reservation.reference)) {
     const target = store.findTable(restaurant, plan.table_id);
     fail('table_unavailable', placeContext(restaurant, target, time.parseWall(plan.starts_at_local)));
   }
@@ -213,7 +215,7 @@ function availabilityFor(state, restaurant, date, partySize) {
       const endMs = startMs + duration * MILLIS_PER_MINUTE;
       const available = [];
       for (const table of restaurant.tables) {
-        if (table.capacity >= partySize && !isOccupied(state, table.id, startMs, endMs, null)) {
+        if (table.capacity >= partySize && !isOccupied(state, restaurant.id, table.id, startMs, endMs, null)) {
           available.push(table.id);
         }
       }

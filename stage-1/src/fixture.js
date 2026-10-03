@@ -7,6 +7,8 @@ const domain = require('./domain');
 const { hashPassword, randomId, randomToken } = require('./accounts');
 const { has, isPlainObject, normaliseEmail, MAX_ID_LENGTH } = require('./fields');
 
+const REFERENCE_PATTERN = /^[A-Z0-9]{6,12}$/;
+
 function expectObject(value, field) {
   if (!isPlainObject(value)) fail('malformed_request', { field });
   return value;
@@ -104,6 +106,13 @@ function parseUser(raw, takenIds, takenEmails) {
   return { id, email, display_name: displayName, password, password_hash: null };
 }
 
+function requireReference(raw) {
+  if (typeof raw !== 'string' || !REFERENCE_PATTERN.test(raw)) {
+    fail('validation_failed', { field: 'reference' });
+  }
+  return raw;
+}
+
 function parseSeededReservation(raw, state, nowMs) {
   expectObject(raw, 'reservations');
   const restaurantId = fixtureId(raw.restaurant_id, 'restaurant_id');
@@ -118,7 +127,7 @@ function parseSeededReservation(raw, state, nowMs) {
   const partySize = raw.party_size === undefined ? 1 : integerAtLeast(raw.party_size, 'party_size', 1);
   const status = raw.status === 'cancelled' ? 'cancelled' : 'confirmed';
   const userId = raw.user_id === undefined ? null : fixtureId(raw.user_id, 'user_id');
-  const reference = raw.reference === undefined ? store.allocateReference(state) : fixtureId(raw.reference, 'reference');
+  const reference = raw.reference === undefined ? store.allocateReference(state) : requireReference(raw.reference);
   if (store.isReferenceTaken(state, reference)) fail('validation_failed', { field: 'reference' });
   const id = raw.id === undefined ? store.allocateReservationId(state) : fixtureId(raw.id, 'reservation_id');
   if (state.reservations.some((reservation) => reservation.id === id)) {

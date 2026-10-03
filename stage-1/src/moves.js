@@ -29,13 +29,17 @@ function validateMoveList(body) {
 }
 
 function overlaps(a, b) {
-  return a.table_id === b.table_id && a.starts_at_ms < b.ends_at_ms && b.starts_at_ms < a.ends_at_ms;
+  return a.restaurant_id === b.restaurant_id &&
+    a.table_id === b.table_id &&
+    a.starts_at_ms < b.ends_at_ms &&
+    b.starts_at_ms < a.ends_at_ms;
 }
 
 function occupiedByUnlisted(state, plan, listed) {
   return state.reservations.some(
     (reservation) =>
       reservation.status === 'confirmed' &&
+      reservation.restaurant_id === plan.restaurant_id &&
       reservation.table_id === plan.table_id &&
       !listed.has(reservation.reference) &&
       reservation.starts_at_ms < plan.ends_at_ms &&

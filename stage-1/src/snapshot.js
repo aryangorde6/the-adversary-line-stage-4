@@ -8,6 +8,7 @@ const { isPlainObject, has } = require('./fields');
 
 const TRACK = 'tablekeeper';
 const FORMAT_VERSION = 1;
+const REFERENCE_PATTERN = /^[A-Z0-9]{6,12}$/;
 
 function requireString(value, field, allowEmpty) {
   if (typeof value !== 'string') fail('validation_failed', { field });
@@ -80,7 +81,9 @@ function validateReservations(raw, restaurants) {
       fail('validation_failed', { field: 'starts_at_ms' });
     }
     const reference = requireString(entry.reference, 'reference');
-    if (references.has(reference)) fail('validation_failed', { field: 'reference' });
+    if (!REFERENCE_PATTERN.test(reference) || references.has(reference)) {
+      fail('validation_failed', { field: 'reference' });
+    }
     references.add(reference);
     const status = entry.status === 'cancelled' ? 'cancelled' : 'confirmed';
     const reservation = {
