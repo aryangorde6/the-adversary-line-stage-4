@@ -73,6 +73,7 @@ const STATUS_BY_CODE = Object.freeze({
   not_on_slot_grid: 422,
   outside_opening_hours: 422,
   party_exceeds_capacity: 422,
+  combination_not_allowed: 422,
   invalid_local_time: 422,
 });
 
@@ -89,6 +90,40 @@ function noun(ctx, key) {
 
 function fieldNoun(ctx) {
   return FIELD_NOUNS[word(ctx.field)] || "";
+}
+
+// Stage 2 books a set of tables. Labels are preferred so a sentence reads "Tables 1 and 2" rather
+// than "Tables t_1 and t_2". A caller may pass labels as an array or as a joined string; the joined
+// form is split, which is a guess, so an array is the better contract and the caller should send one.
+// Table ids are never printed: a diner picks tables by label, so naming ids back at them helps
+// nobody, and the specification asks for identifiers to stay out of the way.
+function tableSet(ctx) {
+  const fromArray = (value) => (Array.isArray(value) ? value.map(word).filter(Boolean) : []);
+  const fromJoined = (value) => {
+    const joined = word(value);
+    if (!joined) return [];
+    return joined.includes(" and ") ? joined.split(" and ").map(word).filter(Boolean) : [joined];
+  };
+  const sources = [() => fromArray(ctx.tables), () => fromJoined(ctx.tables), () => fromArray(ctx.table_labels)];
+  for (const source of sources) {
+    const found = source();
+    if (found.length) return found;
+  }
+  return fromJoined(ctx.table);
+}
+
+function setSize(ctx) {
+  const counts = [ctx.tables, ctx.table_labels, ctx.table_ids].map((value) =>
+    Array.isArray(value) ? value.filter((v) => word(v) !== "").length : 0
+  );
+  return Math.max(tableSet(ctx).length, ...counts);
+}
+
+function tablePhrase(set) {
+  if (set.length === 1) return `Table ${set[0]}`;
+  if (set.length === 2) return `Tables ${set[0]} and ${set[1]}`;
+  if (set.length > 2) return `Tables ${set.slice(0, -1).join(", ")} and ${set[set.length - 1]}`;
+  return "";
 }
 
 function span(count) {
@@ -236,11 +271,27 @@ const MESSAGES = {
 
   party_exceeds_capacity: (ctx) => {
     const capacity = Math.floor(Number(ctx.capacity));
-    const label = word(ctx.table);
-    const seats = Number.isFinite(capacity) && capacity >= 1 ? `seats ${capacity} at most` : "is too small";
-    return label
-      ? `Table ${label} ${seats}. Book for fewer people, or pick a larger table.`
-      : `That table ${seats}. Book for fewer people, or pick a larger table.`;
+    const set = tableSet(ctx);
+    const many = set.length > 1;
+    const seats = Number.isFinite(capacity) && capacity >= 1
+      ? `${many ? "seat" : "seats"} ${capacity} at most`
+      : `${many ? "are" : "is"} too small`;
+    const bigger = many ? "a larger option" : "a larger table";
+    const named = tablePhrase(set);
+    if (named) return `${named} ${seats}. Book for fewer people, or pick ${bigger}.`;
+    return `That ${many ? "combination of tables" : "table"} ${seats}. Book for fewer people, or pick ${bigger}.`;
+  },
+
+  combination_not_allowed: (ctx) => {
+    const set = tableSet(ctx);
+    const named = tablePhrase(set);
+    const offer = "Pick one table, or a pair the restaurant offers.";
+    if (setSize(ctx) > 2) {
+      return `A booking can use one table, or two tables that go together. ${offer}`;
+    }
+    return named
+      ? `${named} cannot be booked together at this restaurant. ${offer}`
+      : `That combination of tables cannot be booked at this restaurant. ${offer}`;
   },
 
   invalid_local_time: (ctx) => {
