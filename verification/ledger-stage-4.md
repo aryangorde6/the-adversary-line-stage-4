@@ -353,6 +353,21 @@ row I cannot show failing is a row I am reporting green for.
 with `negative_control.py` — **7 rows proven capable of failing, each against the wrong answer a real build
 returned** — the audit covers the rows I wrote *about a shape* and the rows I wrote *about a plan*.
 
+**Which probe the audit should lead with, and the Builder's contribution to the question, which is better than
+mine: `error-layer.mjs` is the first probe in this project that has been _red before it was committed_.** It
+failed once, on its own one-table fixture, and the fixture was fixed rather than the assertion — so its green
+is **a green it has been wrong about once.** `invariants.mjs` by contrast was introduced red, then green, then
+one later red, and has been green far more often than red. **So the criterion for which probe leads the audit
+is not size or thoroughness: it is whether the probe's green has ever cost it a fix.** A probe that has been
+wrong while green has nothing to protect; **a probe that has been right while green may be right by
+construction.**
+
+**And `error-layer.mjs`'s third assertion is the one worth copying into every door row: that the coercion
+itself is asserted — that an unregistered code _does_ become `validation_failed`** — so the hazard that made
+`stale_plan` answer 422 with a validation message stays visible instead of being described and then
+forgotten. **Asserting that the hazard still exists is different from asserting that the good path works,
+and only one of the two tells you whether the guard is load-bearing.**
+
 **And the honest limit of my own audit, which the round should hold me to: inverting an assertion proves the
 row can fail, and it does not prove the row is pointed at the right thing.** The only measurement of that is a
 mutant in the product, which is what the round is for. **Deletion establishes that a probe is not vacuous;
