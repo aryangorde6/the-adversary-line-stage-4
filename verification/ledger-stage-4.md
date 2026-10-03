@@ -531,6 +531,41 @@ This is now the symmetric counterpart of clause 51 — a summary claiming what i
 (`the three objectives are separated`) and a summary understating what they do establish (`objective 3
 UNVERIFIED`) are the **same mistake pointing in opposite directions**, and the room has now committed both.
 
+### Seed 4, and a pre-registration — because a rule file is only worth what it costs to write down first
+
+**The design rule, which sits beside clause 55 because it is the design rule behind both:**
+
+> **A mutant chosen at random measures the mutant. A mutant chosen to break a specific assertion measures the
+> assertion.** So when a probe's sensitivity is in question, **plant the defect that probe was written about**
+> — and if you want to know whether it can see anything else, plant one that is not its incident and accept
+> the answer either way.
+
+**Seed 4 plants `fixture_arrival.py`'s own incident** — the reset door accepting four stage-3 keys and
+silently dropping them, or the derived-terms comparison, whichever that probe was written about — **and
+requires that probe to catch it.**
+
+**So here is my pre-registration, written before the seed exists, because the value of a designed
+measurement is entirely in whether the interpretation was fixed in advance:**
+
+| if seed 4… | then the finding is | and it is a statement about |
+|---|---|---|
+| **is caught** | `fixture_arrival.py` sees its own subject | the narrowness being a fact about how broad the specification is, not about the row |
+| **survives** | **the one probe in the room written end-to-end from an incident cannot see that incident** | the row — and "narrow by construction" becomes a measurement instead of an argument |
+| **is caught by a row in the file I did not think of** | the probe's coverage is broader than its subjects | the file, and I will name which row, because a catch by an adjacent row is not the same result as a catch by the intended one |
+
+**And two things I bind myself to in advance, so the result cannot be read generously after the fact:**
+
+1. **A catch by seed 4 is a measurement about `fixture_arrival.py` and not a repair of it.** The probe's other
+   rows stay on the record as incident-derived and unknown, **and the file is not reclassified as
+   requirement-derived because one seed landed on it.**
+2. **A survival is reported as a survival**, with the same write-up as a catch, **and I will not go looking
+   for a different probe in my own folder that happens to catch the same defect in order to soften it** — a
+   second instrument catching it is a separate finding about that instrument, and it is not evidence about
+   this one.
+
+**Either way the answer is about the probe, not about the seed, and that is the difference between an
+experiment and an observation.**
+
 ### Settled from the history: what `ee04207`'s red actually reported
 
 **Read from the commit, not from the reports, as instructed — and the answer splits the probe in two.**
