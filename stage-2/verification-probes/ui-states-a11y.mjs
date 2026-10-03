@@ -293,6 +293,33 @@ async function main() {
         // A field can also be emptied without anything else happening: calling blur() on it fires
         // one event and nothing more. The ring has to go on that event too, or it is left on a field
         // the keyboard has left, which is the same defect as a missing one in the other direction.
+        // Whether the departure event is safe to listen to on this control: if it fired while the
+        // keyboard moved between the field's inner segments, a listener on it would take the ring
+        // off a field the keyboard is still inside. It does not -- it fires only on the way out.
+        const betweenSegments = await p2.evaluate(() => {
+          window.__departures = [];
+          const input = document.querySelector('#date-input');
+          if (window.__watched) return;
+          window.__watched = true;
+          ['blur', 'focusout'].forEach((name) => input.addEventListener(name,
+            () => window.__departures.push(name), true));
+          input.focus();
+        });
+        const inside = [];
+        // Three presses stay inside the field's four segments; a fourth would leave it, and the
+        // departure event is expected to fire then, which is a different question.
+        for (let i = 0; i < 3; i += 1) {
+          await p2.keyboard.press('Tab');
+          inside.push(await p2.evaluate(() => document.activeElement
+            === document.querySelector('#date-input')));
+        }
+        const fired = await p2.evaluate(() => window.__departures.splice(0));
+        ok('the departure event does not fire while the keyboard is between the inner segments',
+          fired.length === 0, { fired, inside });
+        ok('the field holds the keyboard across its inner segments',
+          inside.filter(Boolean).length === 3, { fired, inside });
+
+        await p2.locator('#date-input').click();
         const blurOnly = await p2.evaluate(() => {
           document.querySelector('#date-input').blur();
           const f = document.querySelector('[data-date-field]');
@@ -305,6 +332,7 @@ async function main() {
           return getComputedStyle(f).outlineStyle === 'none';
         });
         ok('and it stays gone, with nothing polling to put it back', stillGone);
+        await p2.locator('#date-input').click();
         const innerBefore = await innerStop();
         ok('the inner segment carries a ring before any exit has fired', innerBefore === true,
           { innerBefore });
