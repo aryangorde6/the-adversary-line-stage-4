@@ -3,122 +3,70 @@
 Result repository: /home/aryan/band_hack/band-work/tablekeeper5
 Specification: /home/aryan/band_hack/dark-factory-wearedevs/tablekeeper/spec/stage-1.md
 
-| id | section | requirement | how_to_check |
-|---|---|---|---|
-| R001 | §1 | Diners can search restaurant availability, book a table and receive confirmation reference | Test availability search, booking flow |
-| R002 | §1 | Can cancel or amend bookings, including changing several bookings together | Test cancel, amend, batch moves |
-| R003 | §1 | Each restaurant has table capacities, opening hours, cancellation policy | Verify fixture fields respected |
-| R004 | §1 | Only HTTP API required | N/A - implementation choice |
-| R005 | §1 | Two confirmed reservations must never occupy the same table at overlapping times including concurrent requests | Concurrent booking attempts to same slot |
-| R006 | §1 | Occupancy is half-open interval [starts_at, starts_at + reservation_duration) | Verify ends_at = starts_at + duration |
-| R007 | §1 | Retries and rejected requests must not create duplicate or partial bookings | Retry scenarios |
-| R008 | §2 | Deliver HTTP service, Dockerfile and RUN.md with command to build and start without manual setup | Verify files exist |
-| R009 | §2 | Image must run with -e PORT=<port> and port mapping | Docker run as specified |
-| R010 | §2 | Runtime networking has no outbound access; all deps in image | Build-time vs runtime constraints |
-| R011 | §2 | Resource limits: CPU 2vCPU, memory 2GiB, start to first healthy within 60s, up to 50 concurrent in-flight, per-request timeout 5s (10s for POST /_test/reset), no outbound at runtime | Verify constraints are met |
-| R012 | §3.1 | Listen on 0.0.0.0 using PORT env var, default 8080 | Start server with/without PORT |
-| R013 | §3.2 | GET /health -> 200 {"status":"ok"}; non-200 allowed before ready but must be 200 when ready within 60s | Probe health during startup and when ready |
-| R014 | §3.3 | POST /_test/reset with fixture body -> 204; replaces all state; repeated resets supported; unauthenticated | Reset and verify state; repeat |
-| R015 | §3.4 | application/json; charset=utf-8 | Check content-type |
-| R016 | §3.4 | Timestamps RFC 3339 with explicit offset | Inspect timestamp formats |
-| R017 | §3.4 | Unknown fields in request ignored; unknown query params ignored | Send extra fields/params |
-| R018 | §3.4 | IDs opaque strings max 64 chars (applies to fixture IDs too) | Validate ID format/length constraints |
-| R019 | §4 | Restaurants/tables supplied only via POST /_test/reset; no create endpoints | Enforce via fixture only |
-| R020 | §4 | Seeded users must be able to login immediately with given password | Login seeded user |
-| R021 | §4 | Fixtures may use any calendar date; booking not rejected solely because start is in past | Past date booking allowed except cutoffs |
-| R022 | §4 | weekday one of mon tue wed thu fri sat sun | Validate weekday values |
-| R023 | §4 | opens/closes HH:MM 24h, closes later than opens same day, never cross midnight | Validate opening hours |
-| R024 | §5 | Every 4xx/5xx has body {error:{code,message}} | Check all error responses |
-| R025 | §5 | 400 malformed_request for unparseable body or wrong JSON type | Send bad JSON/wrong types |
-| R026 | §5 | 400 missing_idempotency_key when required header absent/empty | Test missing/empty key |
-| R027 | §5 | 401 unauthenticated for missing/malformed/unknown bearer token | Auth failures |
-| R028 | §5 | 403 forbidden when authenticated but not permitted | Permission cases |
-| R029 | §5 | 404 not_found when no such resource or not visible to caller | Not found cases; ownership |
-| R030 | §5 | 409 idempotency_key_reuse when key used by same caller with different body | Idem reuse |
-| R031 | §5 | 422 validation_failed for missing required field/param or stated rule violation | Validation cases |
-| R032 | §5 | Idempotency-Key 1..255 chars; else 422 validation_failed | Key length bounds |
-| R033 | §5 | No 5xx under any circumstances including concurrent load | Stress/concurrency |
-| R034 | §5 | Query param integers must be plain decimal digits (1e9, 4.0, +4 -> 422) | Query param format |
-| R035 | §6 | POST /auth/signup returns 201 with user_id, display_name, token | Signup |
-| R036 | §6 | POST /auth/login returns 200 with user_id, display_name, token | Login |
-| R037 | §6 | Email already registered -> 409 email_taken | Duplicate signup |
-| R038 | §6 | Password < 8 chars -> 422 validation_failed | Short password |
-| R039 | §6 | email not local@domain form -> 422 validation_failed | Bad email format |
-| R040 | §6 | Wrong password or unknown email on login -> 401 unauthenticated | Bad login |
-| R041 | §6 | Bearer token required on all endpoints except /health, /_test/reset, /auth/signup, /auth/login, GET /restaurants, GET /restaurants/{id}, GET /availability | Auth scope test |
-| R042 | §6 | Tokens do not expire; multiple tokens/sessions allowed | Token behavior |
-| R043 | §6 | Passwords stored using password-hashing function (bcrypt/scrypt/argon2 or equivalent), not plaintext | Inspect storage semantics via behavior/implementation check |
-| R044 | §7 | POST /reservations and POST /reservation-moves require Idempotency-Key | Enforce requirement |
-| R045 | §7 | Key scoped to authenticated user | Different users same key independent |
-| R046 | §7 | Replay = same user, same method, same path, same body; same key on different path is different | Path boundary |
-| R047 | §7 | Idempotency resolved after body parsed and authenticated, before endpoint validation and resource checks; different body -> 409 even if new body invalid | Order of checks |
-| R048 | §7 | Absent/empty key -> 400 missing_idempotency_key | Key missing |
-| R049 | §7 | First use -> normal response (201) | First use |
-| R050 | §7 | Replay same key same body -> 200 with identical body | Replay identity |
-| R051 | §7 | Same key different body -> 409 idempotency_key_reuse | Reuse different |
-| R052 | §7 | Key reused after 4xx original -> treated as first use | After failure reuse |
-| R053 | §7 | Same body means same JSON value after parsing (order/whitespace irrelevant) | Canonicalization |
-| R054 | §7 | Concurrent identical requests with unused key: exactly one 201, others 200 with same body; op once | Concurrency |
-| R055 | §7 | Successful replay returns original response even after resource changes/cancelled; makes no state changes | Replay stability |
-| R056 | §8 | GET /restaurants returns list with id,name,timezone | Public endpoint |
-| R057 | §8 | GET /restaurants/{id} returns full restaurant shape incl slot_minutes, duration, cutoff, opening_hours, tables; 404 if unknown | Get single restaurant |
-| R058 | §8 | GET /availability requires restaurant_id,date,party_size; missing any -> 422 validation_failed; date is local calendar date | Param validation |
-| R059 | §8 | Availability returns slots on slot_minutes grid from opens while slot+duration <= closes; closed day returns empty slots | Grid calculation |
-| R060 | §8 | available_table_ids lists tables with capacity>=party_size and no overlapping confirmed reservation, in fixture order; empty list if none | Availability filtering |
-| R061 | §8 | starts_at_local is full YYYY-MM-DDTHH:MM | Format |
-| R062 | §8 | POST /reservations requires Idempotency-Key; returns 201 with full reservation fields including reference, status confirmed, timestamps with offsets | Create reservation |
-| R063 | §8 | reference 6-12 chars A-Z0-9, unique across all, never changes | Reference format/uniqueness |
-| R064 | §8 | Table taken for overlapping interval -> 409 table_unavailable | Overlap conflict |
-| R065 | §8 | starts_at_local not on slot grid -> 422 not_on_slot_grid | Grid alignment |
-| R066 | §8 | Slot outside opening hours or would end after closes -> 422 outside_opening_hours | Hours boundary |
-| R067 | §8 | party_size exceeds table capacity -> 422 party_exceeds_capacity | Capacity |
-| R068 | §8 | party_size < 1 or not integer -> 422 validation_failed | Party size validation |
-| R069 | §8 | starts_at_local is local time that does not exist (DST spring forward) -> 422 invalid_local_time | DST skipped hour |
-| R070 | §8 | Unknown restaurant/table or table belongs to different restaurant -> 404 not_found | Referential integrity |
-| R071 | §8 | GET /reservations returns caller's reservations starts_at desc, confirmed and cancelled; empty list ok | List own reservations |
-| R072 | §8 | GET /reservations/{reference} returns one reservation; 404 if not caller's (no leakage) | Ownership enforced |
-| R073 | §8 | POST /reservations/{reference}/cancel -> 200 with status cancelled; frees table immediately | Cancel frees slot |
-| R074 | §8 | Cancel already cancelled -> 200 with current state | Idempotent cancel |
-| R075 | §8 | Cancel within cutoff or later -> 409 cutoff_passed | Cutoff enforcement |
-| R076 | §8 | Cancel not caller's -> 404 not_found | Ownership |
-| R077 | §8 | PATCH /reservations/{reference} changes time/table/party_size (any subset); no idem key required | Amendment |
-| R078 | §8 | Amendment uses same validation as create; cutoff measured against current start; cancelled -> 409 reservation_cancelled | Amend rules |
-| R079 | §8 | Successful amendment releases old slot and reserves new together; failed amendment leaves original unchanged | Atomicity of amend |
-| R080 | §8 | reference and reservation_id survive change | Identity preserved |
-| R081 | §9 | Spring forward: skipped local times never appear in availability; booking skipped time -> 422 invalid_local_time | DST spring |
-| R082 | §9 | Fall back: repeated hour occurs twice; always resolve to first occurrence (before clocks change); slot appears once; second not bookable | DST fall back ambiguity |
-| R083 | §9 | reservation_duration_minutes is absolute time, not wall-clock | Duration absolute |
-| R084 | §9 | Europe/Berlin and America/New_York transitions as specified must be handled; offsets follow IANA rules | Specific transition dates |
-| R085 | §10 | GET /_test/export and POST /_test/import are unauthenticated test endpoints | Public test endpoints |
-| R086 | §10 | Export returns 200 with track="tablekeeper", format_version=1, state (opaque) | Export format |
-| R087 | §10 | Import takes entire object, atomically replaces state, returns 204 | Import behavior |
-| R088 | §10 | Import accepts unchanged export from same service; no dependency on process/files/volume/port/network | Portability |
-| R089 | §10 | Import is replacement not merge; repeating restores exported state without duplication | Idempotent replace |
-| R090 | §10 | Invalid JSON -> malformed per §5; missing fields/wrong track/version/invalid state -> 422 validation_failed without changing destination | Validation |
-| R091 | §10 | Test control calls have 10s timeout | Timeout |
-| R092 | §10 | Export is atomic read-only snapshot; subsequent writes don't change it | Snapshot |
-| R093 | §10 | Preserve accounts, hashed passwords, bearer tokens, fixture config, reservations, references, completed idem request bodies and original responses | Preservation |
-| R094 | §10 | Identities, statuses, timestamps never regenerated | No regeneration |
-| R095 | §10 | Failed request keys remain reusable | Failed keys reusable |
-| R096 | §10 | Existing receipts/references/tokens/retries remain valid after import | Validity preserved |
-| R097 | §10 | Replacing state with fresh fixture alone does not satisfy preservation requirement | Semantic requirement |
-| R098 | §10 | Import removes all previous destination data/credentials | Full replacement |
-| R099 | §10 | Reset clears all state including imported state | Reset scope |
-| R100 | §10 | State need not survive abrupt container restart | No persistence |
-| R101 | §11 | POST /reservation-moves requires auth and idempotency key; body has moves array | Moves basics |
-| R102 | §11 | moves has 1..8 objects with distinct string references; invalid shape/duplicates -> 422 validation_failed | Shape/range |
-| R103 | §11 | Every booking must belong to caller and same restaurant; unknown/other owner -> 404 not_found; different restaurants -> 422 validation_failed | Scope constraints |
-| R104 | §11 | No token -> 401 | Auth |
-| R105 | §11 | Each item accepts table_id, starts_at_local, party_size (subset); omitted fields retained; unknown ignored | Patch semantics |
-| R106 | §11 | Booking identity, owner, creation time never change | Identity |
-| R107 | §11 | Cancelled bookings -> 409 reservation_cancelled | Cancelled blocked |
-| R108 | §11 | Each booking's existing cutoff applies | Cutoff per booking |
-| R109 | §11 | Non-occupancy errors use ordinary amendment codes; precedence in input order; cutoff errors precede other changes for that booking | Error precedence |
-| R110 | §11 | Overlap among resulting bookings or with unlisted booking -> 409 table_unavailable | Move conflicts |
-| R111 | §11 | Unchanged listed bookings retain occupancy | No side effects |
-| R112 | §11 | Either every move commits or nothing changes (occupancy, records, retry keys) | Atomic all-or-nothing |
-| R113 | §11 | On success 201 with {"reservations": [...]} in input order, including unchanged items | Success response |
-| R114 | §11 | Replays return original response with 200 even after amendments/cancellations; no-op moves retain values | Replay behavior |
-| R115 | §11 | Export/import preserves successful batch receipts and resulting bookings | Persistence across export/import |
+| id | section | requirement | how_to_check | tag | risk |
+|---|---|---|---|---|---|
+| R001 | §1 | "Diners can search restaurant availability, book a table and receive a confirmation reference." | GET /availability with restaurant_id/date/party_size -> 200 with slots; POST /reservations with valid body and Idempotency-Key -> 201 including reference (A-Z0-9 6-12 chars), status confirmed, timestamps with explicit offset. | shipped | low |
+| R002 | §1 | "They can cancel or amend their bookings, including changing several bookings together." | POST /reservations/{ref}/cancel -> 200 cancelled; PATCH /reservations/{ref} subset updates; POST /reservation-moves with >=2 moves -> 201 all-or-nothing in input order. | shipped | medium |
+| R003 | §1 | "Each restaurant has table capacities, opening hours and cancellation policy." | GET /restaurants/{id} returns tables with capacity, opening_hours, cancellation_cutoff_minutes, slot_minutes, reservation_duration_minutes, timezone. | shipped | low |
+| R004 | §1 | "Only the HTTP API is required." | HTTP API only (no UI for stage 1). | shipped | low |
+| R005 | §1 | "Two confirmed reservations must never occupy the same table at overlapping times, including during concurrent requests." | Book t1 19:00-20:30 (90m); attempt t1 starting 19:30 -> 409 table_unavailable. 10 concurrent identical POST /reservations with unused Idempotency-Key -> exactly one 201, others 200 identical; only one confirmed. | hidden | high |
+| R006 | §1 | "Occupancy is the half-open interval [starts_at, starts_at + reservation_duration). A 90-minute booking at 19:00 therefore does not overlap a booking starting at 20:30." | 90m at 19:00:00+02:00 ends 20:30:00+02:00; booking starting 20:30:00+02:00 does not overlap. | both | high |
+| R007 | §1 | "Retries and rejected requests must not create duplicate or partial bookings." | After 4xx, reusing same Idempotency-Key treated as first use; no partial state persists. | hidden | high |
+| R008 | §2 | "Deliver HTTP service, Dockerfile and RUN.md with command to build and start without manual setup." | Dockerfile and RUN.md present; docker build and run succeed. | shipped | low |
+| R009 | §2 | "Image must run on its own with -e PORT=<port> and a port mapping." | docker run -e PORT=8081 -p 8081:8081 <img> responds on 8081. | shipped | low |
+| R010 | §2 | "Runtime networking has no outbound access. All runtime dependencies, initialization and seed data must work within single container." | Self-contained; no runtime outbound. | shipped | low |
+| R011 | §2 | "Start to first healthy 60s; up to 50 concurrent in-flight; 5s per request (10s for POST /_test/reset); never 5xx." | Health < 60s; 50 concurrent no 5xx; timeouts as specified. | both | high |
+| R012 | §3.1 | "Listen on 0.0.0.0 using PORT env var, default 8080." | PORT unset -> 8080; PORT=9091 -> 9091. | shipped | low |
+| R013 | §3.2 | "GET /health -> 200 {'status':'ok'}. Return 200 once ready within 60s; non-200 allowed before ready." | Health returns correct body when ready within 60s. | shipped | low |
+| R014 | §3.3 | "POST /_test/reset replaces all state with fixture; returns 204; repeated resets supported; no auth required." | State replaced; repeats ok; works without auth. | shipped | high |
+| R015 | §3.4 | "Requests/responses application/json; charset=utf-8. Timestamps RFC 3339 with explicit offset." | Content-Type correct; timestamps include explicit offset. | shipped | medium |
+| R016 | §3.4 | "Unknown fields in request ignored; unknown query params ignored." | Extra fields/params do not error. | shipped | medium |
+| R017 | §3.4 | "IDs opaque strings max 64 chars (including fixture IDs)." | ID length <= 64 enforced. | shipped | medium |
+| R018 | §4 | "Restaurants/tables only via reset. Seeded users can login immediately." | Only fixture defines; seeded login works. | shipped | low |
+| R019 | §4 | "Booking not rejected solely for past start (cutoffs apply). weekday mon..sun. opens/closes HH:MM 24h; closes>opens same day; never cross midnight." | Past dates allowed unless cutoffs; hours constraints. | shipped | medium |
+| R020 | §5 | "Every 4xx/5xx has {error:{code,message}} with specified status and code." | Error shape and codes correct. | shipped | low |
+| R021 | §5 | "400 malformed_request for unparseable body or wrong JSON type." | Bad JSON/wrong types -> 400. | shipped | medium |
+| R022 | §5 | "400 missing_idempotency_key if header absent or empty." | Absent/empty -> 400. | shipped | low |
+| R023 | §5 | "401 unauthenticated for missing/malformed/unknown token." | Auth failures -> 401. | shipped | low |
+| R024 | §5 | "403 forbidden if authenticated but not permitted." | Forbidden -> 403. | shipped | low |
+| R025 | §5 | "404 not_found if no such resource or not visible to caller (no leakage)." | Not found including ownership -> 404. | shipped | high |
+| R026 | §5 | "409 idempotency_key_reuse if same key used by same caller with different request body." | Different body reuse -> 409. | shipped | high |
+| R027 | §5 | "422 validation_failed for missing required field/param or stated violation." | Validation -> 422. | shipped | low |
+| R028 | §5 | "Idempotency-Key 1..255 chars; >255 -> 422 (empty -> 400)." | Key length rules enforced. | shipped | medium |
+| R029 | §5 | "Integer query params must be plain decimal digits (1e9, 4.0, +4 -> 422)." | Query param format enforced. | shipped | high |
+| R030 | §5 | "No 5xx ever including concurrent load." | No 5xx under load. | both | high |
+| R031 | §5 | "Endpoint-specific precedence: invalid party_size values (strings/booleans) and starts_at_local not bare YYYY-MM-DDTHH:MM -> 422 validation_failed (precedence)." | Type/format precedence correct. | shipped | high |
+| R032 | §6 | "POST /auth/signup -> 201 {user_id,display_name,token}. POST /auth/login -> 200 same." | Auth responses correct. | shipped | low |
+| R033 | §6 | "Email already registered -> 409 email_taken. Password < 8 -> 422 validation_failed. email not local@domain -> 422 validation_failed. Wrong password/unknown email -> 401 unauthenticated." | Auth cases correct. | shipped | medium |
+| R034 | §6 | "Bearer token required except /health, /_test/reset, /auth/signup, /auth/login, GET /restaurants, GET /restaurants/{id}, GET /availability." | Scope enforced. | shipped | medium |
+| R035 | §6 | "Tokens don't expire; multiple tokens/sessions allowed. Passwords hashed (not plaintext)." | Token behavior and hashing. | shipped | high |
+| R036 | §7 | "POST /reservations and POST /reservation-moves require Idempotency-Key. Key scoped to authenticated user." | Both require key; per-user scope. | shipped | high |
+| R037 | §7 | "Replay = same user/method/path/body. Same key on different path is different request (succeeds normally)." | Path boundary correct. | hidden | high |
+| R038 | §7 | "Resolved after body parsed and authenticated, before endpoint validation/resource checks -> different body with used key returns 409 even if new body invalid." | Check order correct. | hidden | high |
+| R039 | §7 | "First use -> 201. Replay same key same body -> 200 with identical body. Same body = same JSON after parsing (order/whitespace irrelevant)." | Replay identity correct. | shipped | high |
+| R040 | §7 | "Concurrent identical unused key: exactly one 201, others 200 identical; op takes effect once." | Concurrency correct. | hidden | high |
+| R041 | §7 | "Successful replay returns original response even after resource changed/cancelled; makes no state changes. Key reused after 4xx original -> treated as first use." | Stability and reuse after failure. | hidden | high |
+| R042 | §8 GET /availability | "All three params required; missing any -> 422 validation_failed. date is local calendar date." | Required params enforced. | shipped | medium |
+| R043 | §8 GET /availability | "Slot appears for every slot_minutes step from opens such that slot + reservation_duration_minutes <= closes." | Grid calculation correct. | shipped | high |
+| R044 | §8 GET /availability | "available_table_ids lists tables with capacity >= party_size and no overlapping confirmed reservation, in fixture order; empty list if none. Slot with no available table still appears with empty list. Closed day returns slots: []." | Filtering/empty/closed correct. | shipped | high |
+| R045 | §8 GET /availability | "starts_at_local is full YYYY-MM-DDTHH:MM; both starts_at_local and starts_at present; timezone echoed." | Formats and fields correct. | shipped | medium |
+| R046 | §8 POST /reservations | "Idempotency-Key required. 201 includes reservation_id, reference, restaurant_id, table_id, party_size, status confirmed, starts_at_local, starts_at, ends_at, created_at with offsets." | Shape correct. | shipped | low |
+| R047 | §8 POST /reservations | "reference 6-12 chars A-Z0-9, unique across all, never changes." | Ref constraints correct. | shipped | high |
+| R048 | §8 POST /reservations | "Table taken for overlapping interval -> 409 table_unavailable. starts_at_local not on slot grid -> 422 not_on_slot_grid. Outside hours or ends after closes -> 422 outside_opening_hours. party_size exceeds capacity -> 422 party_exceeds_capacity. party_size < 1 or not integer -> 422 validation_failed. Skipped DST time -> 422 invalid_local_time. Unknown restaurant/table or table from different restaurant -> 404 not_found. Booking not rejected solely for past start." | All case table cases covered. | shipped | high |
+| R049 | §8 GET /reservations | "Caller's reservations starts_at desc, confirmed and cancelled; empty list is {'reservations':[]}." | List semantics correct. | shipped | low |
+| R050 | §8 GET /reservations/{reference} | "One reservation; 404 if not caller's (no leakage)." | Ownership enforced. | hidden | high |
+| R051 | §8 cancel | "Frees table immediately (next availability offers slot). Already cancelled -> 200 current state. Within cutoff or later -> 409 cutoff_passed. Not caller's -> 404 not_found." | Cancel semantics correct. | shipped | high |
+| R052 | §8 PATCH | "Any subset of table_id/starts_at_local/party_size; no idem key. Validation same as create. Cutoff measured against current start. Cancelled -> 409 reservation_cancelled. Success releases old and reserves new together (atomic). Failure leaves original unchanged. reference and reservation_id survive." | Amendment semantics correct. | hidden | high |
+| R053 | §9 | "Spring forward: skipped local times never in availability; booking skipped -> 422 invalid_local_time." | DST spring handled. | both | high |
+| R054 | §9 | "Fall back: repeated hour occurs twice; always resolve to first occurrence (before change); slot appears once; second not bookable." | DST fall ambiguity handled. | hidden | high |
+| R055 | §9 | "reservation_duration_minutes is absolute time (01:30 + 90m on fall-back ends 02:00 local)." | Absolute duration correct. | hidden | high |
+| R056 | §9 | "Europe/Berlin 2026-03-29 02:00->03:00, 2026-10-25 03:00->02:00. America/New_York 2026-03-08 02:00->03:00, 2026-11-01 02:00->01:00. Offsets follow IANA rules." | Transitions and zones correct. | both | high |
+| R057 | §10 | "GET /_test/export and POST /_test/import unauthenticated. Export returns track='tablekeeper', format_version=1, state (opaque)." | Export format correct. | shipped | low |
+| R058 | §10 | "Import takes entire object, atomically replaces state -> 204. Accepts unchanged export from same service; no deps on process/files/volume/port/network. Replacement not merge; repeat restores without duplication." | Import behavior correct. | hidden | high |
+| R059 | §10 | "Invalid JSON/missing fields/wrong track/version/invalid state -> 422 without changing destination. Test control calls have 10s timeout. Export is atomic read-only snapshot; subsequent writes don't change it." | Validation/snapshot/timeout correct. | hidden | high |
+| R060 | §10 | "Preserve accounts, hashed passwords, bearer tokens, fixture config, reservations, refs, completed idem request bodies and original responses. Identities/statuses/timestamps never regenerated. Failed keys reusable. Receipts/refs/tokens/retries remain valid after import. Import removes all previous; reset clears imported state. State need not survive restart." | Full preservation semantics correct. | hidden | high |
+| R061 | §11 | "moves has 1..8 objects with distinct string references; invalid shape/duplicates -> 422. Every booking belongs to caller and same restaurant; unknown/other owner -> 404; different restaurants -> 422; no token -> 401." | Moves constraints correct. | shipped | high |
+| R062 | §11 | "Each item accepts table_id/starts_at_local/party_size (subset); omitted retained; unknown ignored. Identity/owner/created_time never change. Cancelled -> 409 reservation_cancelled. Each booking's cutoff applies; cutoff errors precede other changes; non-occupancy errors in input order. Overlap among resulting or with unlisted -> 409. Unchanged retain occupancy." | Moves semantics correct. | hidden | high |
+| R063 | §11 | "Either every move commits or nothing changes (occupancy, records, retry keys). 201 with reservations in input order including unchanged. Replays return original 200 even after changes; no-ops retain values. Export/import preserves batch receipts and resulting bookings." | Atomicity/replay/preservation correct. | hidden | high |
 
-Total rows: 115
+Total rows: 63
