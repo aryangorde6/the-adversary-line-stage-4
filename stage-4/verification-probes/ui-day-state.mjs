@@ -2,63 +2,70 @@
 //
 //   node ui-day-state.mjs [baseUrl]
 //
-// Written before the service grows the field this row reads, on purpose: the order has produced
-// every real defect in this project and has never produced a false one.
+// Written before the service grew the field this row reads, kept red until the field arrived, and
+// now driven against the service's own answers rather than a stub: each of the four day states is
+// produced by a real fixture, the field name is the service's, and if `day_state` is renamed or
+// moved this row goes red and says so rather than passing against a shape it imagined.
 //
-// The service answers, at the day level, which of four states a date is in -- shut, terms exclude
-// everything, nothing free, open. A screen may state a day as closed only on `shut`. Everywhere
-// else its obligation is to say less, not more, and this suite drives the screen against each
-// state with the service's own answer stubbed in, so the screen's behaviour is checked against the
-// answers it will actually receive rather than against a guess about them.
+// The service reports which of three things a day is -- shut, terms exclude everything, nothing
+// free -- and a screen may state a day as closed only on `shut`. Everywhere else its obligation is
+// to say less, not more.
 //
 // Two things this deliberately does not assert. It does not assert that some other sentence is
-// rendered instead: a screen that says nothing at all is correct here, and a screen that says
+// rendered instead: a screen that says nothing at all is correct here, and a screen saying
 // something *different and also wrong* would pass such a row. And it does not assert the service's
-// discriminator -- that is an API-layer row, driven from another seat. What it asserts is the one
+// discriminator -- that is an API-layer row driven from another seat. What it asserts is the one
 // thing only a person can see.
 import { chromium } from 'playwright-core';
-import { BASE, SHOTS, ok, section, report, baseFixture, seed } from './ui-lib.mjs';
+import { BASE, SHOTS, ok, section, report, req } from './ui-lib.mjs';
 
-const SHUT_DAY = '2026-12-06';   // a Sunday, absent from the timetable
+const TABLES = [
+  { id: 't_1', label: '1', capacity: 2 },
+  { id: 't_2', label: '2', capacity: 4 },
+  { id: 't_3', label: '3', capacity: 2 },
+  { id: 't_4', label: '4', capacity: 6 },
+];
+const OPEN_HOURS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat']
+  .map((weekday) => ({ weekday, opens: '17:00', closes: '23:00' }));
+// Sunday is absent from the timetable entirely: the day is shut.
+const SHUT_HOURS = OPEN_HOURS;
+// Sunday is listed, but the window is shorter than one reservation: the terms exclude every slot.
+const NARROW_HOURS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
+  .map((weekday) => ({ weekday, opens: '18:00', closes: '18:30' }));
+
+const SHUT_DAY = '2026-12-06';   // a Sunday with no hours
 const OPEN_DAY = '2026-12-01';   // a Tuesday, open
 
-// The four day states, in the shape the service is required to report them.
-function answer(dayState, slots) {
-  return JSON.stringify({
-    restaurant_id: 'r_anker',
-    date: slots.length ? OPEN_DAY : SHUT_DAY,
-    timezone: 'Europe/Berlin',
-    day_state: dayState,
-    slots,
-  });
-}
-
-function slot(time, ids) {
+function fixture(openingHours, reservations) {
   return {
-    starts_at_local: `2026-12-01T${time}`,
-    starts_at: `2026-12-01T${time}:00+01:00`,
-    available_table_ids: ids,
-    available_options: ids.map((id) => ({ table_ids: [id], capacity: 2 })),
+    users: [{ id: 'u_ada', email: 'ada@example.com', password: 'correct horse', display_name: 'Ada' }],
+    restaurants: [{
+      id: 'r_anker', name: 'Zum Anker', timezone: 'Europe/Berlin', slot_minutes: 30,
+      reservation_duration_minutes: 90, cancellation_cutoff_minutes: 120,
+      opening_hours: openingHours, tables: TABLES,
+    }],
+    reservations: reservations || [],
   };
 }
 
-// One rendered slot, and one rendered day with nothing in it at all.
-const WITH_SLOTS = answer('nothing_free', [slot('17:00', []), slot('17:30', []), slot('18:00', [])]);
-const NO_SLOTS_SHUT = answer('shut', []);
-const NO_SLOTS_TERMS = answer('terms_exclude_all', []);
+// Every table committed across the whole evening, so the day has times and nothing free anywhere.
+function wholeDayBooked() {
+  const times = ['17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30'];
+  return TABLES.flatMap((t) => times.map((time) => ({
+    restaurant_id: 'r_anker', table_id: t.id, user_id: 'u_ada',
+    starts_at_local: `${OPEN_DAY}T${time}`, party_size: 1,
+  })));
+}
 
 // Anything a person would read as "the restaurant is not serving that day".
-const CLOSED_SHAPED = /closed|shut|not open|not serving|we are closed|is closed/i;
+const CLOSED_SHAPED = /closed|shut|not open|not serving/i;
 
-async function drive(page, { body, date }) {
+async function drive(page, date) {
   await page.goto(BASE + '/', { waitUntil: 'networkidle' });
-  await page.route('**/availability?*', (route) => route.fulfill({
-    status: 200, contentType: 'application/json', body,
-  }));
   await page.fill('#date-input', date);
   await page.fill('#party-size-input', '2');
   await page.click('[data-testid="search-button"]');
-  await page.waitForTimeout(700);
+  await page.waitForTimeout(800);
   return page.evaluate(() => {
     const grab = (sel) => {
       const el = document.querySelector(sel);
@@ -72,9 +79,11 @@ async function drive(page, { body, date }) {
     return {
       grid: grab('[data-testid="availability-grid"]'),
       noSlots: grab('[data-testid="no-slots"]'),
-      empty: grab('[data-testid="grid-empty"]'),
-      table: grab('[data-testid="availability-grid"] table'),
       cells: document.querySelectorAll('[data-available]').length,
+      freeCells: [...document.querySelectorAll('[data-available="true"]')].length,
+      columns: document.querySelectorAll('[data-testid="availability-grid"] thead th').length - 1,
+      allUnavailable: [...document.querySelectorAll('[data-available]')]
+        .every((c) => c.getAttribute('data-available') === 'false'),
       visibleText,
     };
   });
@@ -87,49 +96,70 @@ async function main() {
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
 
-  // The screens read the restaurant's tables from the service, so a real fixture has to exist; only
-  // the availability answer is stubbed, because the day state under test is what is being varied.
-  await seed(baseFixture());
+  // Each state is produced by a real fixture and read back from the service before the screen is
+  // driven, so a row cannot pass against a day state the service did not actually report.
+  const states = {};
 
-  section('a day the service says is shut');
-  const shut = await drive(page, { body: NO_SLOTS_SHUT, date: SHUT_DAY });
-  ok('the shut day does say the restaurant is closed that day',
-    CLOSED_SHAPED.test(shut.noSlots.text) || CLOSED_SHAPED.test(shut.visibleText.join(' ')),
-    { noSlots: shut.noSlots.text });
-  ok('the shut day has no times to show', shut.noSlots.visible, shut.noSlots);
+  section('the service reports each of the four day states');
+  for (const [name, hours, reservations, date, expected] of [
+    ['shut', SHUT_HOURS, [], SHUT_DAY, 'shut'],
+    ['terms_exclude_all', NARROW_HOURS, [], SHUT_DAY, 'terms_exclude_all'],
+    ['nothing_free', OPEN_HOURS, wholeDayBooked(), OPEN_DAY, 'nothing_free'],
+    ['open', OPEN_HOURS, [], OPEN_DAY, 'open'],
+  ]) {
+    const reset = await req('/_test/reset', fixture(hours, reservations));
+    // A setup step that can fail is asserted before its result is read: a rejected reset leaves the
+    // previous store in place, and every reading after it would be stale.
+    ok(`fixture for ${name} accepted`, reset.status === 204 || reset.status === 200,
+      { status: reset.status, body: JSON.stringify(reset).slice(0, 140) });
+    const login = await req('/auth/login', { email: 'ada@example.com', password: 'correct horse' });
+    ok(`signed in for ${name}`, login.status === 200 && Boolean(login.body && login.body.token),
+      { status: login.status });
+    const auth = { Authorization: `Bearer ${login.body.token}` };
+    const raw = await fetch(`${BASE}/availability?restaurant_id=r_anker&date=${date}`
+      + `&party_size=2&explain=true`, { headers: auth });
+    const body = await raw.json();
+    // The shape is asserted before it is relied on: a missing key is not a value.
+    ok(`${name}: the response carries a day state at the top level`,
+      Object.prototype.hasOwnProperty.call(body, 'day_state'), { keys: Object.keys(body) });
+    ok(`${name}: the service reports ${expected}`, body.day_state === expected, { got: body.day_state });
+    states[name] = await drive(page, date);
+    if (SHOTS) await page.screenshot({ path: `${SHOTS}/daystate-${name}.png`, fullPage: true });
+  }
 
-  section('a day the service says the terms exclude everything');
-  const terms = await drive(page, { body: NO_SLOTS_TERMS, date: SHUT_DAY });
-  const termsWords = terms.visibleText.join(' ');
+  section('a day the service reports as shut');
+  ok('the screen says the restaurant is closed that day',
+    CLOSED_SHAPED.test(states.shut.visibleText.join(' ')),
+    { said: states.shut.visibleText.join(' ').slice(0, 160) });
+  ok('the shut day has no times to show', states.shut.noSlots.visible, states.shut.noSlots);
+  ok('and no grid of times', states.shut.cells === 0, { cells: states.shut.cells });
+
+  section('a day the service reports the terms exclude everything');
+  const termsWords = states.terms_exclude_all.visibleText.join(' ');
   ok('no closed-day claim is rendered for a day that is not shut',
     !CLOSED_SHAPED.test(termsWords), { said: termsWords.slice(0, 200) });
-  ok('the screen did not present an empty day as a closure',
-    !CLOSED_SHAPED.test(terms.noSlots.text), { noSlots: terms.noSlots.text });
-  ok('what a person reads on that day is distinguishable from the shut day',
-    termsWords !== shut.visibleText.join(' '), { terms: termsWords.slice(0, 120) });
+  ok('the message does not present an empty day as a closure',
+    !CLOSED_SHAPED.test(states.terms_exclude_all.noSlots.text),
+    { noSlots: states.terms_exclude_all.noSlots.text });
+  ok('what a person reads is distinguishable from the shut day',
+    termsWords !== states.shut.visibleText.join(' '),
+    { terms: termsWords.slice(0, 120), shut: states.shut.visibleText.join(' ').slice(0, 120) });
+  ok('and no times are invented for it', states.terms_exclude_all.cells === 0,
+    { cells: states.terms_exclude_all.cells });
 
-  section('a day with slots and nothing free');
-  const booked = await drive(page, { body: WITH_SLOTS, date: OPEN_DAY });
-  ok('the times the service returned are the times on screen',
-    booked.cells === 3 * 4, { cells: booked.cells });
-  ok('nothing free is stated as nothing free, not as closure',
-    !CLOSED_SHAPED.test(booked.visibleText.join(' ')),
-    { said: booked.visibleText.join(' ').slice(0, 200) });
-  ok('every cell on that day reads as unavailable',
-    await page.evaluate(() => [...document.querySelectorAll('[data-available]')]
-      .every((c) => c.getAttribute('data-available') === 'false')));
-  ok('the slot list is what the service returned, not a filtered version of it',
-    await page.evaluate(() => document.querySelectorAll('[data-testid="availability-grid"] thead th').length) === 4,
-    await page.evaluate(() => document.querySelectorAll('[data-testid="availability-grid"] thead th').length));
+  section('a day with times and nothing free');
+  ok('the times on screen are the times the service returned',
+    states.nothing_free.columns === 10, { columns: states.nothing_free.columns });
+  ok('every cell reads as unavailable', states.nothing_free.allUnavailable,
+    { cells: states.nothing_free.cells });
+  ok('nothing free is not stated as closure',
+    !CLOSED_SHAPED.test(states.nothing_free.visibleText.join(' ')),
+    { said: states.nothing_free.visibleText.join(' ').slice(0, 200) });
+
+  section('an open day');
+  ok('a free table is offered', states.open.freeCells > 0, { freeCells: states.open.freeCells });
 
   ok('no page errors', errors.length === 0, errors.slice(0, 3));
-
-  if (SHOTS) {
-    await drive(page, { body: NO_SLOTS_SHUT, date: SHUT_DAY });
-    await page.screenshot({ path: `${SHOTS}/daystate-shut.png`, fullPage: true });
-    await drive(page, { body: NO_SLOTS_TERMS, date: SHUT_DAY });
-    await page.screenshot({ path: `${SHOTS}/daystate-terms.png`, fullPage: true });
-  }
 
   await page.close();
   await browser.close();

@@ -137,8 +137,11 @@ async function main() {
     ok('the results region is out of the document',
       await present(page, '[data-testid="availability-grid"]') === false);
     ok('no-slots visible', await vis(page, '[data-testid="no-slots"]') === 'visible');
-    ok('the sentence names the closed day, not a shortage of tables',
-      /closed/i.test(await text(page, '[data-testid="no-slots"]') || ''),
+    // The service reports this day as terms excluding every slot, not as shut: it lists hours, and
+    // the window is simply shorter than a booking. So the screen must not call the restaurant
+    // closed -- that is a claim about the restaurant, and it would be false.
+    ok('the sentence does not claim the day is shut when the service did not say so',
+      !/closed|shut|not open|not serving/i.test(await text(page, '[data-testid="no-slots"]') || ''),
       await text(page, '[data-testid="no-slots"]'));
     ok('the day is named as a person reads it',
       /Tuesday/.test(await text(page, '[data-testid="no-slots"]') || ''),

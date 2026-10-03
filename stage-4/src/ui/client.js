@@ -554,10 +554,18 @@
     // A day with no slots is a day the restaurant is not serving, which is a different thing from a
     // day whose tables are all taken. Saying "no tables are free" when the doors are shut would be
     // a claim about the restaurant that is not true.
-    function closedDayText(restaurant) {
+    // The service says which of three things a day is: shut, or open with nothing to book. Only the
+    // first is a closure, and only that one may be described as one. A day with no times is not
+    // evidence that the doors are shut -- two different days arrive with no times -- so this reads
+    // the day the service reported and says no more than that.
+    function nothingToBookText(restaurant, dayState) {
       var name = restaurant && restaurant.name ? restaurant.name : 'The restaurant';
-      return name + ' is closed on ' + longDate(dateInput.value) + ', so there is nothing to book that day. '
-        + 'Try another date, or a smaller party on a day it is open.';
+      if (dayState === 'shut') {
+        return name + ' is closed on ' + longDate(dateInput.value) + ', so there is nothing to book that day. '
+          + 'Try another date, or a smaller party on a day it is open.';
+      }
+      return 'There are no times to book at ' + name + ' on ' + longDate(dateInput.value) + '. '
+        + 'Try another date, or a smaller party.';
     }
 
     function apply(restaurant, result) {
@@ -567,7 +575,8 @@
       if (!slots.length) {
         clearMessage('availability-panel', 'grid-loading');
         removeGridRegion();
-        showMessage('availability-panel', 'no-slots', 'empty', closedDayText(restaurant));
+        showMessage('availability-panel', 'no-slots', 'empty',
+          nothingToBookText(restaurant, result.body && result.body.day_state));
         resetBooking();
         return;
       }
@@ -581,9 +590,11 @@
     }
 
     function refreshAvailability() {
+      // explain=true for the same reason the search asks for it: the day state travels with it.
       var query = '?restaurant_id=' + encodeURIComponent(restaurantSelect.value)
         + '&date=' + encodeURIComponent(dateInput.value)
-        + '&party_size=' + encodeURIComponent(partyInput.value);
+        + '&party_size=' + encodeURIComponent(partyInput.value)
+        + '&explain=true';
       return restaurantOf(restaurantSelect.value).then(function (restaurant) {
         return api('GET', '/availability' + query).then(function (result) {
           if (result.status !== 200) return null;
@@ -705,9 +716,12 @@
       resetBooking();
 
       restaurantOf(restaurantSelect.value).then(function (restaurant) {
+        // explain=true is what carries the day state, and the day state is what the screen needs
+        // before it may call a day closed. Availability itself is unchanged by asking.
         return api('GET', '/availability?restaurant_id=' + encodeURIComponent(restaurantSelect.value)
           + '&date=' + encodeURIComponent(dateInput.value)
-          + '&party_size=' + encodeURIComponent(partyInput.value)).then(function (result) {
+          + '&party_size=' + encodeURIComponent(partyInput.value)
+          + '&explain=true').then(function (result) {
           if (mine <= applied) return;
           applied = mine;
           if (result.status !== 200) {
