@@ -47,6 +47,18 @@ const HOURS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat']
   // Sunday is deliberately absent: a weekday with no opening hours is the day with no slots.
   .map((weekday) => ({ weekday, opens: '17:00', closes: '23:00' }));
 
+// A closed day reached the second way: the weekday exists, but its opening window is shorter than
+// a booking can be, so the service has no slot to offer. That is a different path through the code
+// from a weekday with no hours at all, and it is covered separately for that reason.
+export const SHORT_WINDOW = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat']
+  .map((weekday) => ({ weekday, opens: '18:00', closes: '18:30' }));
+
+export function baseFixtureWithHours(openingHours) {
+  const fixture = baseFixture();
+  fixture.restaurants[0].opening_hours = openingHours;
+  return fixture;
+}
+
 export function baseFixture() {
   return {
     users: [{ id: 'u_ada', email: 'ada@example.com', password: 'correct horse', display_name: 'Ada' }],

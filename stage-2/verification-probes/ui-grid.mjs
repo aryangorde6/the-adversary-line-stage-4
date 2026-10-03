@@ -2,7 +2,8 @@
 //
 //   node verification/probes/s2/ui-grid.mjs [baseUrl]
 import { chromium } from 'playwright-core';
-import { BASE, SHOTS, ok, section, report, baseFixture, bookedDay, seed } from './ui-lib.mjs';
+import { BASE, SHOTS, ok, section, report, SHORT_WINDOW, baseFixture, baseFixtureWithHours,
+  bookedDay, seed } from './ui-lib.mjs';
 
 // Presence, not visibility: a hidden container satisfies a visibility check and fails a presence
 // check, and only a driven check finds the difference.
@@ -114,6 +115,37 @@ async function main() {
       await text(page, '[data-testid="no-slots"]'));
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/grid-noslots-${width}.png`, fullPage: true });
 
+    await page.close();
+  }
+
+  // A closed day the other way: the restaurant lists hours on that weekday, but the window is
+  // shorter than a booking, so there is no slot to offer. Asserted on its own, both halves.
+  await seed(baseFixtureWithHours(SHORT_WINDOW));
+  for (const width of [375, 1280]) {
+    const page = await browser.newPage({ viewport: { width, height: 900 } });
+    page.setDefaultTimeout(6000);
+    await page.goto(BASE + '/', { waitUntil: 'networkidle' });
+    section(`closed by a window shorter than a booking at ${width}`);
+    await search(page, { date: '2026-12-01', party: 2 });
+    // Read the answer before trusting the screen's reading of it: assert the shape of what you read.
+    const slots = await page.evaluate(async () => {
+      const r = await fetch('/availability?restaurant_id=r_anker&date=2026-12-01&party_size=2');
+      const body = await r.json();
+      return Array.isArray(body.slots) ? body.slots.length : null;
+    });
+    ok('the service reports a day with no slots at all', slots === 0, { slots });
+    ok('the results region is out of the document',
+      await present(page, '[data-testid="availability-grid"]') === false);
+    ok('no-slots visible', await vis(page, '[data-testid="no-slots"]') === 'visible');
+    ok('the sentence names the closed day, not a shortage of tables',
+      /closed/i.test(await text(page, '[data-testid="no-slots"]') || ''),
+      await text(page, '[data-testid="no-slots"]'));
+    ok('the day is named as a person reads it',
+      /Tuesday/.test(await text(page, '[data-testid="no-slots"]') || ''),
+      await text(page, '[data-testid="no-slots"]'));
+    ok('no booking form exists on a day with nothing to book',
+      await present(page, '[data-testid="booking-form"]') === false);
+    if (SHOTS) await page.screenshot({ path: `${SHOTS}/grid-shortwindow-${width}.png`, fullPage: true });
     await page.close();
   }
 
