@@ -76,6 +76,7 @@ const STATUS_BY_CODE = Object.freeze({
   combination_not_allowed: 422,
   stale_revision: 409,
   already_in_series: 409,
+  fixture_unsupported: 422,
   invalid_local_time: 422,
 });
 
@@ -312,6 +313,11 @@ const MESSAGES = {
 
   already_in_series: (ctx) => {
     return 'That booking is already the first night of a repeating series. Cancel the series, or adopt a different booking.';
+  },
+
+  fixture_unsupported: (ctx) => {
+    const field = ctx.field ? ` (${ctx.field})` : '';
+    return `A reset fixture cannot seed that${field}. Seed it through an import instead, where the document carries it.`;
   },
 
   invalid_local_time: (ctx) => {

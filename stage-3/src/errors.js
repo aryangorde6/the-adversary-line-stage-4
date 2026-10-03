@@ -21,6 +21,10 @@ const BUILTIN_STATUS_BY_CODE = Object.freeze({
   // revision that is not current; already_in_series is likewise a conflict with existing state.
   stale_revision: 409,
   already_in_series: 409,
+  // fixture_unsupported is stage 3's own: a reset fixture described something the reset cannot seed.
+  // It is a validation failure, not a malformed body, and it exists so that the refusal is legible
+  // instead of a 204 that silently seeded nothing.
+  fixture_unsupported: 422,
 });
 
 let catalogue = null;

@@ -179,6 +179,27 @@ function parseSeededReservation(raw, state, nowMs) {
     fail('validation_failed', { field: 'reservation_id' });
   }
   const createdAt = textOr(raw.created_at, time.formatUtc(nowMs), 'created_at');
+  // A seeded booking was accepted under the rules the fixture declares, which is policy 0 by
+  // definition, and it starts at revision 1 (S3-052). Both are therefore derived here rather than
+  // read from the fixture, and a fixture that tries to assert either is refused instead.
+  //
+  // The two arrival paths must not be able to disagree about what a booking is. The import path
+  // derives policy-0 terms for a document that carries none, and this path may not produce the
+  // booking the import path would refuse: a reservation asserting revision 5 with null terms is a
+  // booking that obeys rules it was never created under. Coercing the terms while keeping the
+  // revision would reintroduce that defect through this door, so it is refused rather than coerced.
+  const policyRules = require('./policy');
+  const derivedTerms = policyRules.acceptedTermsOf(policyRules.policyZeroOf(restaurant));
+  if (has(raw, 'revision') && raw.revision !== 1) {
+    fail('fixture_unsupported', { field: 'reservations', reason: 'revision_not_seedable' });
+  }
+  if (has(raw, 'accepted_terms')
+      && JSON.stringify(raw.accepted_terms) !== JSON.stringify(derivedTerms)) {
+    fail('fixture_unsupported', { field: 'reservations', reason: 'terms_not_seedable' });
+  }
+  if (has(raw, 'series_id') || has(raw, 'series_index')) {
+    fail('fixture_unsupported', { field: 'reservations', reason: 'series_not_seedable' });
+  }
   return {
     id,
     reference,
@@ -191,19 +212,34 @@ function parseSeededReservation(raw, state, nowMs) {
     starts_at_ms: startMs,
     ends_at_ms: startMs + restaurant.reservation_duration_minutes * domain.MILLIS_PER_MINUTE,
     created_at: createdAt,
-    // A seeded booking was accepted under the rules the fixture declares, which is policy 0 by
-    // definition, and it starts at revision 1 (S3-052).
-    revision: raw.revision === undefined ? 1 : raw.revision,
-    accepted_terms: raw.accepted_terms === undefined
-      ? require('./policy').acceptedTermsOf(require('./policy').policyZeroOf(restaurant))
-      : raw.accepted_terms,
-    series_id: raw.series_id === undefined ? null : raw.series_id,
-    series_index: raw.series_index === undefined ? null : raw.series_index,
+    revision: 1,
+    accepted_terms: derivedTerms,
+    series_id: null,
+    series_index: null,
   };
+}
+
+// The stage-3 stores. A reset fixture describes users, restaurants and reservations, and it cannot
+// describe a published policy, a series, history or a batch counter — /_test/import is the door for
+// those, because a document carries them and a hand-written fixture does not.
+//
+// They were previously accepted and silently dropped, which is the worst outcome available: the
+// reset answered 204, the author believed they had seeded a policy, and every assertion they then
+// wrote was quietly about policy 0 with nothing red. A capability a fixture cannot express has to be
+// a refusal the author sees.
+const STAGE3_FIXTURE_KEYS = ['policies', 'series', 'history', 'batch_counters'];
+
+function refuseStage3State(fixture) {
+  for (const key of STAGE3_FIXTURE_KEYS) {
+    if (has(fixture, key)) {
+      fail('fixture_unsupported', { field: key, reason: 'stage3_state_not_seedable' });
+    }
+  }
 }
 
 async function stateFromFixture(fixture, nowMs) {
   expectObject(fixture, 'fixture');
+  refuseStage3State(fixture);
   const state = store.emptyState();
 
   const takenIds = new Set();
@@ -233,6 +269,8 @@ async function stateFromFixture(fixture, nowMs) {
 }
 
 module.exports = {
+  STAGE3_FIXTURE_KEYS,
+  refuseStage3State,
   parseManagerUserIds,
   stateFromFixture,
   expectObject,
