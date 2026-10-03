@@ -472,6 +472,19 @@ because they have now failed to travel into a new file twice.**
     preferred option first** — which is a fact about ordering, not about data, and would change if the order
     did. **A clean bill of health on question 4 is weaker evidence than a found loss, and the difference is
     recorded rather than smoothed.**
+48. **A no-regression claim is a claim about a _suite_, and it is only as good as the last time that suite
+    ran.** "No regression" is not a fact about the change under test; it is a fact about a set of rows at a
+    moment. **Five shared modules is five chances to be wrong about what a change touched, and enumerating
+    them by hand is the same failure as reading instead of driving.** So: **re-run the whole surface after
+    every change, not the suites you touched** — and the measurement that catches a regression costs one
+    command, while the claim that would have replaced it costs a whole commit. Recorded from the turn where
+    stage 3 went **47/47 → 37/47 inside an uncommitted patch**, every failure a series row, and the work
+    reverted to green because **a shared folder with ten uncommitted files is exactly what another seat
+    commits by accident.** **An unmeasured green is not a safe state; it is an unmeasured one.**
+49. **The walk covers a probe against its row; it does not cover an implementer against a specification.**
+    Every question in it is asked of a probe, so **no amount of walking my own rows would ever have found
+    that two recorded ambiguities were answered by a document nobody opened.** That is the fifth question's
+    whole reason for existing.
 47. **Every artefact must state what kind of authority it carries, because nothing in a folder listing says
     which kind you are reading.** A specification defines the product; a ledger records what to check; a
     check file asserts behaviour; a participant guide says how the room runs. **I introduced a ledger as "the
@@ -1033,6 +1046,13 @@ is worth more than a catch**, and it goes in the report whether or not it is con
    is that asserted, and is it read from the surface the implementation reads?
 4. **Lossiness** — for any comparison, **is either side lossy?** A count over a map that dropped a class of
    thing is a count of the wrong population, **and no assertion added afterwards can recover it** (clause 38).
+
+**And a standing warning from the same turn, for the rows I own:** a build that adds a field to a shared
+**response view** breaks every deep-equality row that compares a whole object, in the same way a scratch key
+written onto stored records does. `terms_history_series.py` has one such assertion — the occurrence object's
+key set — and it is there on purpose; **the general form is that an exact-key-set assertion is a row about a
+shape, and a shape grows when a neighbouring feature needs a field.** So the rows to re-read after any shared
+view change are the exact-shape ones, not the value ones.
 
 **Question 4 is the newest and it is the one that found a defect no row could have found:** the audit of
 `ui-grid.mjs` was done **by reading, by a seat that cannot execute the file**, and found a map that silently
