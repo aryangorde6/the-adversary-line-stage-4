@@ -497,6 +497,42 @@ surface is not blind at objective 3; it is blind only to a mutant that changes n
 commits; they get planted on a seat with write access, on the accepted hash, with the commit discipline this
 round could not honour.
 
+### Settled from the history: what `ee04207`'s red actually reported
+
+**Read from the commit, not from the reports, as instructed — and the answer splits the probe in two.**
+
+```
+ee04207  "THE PROBE IS RED, AND IT FOUND A REAL DEFECT ON ITS FIRST RUN … 5 of 17 assertions fail:
+           a preview over a closure on t_1 answers 409 no_feasible_plan when the only booking is on t_2"
+         "Invariant 2 passes in full: no unexpected field on any reservation view, no planner scratch
+          key on any view, and none on any exported record."
+```
+
+**So it was a genuine _failure-red_ — named rows, not a crash — but the defect it caught belonged to
+Invariant 1, and the scratch-key invariant _passed in full_ in the very commit named after the scratch-key
+incident.** Under `AUDIT MUTANT A` the two scratch-key rows **pass again while that defect is planted.**
+
+**Therefore, precisely: `invariants.mjs` enters the audit with one committed failure-red belonging to
+Invariant 1, and with Invariant 2's rows carrying _zero_ reds of their own and demonstrably pointed at a
+projection of their subject** — a key stashed on the record is not in the view, and under the mutant the
+export cannot serialise at all, so the probe crashes before it can report.
+
+**And there is a third kind of red, discovered from the other side, and it is the worst of the three:**
+
+55. **Assert against the surface where the defect lives, not a projection of it.** An allowlist over a
+    response view cannot detect a field added to stored state, **because the view is constructed and the
+    field is not in it** — the record is the subject and the view is evidence about the record. **And a
+    probe's failure mode must be a _reported row_, never an exception: a crash is red in the exit status and
+    silent about which invariant failed, and every row after the crash point never runs** — so a defect that
+    breaks serialisation converts a diagnosable failure into an opaque one. **A _crash-red_ is the third kind:
+    red without being informative**, and it is the only one of the three that destroys evidence rather than
+    producing it. Where a subject may be unserialisable, the probe must **catch, report, and continue.**
+
+**One irony worth recording rather than glossing: `ee04207` deliberately reported blocked assertions as
+failures "so the count cannot be read as coverage", and the audit has now found a mode in which the rows after
+the failure never run at all** — the same hazard, arriving from the opposite direction, and fixed by the same
+discipline.
+
 ## M2 survived against my own rows, and `S4-171d` is the rebuild
 
 **M2 — the rank vector deleted from `betterThan` — left every measurable row green, including mine.** So the
