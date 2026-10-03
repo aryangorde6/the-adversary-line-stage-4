@@ -17,6 +17,10 @@ const BUILTIN_STATUS_BY_CODE = Object.freeze({
   party_exceeds_capacity: 422,
   invalid_local_time: 422,
   combination_not_allowed: 422,
+  // Stage 3 codes. stale_revision is a conflict like the other 409s because the caller named a
+  // revision that is not current; already_in_series is likewise a conflict with existing state.
+  stale_revision: 409,
+  already_in_series: 409,
 });
 
 let catalogue = null;

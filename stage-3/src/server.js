@@ -23,6 +23,15 @@ const ROUTES = [
   { method: 'POST', path: ['reservations', ':reference', 'cancel'], auth: true, handler: api.cancelReservation },
   { method: 'PATCH', path: ['reservations', ':reference'], auth: true, body: 'object', handler: api.patchReservation },
   { method: 'POST', path: ['reservation-moves'], auth: true, key: true, body: 'object', handler: api.reservationMoves },
+  // Stage 3 routes. The three that answer a private read are marked optional rather than auth: a
+  // caller with no token must receive the same 404 a stranger receives, not stage 1's 401, or the
+  // status itself tells an unauthenticated caller the reference exists (S3-081).
+  { method: 'POST', path: ['restaurants', ':id', 'policies'], auth: true, key: true, body: 'object', handler: api.publishPolicy },
+  { method: 'GET', path: ['restaurants', ':id', 'policies'], handler: api.listPolicies },
+  { method: 'GET', path: ['reservations', ':reference', 'history'], optionalAuth: true, handler: api.reservationHistory },
+  { method: 'GET', path: ['reservations', ':reference', 'decision'], optionalAuth: true, handler: api.reservationDecision },
+  { method: 'POST', path: ['series'], auth: true, key: true, body: 'object', handler: api.adoptSeries },
+  { method: 'GET', path: ['series', ':seriesId'], optionalAuth: true, handler: api.getSeries },
 ];
 
 // The four screens and the one script they load. src/ui/ owns what a page says; this file only
@@ -131,6 +140,10 @@ async function dispatch(req) {
     user: null,
   };
   if (route.auth) ctx.user = api.authenticate(req, state);
+  // An optional route authenticates only when a usable token is present. A malformed or unknown
+  // token is treated as no token rather than as an error, because the answer for a stranger and for
+  // an unauthenticated caller has to be the same 404.
+  else if (route.optionalAuth) ctx.user = api.authenticateIfPresent(req, state);
   const run = () => route.handler(ctx);
   const result = route.key ? withIdempotency(ctx, run) : await run();
   return result;

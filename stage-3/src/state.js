@@ -10,6 +10,16 @@ function emptyState() {
     restaurants: [],
     reservations: [],
     idempotency: [],
+    // Stage 3 adds three stores beside the stage 1 ones. All three default to empty so a stage 1
+    // or stage 2 export imports into a stage 3 service without a migration step (S3-121), and a
+    // reservation that predates stage 3 still reads as revision 1 under policy 0 (S3-052).
+    policies: [],
+    history: [],
+    series: [],
+    // The batch counter S3-118 and S3-139 name. Stages 1 and 2 have no such field, so it is created
+    // here and the ledger's S3-A1 is answered by reading exactly this: one counter per restaurant,
+    // moved by one per operation rather than by one per booking inside it.
+    batch_counters: {},
   };
 }
 
@@ -95,10 +105,16 @@ function reservationView(state, reservation) {
     created_at: reservation.created_at,
   };
   if (tableIds.length === 1) view.table_id = tableIds[0];
+  // Stage 3 adds two fields to every reservation response. revision is always an integer and
+  // accepted_terms is the snapshot the booking accepted, never the policy in force now (S3-050,
+  // S3-051), which is why it is stored on the reservation rather than looked up here.
+  view.revision = typeof reservation.revision === 'number' ? reservation.revision : 1;
+  view.accepted_terms = reservation.accepted_terms || null;
   return view;
 }
 
 module.exports = {
+  randomId,
   emptyState,
   getState,
   setState,

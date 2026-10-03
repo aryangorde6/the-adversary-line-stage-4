@@ -62,6 +62,14 @@ function moveTableSet(move, restaurant) {
   return domain.canonicalTableSet(restaurant, requested);
 }
 
+// S3-136: expected_revision is per item, so it is read from each move rather than read once for the
+// batch. A batch carrying one stale value is refused whole, which is the same all-or-nothing rule
+// the rest of this function already follows.
+function checkMoveRevision(reservation, move) {
+  if (!has(move, 'expected_revision')) return;
+  domain.checkExpectedRevision(reservation, move);
+}
+
 function applyMoves(state, user, body, nowMs) {
   const moves = validateMoveList(body);
 
@@ -83,10 +91,11 @@ function applyMoves(state, user, body, nowMs) {
   for (let index = 0; index < targets.length; index += 1) {
     const reservation = targets[index];
     if (reservation.status === 'cancelled') fail('reservation_cancelled', { reference: reservation.reference });
-    if (domain.cutoffHasPassed(restaurant, reservation, nowMs)) {
+    const move = moves[index];
+    checkMoveRevision(reservation, move);
+    if (domain.cutoffHasPassed(reservation, nowMs)) {
       fail('cutoff_passed', domain.reservationContext(restaurant, reservation));
     }
-    const move = moves[index];
     plans.push(
       domain.planAmendment(state, reservation, restaurant, {
         table_ids: moveTableSet(move, restaurant),
@@ -109,7 +118,39 @@ function applyMoves(state, user, body, nowMs) {
     }
   }
 
-  return targets.map((reservation, index) => domain.applyPlan(reservation, plans[index]));
+  // Every plan was validated before anything was written, so reaching here means all of them can be
+  // applied. Each changed booking gains exactly one revision and one history entry, and the batch
+  // moves the restaurant's batch counter once rather than once per booking (S3-139).
+  const series = require('./series');
+  const before = targets.map((reservation) => ({
+    table_ids: reservation.table_ids.slice(),
+    party_size: reservation.party_size,
+    starts_at_local: reservation.starts_at_local,
+  }));
+  const applied = targets.map((reservation, index) => domain.applyPlan(reservation, plans[index]));
+  const changed = [];
+  // One set per batch, not per booking: two occurrences of the same series move its revision once.
+  const affected = new Set();
+  applied.forEach((reservation, index) => {
+    const prior = before[index];
+    const sameSet = prior.table_ids.length === reservation.table_ids.length
+      && prior.table_ids.every((id, at) => id === reservation.table_ids[at]);
+    const moved = !sameSet
+      || prior.party_size !== reservation.party_size
+      || prior.starts_at_local !== reservation.starts_at_local;
+    if (!moved) return;
+    reservation.revision += 1;
+    require('./history').append(state, reservation, 'changed', require('./history').amendmentChanges(prior, reservation), nowMs);
+    // A moved series occurrence becomes a permanent exception. The series revision moves once per
+    // affected series for the whole batch, not once per occurrence (S3-140).
+    if (series.markException(state, reservation)) affected.add(reservation.series_id);
+    changed.push(reservation);
+  });
+  for (const seriesId of affected) series.bumpSeriesRevision(state, seriesId);
+  if (changed.length > 0) {
+    series.moveRestaurantBatchCounter(state, firstRestaurantId);
+  }
+  return applied;
 }
 
 module.exports = { applyMoves };

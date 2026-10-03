@@ -43,6 +43,10 @@ function snapshotState(state) {
       restaurants: state.restaurants,
       reservations: state.reservations.map(snapshotReservation),
       idempotency: state.idempotency,
+      policies: state.policies,
+      history: state.history,
+      series: state.series,
+      batch_counters: state.batch_counters,
     }),
   );
 }
@@ -111,8 +115,16 @@ function validateReservations(raw, restaurants) {
       starts_at_ms: startsAtMs,
       ends_at_ms: endsAtMs,
       created_at: requireString(entry.created_at, 'created_at', true),
+      // A stage 1 or stage 2 export has neither field, so both are defaulted here rather than
+      // required: that is what lets a stage-2 document import into a stage-3 service unchanged
+      // (S3-121), and it is why an imported booking reads as revision 1 under policy 0 (S3-052).
+      revision: entry.revision === undefined ? 1 : requireInteger(entry.revision, 'revision'),
+      accepted_terms: entry.accepted_terms === undefined ? null : entry.accepted_terms,
+      series_id: entry.series_id === undefined ? null : entry.series_id,
+      series_index: entry.series_index === undefined ? null : entry.series_index,
     };
     if (reservation.party_size < 1) fail('validation_failed', { field: 'party_size' });
+    if (reservation.revision < 1) fail('validation_failed', { field: 'revision' });
     return reservation;
   });
 }
@@ -153,6 +165,15 @@ function stateFromDocument(document) {
   }
   state.reservations = validateReservations(raw.reservations === undefined ? [] : raw.reservations, state.restaurants);
   state.idempotency = validateIdempotency(raw.idempotency === undefined ? [] : raw.idempotency);
+  // The three stage-3 stores and the batch counter are optional in a document, so a stage-1 or
+  // stage-2 export imports without them. Each is carried across verbatim rather than re-derived,
+  // because a policy's version number and a history entry's seq are promises already made.
+  state.policies = raw.policies === undefined ? [] : JSON.parse(JSON.stringify(raw.policies));
+  state.history = raw.history === undefined ? [] : JSON.parse(JSON.stringify(raw.history));
+  state.series = raw.series === undefined ? [] : JSON.parse(JSON.stringify(raw.series));
+  state.batch_counters = raw.batch_counters === undefined
+    ? {}
+    : JSON.parse(JSON.stringify(raw.batch_counters));
   return state;
 }
 

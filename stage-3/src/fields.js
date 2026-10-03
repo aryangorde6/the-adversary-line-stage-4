@@ -100,6 +100,16 @@ function requireQueryId(url, name) {
   return raw;
 }
 
+// `explain` has one accepted value and everything else is a 422, including false, 1 and the empty
+// string. Reading it as a truthy flag would accept explain=0 and silently omit the explanation, so
+// the parameter is compared as a string rather than coerced.
+function explainFlag(url) {
+  const raw = queryValue(url, 'explain');
+  if (raw === null) return false;
+  if (raw !== 'true') fail('validation_failed', { field: 'explain' });
+  return true;
+}
+
 function requireQueryInteger(url, name, options) {
   const raw = queryValue(url, name);
   if (raw === null) fail('validation_failed', { field: name });
@@ -130,6 +140,7 @@ module.exports = {
   requireString,
   normaliseEmail,
   queryValue,
+  explainFlag,
   requireQueryId,
   requireQueryInteger,
 };

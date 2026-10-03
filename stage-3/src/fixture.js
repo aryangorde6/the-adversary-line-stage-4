@@ -100,6 +100,21 @@ function parseCombinable(raw, tables) {
   return pairs;
 }
 
+// manager_user_ids defaults to [] so a fixture that never mentions it publishes nothing, and a
+// restaurant with no declared manager answers 403 to every publication attempt (S3-020).
+function parseManagerUserIds(raw) {
+  if (!has(raw, 'manager_user_ids')) return [];
+  const value = raw.manager_user_ids;
+  if (!Array.isArray(value)) fail('malformed_request', { field: 'manager_user_ids' });
+  const seen = new Set();
+  for (const entry of value) {
+    const id = fixtureId(entry, 'manager_user_ids');
+    if (seen.has(id)) fail('validation_failed', { field: 'manager_user_ids' });
+    seen.add(id);
+  }
+  return value.slice();
+}
+
 function parseRestaurant(raw) {
   expectObject(raw, 'restaurants');
   const id = fixtureId(raw.id, 'restaurant_id');
@@ -122,6 +137,7 @@ function parseRestaurant(raw) {
     opening_hours: parseOpeningHours(raw.opening_hours),
     tables,
     combinable: parseCombinable(raw.combinable, tables),
+    manager_user_ids: parseManagerUserIds(raw),
   };
 }
 
@@ -175,6 +191,14 @@ function parseSeededReservation(raw, state, nowMs) {
     starts_at_ms: startMs,
     ends_at_ms: startMs + restaurant.reservation_duration_minutes * domain.MILLIS_PER_MINUTE,
     created_at: createdAt,
+    // A seeded booking was accepted under the rules the fixture declares, which is policy 0 by
+    // definition, and it starts at revision 1 (S3-052).
+    revision: raw.revision === undefined ? 1 : raw.revision,
+    accepted_terms: raw.accepted_terms === undefined
+      ? require('./policy').acceptedTermsOf(require('./policy').policyZeroOf(restaurant))
+      : raw.accepted_terms,
+    series_id: raw.series_id === undefined ? null : raw.series_id,
+    series_index: raw.series_index === undefined ? null : raw.series_index,
   };
 }
 
@@ -209,6 +233,7 @@ async function stateFromFixture(fixture, nowMs) {
 }
 
 module.exports = {
+  parseManagerUserIds,
   stateFromFixture,
   expectObject,
   expectArray,

@@ -10,6 +10,9 @@ const { hashPassword, verifyPassword } = require('./accounts');
 const { stateFromFixture } = require('./fixture');
 const { exportDocument, stateFromDocument } = require('./snapshot');
 const moves = require('./moves');
+const policyRules = require('./policy');
+const historyRules = require('./history');
+const series = require('./series');
 
 const { has, optionalString, requireString, normaliseEmail } = fields;
 
@@ -25,6 +28,19 @@ function authenticate(req, state) {
   const user = store.findUserById(state, entry.user_id);
   if (!user) fail('unauthenticated');
   return user;
+}
+
+// Returns null instead of failing. Used by the three endpoints whose answer for a stranger and for an
+// anonymous caller must be the same 404, so that the status itself cannot be used to learn whether
+// a reference exists.
+function authenticateIfPresent(req, state) {
+  const header = req.headers.authorization;
+  if (typeof header !== 'string' || header.length === 0) return null;
+  const match = /^Bearer +(.+)$/i.exec(header.trim());
+  if (!match) return null;
+  const entry = state.tokens.find((candidate) => candidate.token === match[1].trim());
+  if (!entry) return null;
+  return store.findUserById(state, entry.user_id);
 }
 
 async function signup(ctx) {
@@ -100,7 +116,11 @@ function availability(ctx) {
   if (!date) fail('validation_failed', { field: 'date', reason: 'time_format', date: rawDate });
   const partySize = fields.requireQueryInteger(ctx.url, 'party_size', { min: 1 });
   const restaurant = domain.requireRestaurant(ctx.state, restaurantId);
-  return { status: 200, body: domain.availabilityFor(ctx.state, restaurant, date, partySize) };
+  const explain = fields.explainFlag(ctx.url);
+  return {
+    status: 200,
+    body: domain.availabilityFor(ctx.state, restaurant, date, partySize, { explain }),
+  };
 }
 
 function createReservation(ctx) {
@@ -125,9 +145,16 @@ function getReservation(ctx) {
   return { status: 200, body: store.reservationView(ctx.state, reservation) };
 }
 
+// Cancelling an occurrence retains it in the series with its current status and moves the series
+// revision once, but never marks it an exception: a cancellation is not a diner amending their own
+// arrangement, and conflating the two is exactly what S3-115 separates.
 function cancelReservation(ctx) {
   const reservation = ownReservationOrFail(ctx.state, ctx.user, ctx.params.reference);
+  const wasConfirmed = reservation.status === 'confirmed';
   domain.cancelReservation(ctx.state, reservation, ctx.nowMs);
+  if (wasConfirmed && reservation.series_id) {
+    require('./series').bumpSeriesRevision(ctx.state, reservation.series_id);
+  }
   return { status: 200, body: store.reservationView(ctx.state, reservation) };
 }
 
@@ -141,6 +168,57 @@ function patchReservation(ctx) {
 function reservationMoves(ctx) {
   const reservations = moves.applyMoves(ctx.state, ctx.user, ctx.body, ctx.nowMs);
   return { status: 201, body: { reservations: reservations.map((reservation) => store.reservationView(ctx.state, reservation)) } };
+}
+
+function publishPolicy(ctx) {
+  const restaurant = domain.requireRestaurant(ctx.state, ctx.params.id);
+  policyRules.requireManager(ctx.state, restaurant, ctx.user);
+  const policy = policyRules.publishPolicy(ctx.state, restaurant, ctx.body);
+  return { status: 201, body: policyRules.acceptedTermsOf(policy) };
+}
+
+function listPolicies(ctx) {
+  const restaurant = domain.requireRestaurant(ctx.state, ctx.params.id);
+  return { status: 200, body: { policies: policyRules.listPolicies(ctx.state, restaurant) } };
+}
+
+// History and decision answer 404 for a stranger and for a missing reference alike, and 404 rather
+// than 401 with no token at all. That is a deliberate exception to stage 1's rule for private reads
+// (S3-081): the endpoint must not tell an unauthenticated caller that the reference exists.
+function ownerOnly(ctx, reference) {
+  const reservation = store.findOwnReservation(ctx.state, ctx.user && ctx.user.id, reference);
+  if (!reservation) fail('not_found', { resource: 'reservation', reference });
+  return reservation;
+}
+
+function reservationHistory(ctx) {
+  const reservation = ownerOnly(ctx, ctx.params.reference);
+  // The key is entries: history is the record, and the reference is already in the path, so the body
+  // is the ordered record and nothing else. Naming the key "history" would read as the record of a
+  // history rather than the history itself.
+  return { status: 200, body: { entries: historyRules.historyFor(ctx.state, reservation.reference) } };
+}
+
+function reservationDecision(ctx) {
+  const reservation = ownerOnly(ctx, ctx.params.reference);
+  return {
+    status: 200,
+    body: {
+      reference: reservation.reference,
+      revision: reservation.revision,
+      accepted_terms: reservation.accepted_terms,
+    },
+  };
+}
+
+function adoptSeries(ctx) {
+  const created = series.adopt(ctx.state, ctx.user, ctx.body, ctx.nowMs);
+  return { status: 201, body: series.seriesView(ctx.state, created) };
+}
+
+function getSeries(ctx) {
+  const found = series.requireOwnSeries(ctx.state, ctx.user, ctx.params.seriesId);
+  return { status: 200, body: series.seriesView(ctx.state, found) };
 }
 
 async function reset(ctx) {
@@ -165,6 +243,7 @@ function health() {
 
 module.exports = {
   authenticate,
+  authenticateIfPresent,
   signup,
   login,
   createReservation,
@@ -177,6 +256,12 @@ module.exports = {
   cancelReservation,
   patchReservation,
   reservationMoves,
+  publishPolicy,
+  listPolicies,
+  reservationHistory,
+  reservationDecision,
+  adoptSeries,
+  getSeries,
   reset,
   exportState,
   importState,

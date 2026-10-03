@@ -3,6 +3,9 @@
 const { fail } = require('./errors');
 const time = require('./time');
 const store = require('./state');
+const policyRules = require('./policy');
+const history = require('./history');
+const explainRules = require('./explain');
 const {
   requireId,
   requirePartySize,
@@ -30,9 +33,12 @@ function placeContext(restaurant, table, wall) {
   return context;
 }
 
-function dayOpeningHours(restaurant, wall) {
+// Opening hours are read from a policy rather than from the restaurant, because a published policy
+// carries its own hours and a booking on that policy's date must be judged by them. The restaurant
+// is still passed for the timezone and for context in a refusal.
+function dayOpeningHours(selected, restaurant, wall) {
   const name = time.WEEKDAY_NAMES[time.weekdayOf(wall.y, wall.mo, wall.d)];
-  const entry = restaurant.opening_hours.find((day) => day.weekday === name);
+  const entry = selected.opening_hours.find((day) => day.weekday === name);
   if (!entry) return null;
   return { opens: time.parseHhmm(entry.opens), closes: time.parseHhmm(entry.closes) };
 }
@@ -73,10 +79,15 @@ function refusedSetContext(restaurant, tableIds) {
   return context;
 }
 
+// The refusal names the cutoff the diner actually accepted rather than the restaurant's current
+// one, so the sentence and the check cannot disagree after a policy is published.
 function reservationContext(restaurant, reservation) {
   const context = placeSetContext(restaurant, tableIdsOf(reservation), time.parseWall(reservation.starts_at_local));
   context.reference = reservation.reference;
-  context.cutoff_minutes = restaurant.cancellation_cutoff_minutes;
+  const accepted = reservation.accepted_terms || {};
+  context.cutoff_minutes = typeof accepted.cancellation_cutoff_minutes === 'number'
+    ? accepted.cancellation_cutoff_minutes
+    : restaurant.cancellation_cutoff_minutes;
   return context;
 }
 
@@ -89,13 +100,13 @@ function hoursContext(restaurant, wall, day) {
   return context;
 }
 
-function requireSlotInsideOpeningHours(restaurant, wall) {
-  const day = dayOpeningHours(restaurant, wall);
+function requireSlotInsideOpeningHours(selected, restaurant, wall) {
+  const day = dayOpeningHours(selected, restaurant, wall);
   if (!day || day.opens === null || day.closes === null) {
     fail('outside_opening_hours', hoursContext(restaurant, wall, null));
   }
   const minutesOfDay = wall.h * 60 + wall.mi;
-  const step = restaurant.slot_minutes;
+  const step = selected.slot_minutes;
   const offset = minutesOfDay - day.opens;
   if (offset < 0) {
     fail('outside_opening_hours', hoursContext(restaurant, wall, day));
@@ -105,7 +116,7 @@ function requireSlotInsideOpeningHours(restaurant, wall) {
     context.slot_minutes = step;
     fail('not_on_slot_grid', context);
   }
-  if (minutesOfDay + restaurant.reservation_duration_minutes > day.closes) {
+  if (minutesOfDay + selected.reservation_duration_minutes > day.closes) {
     fail('outside_opening_hours', hoursContext(restaurant, wall, day));
   }
 }
@@ -155,8 +166,12 @@ function declaredPair(restaurant, tableIds) {
   return null;
 }
 
-function capacityOf(restaurant, tableIds) {
+// Capacity is the selected policy's, not the fixture's. Under policy 0 the two agree because
+// policy 0 is derived from the fixture, and under a published policy they deliberately do not,
+// which is the whole point of S3-130.
+function capacityOf(selected, restaurant, tableIds) {
   return tableIds.reduce((total, id) => {
+    if (policyRules.policyCapacity(selected, id) > 0) return total + policyRules.policyCapacity(selected, id);
     const table = store.findTable(restaurant, id);
     return total + (table ? table.capacity : 0);
   }, 0);
@@ -252,32 +267,42 @@ function fixtureIdsOf(value) {
   return value;
 }
 
-function cutoffHasPassed(restaurant, reservation, nowMs) {
-  const cutoff = restaurant.cancellation_cutoff_minutes * MILLIS_PER_MINUTE;
-  return nowMs >= reservation.starts_at_ms - cutoff;
+// The cutoff is the one the diner accepted, not the one in force now. Reading the current policy
+// here is exactly the failure S3-055 constructs: a booking made under a 120-minute cutoff must
+// still refuse a cancellation 121 minutes out after a shorter policy has been published.
+function cutoffHasPassed(reservation, nowMs) {
+  const accepted = reservation.accepted_terms || {};
+  const minutes = typeof accepted.cancellation_cutoff_minutes === 'number'
+    ? accepted.cancellation_cutoff_minutes
+    : 0;
+  return nowMs >= reservation.starts_at_ms - minutes * MILLIS_PER_MINUTE;
 }
 
-function createReservation(state, user, body, nowMs) {
+function createReservation(state, user, body, nowMs, options) {
+  const settings = options || {};
   const restaurantId = requireId(body, 'restaurant_id');
   const restaurant = requireRestaurant(state, restaurantId);
   const tableIds = requireTableSet(body, restaurant);
   const wall = requireStartsAtLocal(body);
   const partySize = requirePartySize(body);
+  // The policy is selected once, here, from the local start date, and everything below reads it.
+  // Selecting again later would mean a publication landing mid-request could change the answer.
+  const selected = policyRules.policyForStart(state, restaurant, time.wallToString(wall));
   const startMs = resolveStartMs(restaurant, wall);
-  requireSlotInsideOpeningHours(restaurant, wall);
-  const capacity = capacityOf(restaurant, tableIds);
+  requireSlotInsideOpeningHours(selected, restaurant, wall);
+  const capacity = capacityOf(selected, restaurant, tableIds);
   if (partySize > capacity) {
     fail('party_exceeds_capacity', Object.assign(placeSetContext(restaurant, tableIds, wall), { capacity }));
   }
-  const endMs = startMs + restaurant.reservation_duration_minutes * MILLIS_PER_MINUTE;
-  const taken = occupiedTableId(state, restaurant.id, tableIds, startMs, endMs, null);
+  const endMs = startMs + selected.reservation_duration_minutes * MILLIS_PER_MINUTE;
+  const taken = occupiedTableId(state, restaurant.id, tableIds, startMs, endMs, settings.ignoreReference || null);
   if (taken !== null) {
     fail('table_unavailable', placeContext(restaurant, store.findTable(restaurant, taken), wall));
   }
   const reservation = {
     id: store.allocateReservationId(state),
-    reference: store.allocateReference(state),
-    user_id: user.id,
+    reference: settings.reference || store.allocateReference(state),
+    user_id: settings.userId || user.id,
     restaurant_id: restaurant.id,
     table_ids: tableIds,
     party_size: partySize,
@@ -285,9 +310,18 @@ function createReservation(state, user, body, nowMs) {
     starts_at_local: time.wallToString(wall),
     starts_at_ms: startMs,
     ends_at_ms: endMs,
-    created_at: time.formatUtc(nowMs),
+    created_at: time.createdAt || time.formatUtc(nowMs),
+    // Stage 3 fields. revision starts at 1 and accepted_terms is the snapshot taken now, so a later
+    // publication cannot reach back and change what this booking agreed to.
+    revision: 1,
+    accepted_terms: policyRules.acceptedTermsOf(selected),
+    series_id: settings.seriesId === undefined ? null : settings.seriesId,
+    series_index: settings.seriesIndex === undefined ? null : settings.seriesIndex,
   };
   state.reservations.push(reservation);
+  if (settings.recordHistory !== false) {
+    history.append(state, reservation, 'created', history.creationChanges(reservation), nowMs);
+  }
   return reservation;
 }
 
@@ -297,9 +331,14 @@ function planAmendment(state, reservation, restaurant, changes) {
     : changes.starts_at_local;
   const tableIds = changes.table_ids === undefined ? tableIdsOf(reservation) : changes.table_ids;
   const partySize = changes.party_size === undefined ? reservation.party_size : changes.party_size;
+  const startsAtLocal = time.wallToString(wall);
+  // The resulting date's policy, which is not necessarily the one the booking was accepted under.
+  // S3-056 and S3-057 depend on this: an amendment across a boundary re-adopts terms and recomputes
+  // the end time from the policy that now governs the new date.
+  const selected = policyRules.policyForStart(state, restaurant, startsAtLocal);
   const startMs = resolveStartMs(restaurant, wall);
-  requireSlotInsideOpeningHours(restaurant, wall);
-  const capacity = capacityOf(restaurant, tableIds);
+  requireSlotInsideOpeningHours(selected, restaurant, wall);
+  const capacity = capacityOf(selected, restaurant, tableIds);
   if (partySize > capacity) {
     fail('party_exceeds_capacity', Object.assign(placeSetContext(restaurant, tableIds, wall), { capacity }));
   }
@@ -307,9 +346,10 @@ function planAmendment(state, reservation, restaurant, changes) {
     restaurant_id: restaurant.id,
     table_ids: tableIds,
     party_size: partySize,
-    starts_at_local: time.wallToString(wall),
+    starts_at_local: startsAtLocal,
     starts_at_ms: startMs,
-    ends_at_ms: startMs + restaurant.reservation_duration_minutes * MILLIS_PER_MINUTE,
+    ends_at_ms: startMs + selected.reservation_duration_minutes * MILLIS_PER_MINUTE,
+    accepted_terms: policyRules.acceptedTermsOf(selected),
   };
 }
 
@@ -319,14 +359,42 @@ function applyPlan(reservation, plan) {
   reservation.starts_at_local = plan.starts_at_local;
   reservation.starts_at_ms = plan.starts_at_ms;
   reservation.ends_at_ms = plan.ends_at_ms;
+  reservation.accepted_terms = plan.accepted_terms;
   return reservation;
+}
+
+function expectedRevision(body) {
+  if (!has(body, 'expected_revision')) return undefined;
+  const value = body.expected_revision;
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < 1) {
+    fail('validation_failed', { field: 'expected_revision' });
+  }
+  return value;
+}
+
+// The stale check runs before the cutoff and before validation, because that is what "before" in
+// S3-061 means. Constructing a case where both would fire is the only way the order is observable,
+// and the row asks for exactly that.
+function checkExpectedRevision(reservation, body) {
+  const wanted = expectedRevision(body);
+  if (wanted === undefined) return;
+  if (wanted !== reservation.revision) {
+    fail('stale_revision', { reference: reservation.reference, revision: reservation.revision });
+  }
 }
 
 function amendReservation(state, reservation, body, nowMs) {
   const restaurant = requireRestaurant(state, reservation.restaurant_id);
-  if (cutoffHasPassed(restaurant, reservation, nowMs)) {
+  checkExpectedRevision(reservation, body);
+  if (reservation.status === 'cancelled') fail('reservation_cancelled', { reference: reservation.reference });
+  if (cutoffHasPassed(reservation, nowMs)) {
     fail('cutoff_passed', reservationContext(restaurant, reservation));
   }
+  const before = {
+    table_ids: tableIdsOf(reservation).slice(),
+    party_size: reservation.party_size,
+    starts_at_local: reservation.starts_at_local,
+  };
   const changes = {
     table_ids: amendmentsForTable(state, restaurant, body, reservation),
     starts_at_local: optionalStartsAtLocal(body),
@@ -338,7 +406,26 @@ function amendReservation(state, reservation, body, nowMs) {
     const target = store.findTable(restaurant, taken);
     fail('table_unavailable', placeContext(restaurant, target, time.parseWall(plan.starts_at_local)));
   }
-  return applyPlan(reservation, plan);
+  // A no-op is detected before anything is written, so it cannot consume a revision or a seq. This
+  // is what S3-058 and S3-076 ask for and why the comparison is against the snapshot rather than
+  // against the patch: a patch naming a field with its current value is not a change.
+  const sameSet = before.table_ids.length === plan.table_ids.length
+    && before.table_ids.every((id, index) => id === plan.table_ids[index]);
+  const isNoOp = sameSet
+    && before.party_size === plan.party_size
+    && before.starts_at_local === plan.starts_at_local;
+  if (isNoOp) return reservation;
+  applyPlan(reservation, plan);
+  reservation.revision += 1;
+  history.append(state, reservation, 'changed', history.amendmentChanges(before, reservation), nowMs);
+  // A real amendment of a series occurrence is a permanent exception and moves the series revision
+  // once. A no-op returned above, and a failure threw, so neither can reach this line — which is the
+  // negative half of S3-114 that a flag set before validation would get wrong.
+  // Required lazily: series requires this module, so a top-level import would be a cycle. The
+  // lookup happens on a path that only runs for a series occurrence, so the cost is paid only there.
+  const series = require('./series');
+  if (series.markException(state, reservation)) series.bumpSeriesRevision(state, reservation.series_id);
+  return reservation;
 }
 
 // An amendment that does not mention tables keeps the ones it has; one that does is judged by the
@@ -349,21 +436,32 @@ function amendmentsForTable(state, restaurant, body, reservation) {
   return canonicalTableSet(restaurant, requested);
 }
 
+// A repeated cancel changes nothing: no second revision and no second history entry, which is the
+// half of S3-060 that a plain status write gets wrong.
 function cancelReservation(state, reservation, nowMs) {
   if (reservation.status === 'cancelled') return reservation;
   const restaurant = requireRestaurant(state, reservation.restaurant_id);
-  if (cutoffHasPassed(restaurant, reservation, nowMs)) {
+  if (cutoffHasPassed(reservation, nowMs)) {
     fail('cutoff_passed', reservationContext(restaurant, reservation));
   }
   reservation.status = 'cancelled';
+  reservation.revision += 1;
+  // changes is present and empty rather than absent, so a reader can tell a cancellation from an
+  // entry that forgot to record what it changed (S3-077).
+  history.append(state, reservation, 'cancelled', [], nowMs);
   return reservation;
 }
 
-function availabilityFor(state, restaurant, date, partySize) {
+function availabilityFor(state, restaurant, date, partySize, options) {
+  const settings = options || {};
   const slots = [];
-  const day = dayOpeningHours(restaurant, { y: date.y, mo: date.mo, d: date.d, h: 0, mi: 0 });
-  const step = restaurant.slot_minutes;
-  const duration = restaurant.reservation_duration_minutes;
+  const dateString = time.dateToString(date);
+  // Availability is decided under the policy in force on the date being searched, so a search for a
+  // future date sees that date's rules rather than today's.
+  const selected = policyRules.policyForDate(state, restaurant, dateString);
+  const day = dayOpeningHours(selected, restaurant, { y: date.y, mo: date.mo, d: date.d, h: 0, mi: 0 });
+  const step = selected.slot_minutes;
+  const duration = selected.reservation_duration_minutes;
   if (day && day.opens !== null && day.closes !== null && step > 0) {
     for (let minutes = day.opens; minutes + duration <= day.closes; minutes += step) {
       const wall = time.wallFromMinutes(date.y, date.mo, date.d, minutes);
@@ -373,37 +471,50 @@ function availabilityFor(state, restaurant, date, partySize) {
       const endMs = startMs + duration * MILLIS_PER_MINUTE;
       const available = [];
       for (const table of restaurant.tables) {
-        if (table.capacity >= partySize && !isOccupied(state, restaurant.id, [table.id], startMs, endMs, null)) {
+        const capacity = policyRules.policyCapacity(selected, table.id);
+        if (capacity >= partySize && !isOccupied(state, restaurant.id, [table.id], startMs, endMs, null)) {
           available.push(table.id);
         }
       }
-      // available_table_ids stays singles-only and exactly as it was. available_options is the
-      // wider answer: singles in the restaurant's own table order, then the declared pairs in the
-      // order the restaurant declared them, each option offered only if every table it needs is
-      // free for the whole interval and its summed capacity covers the party.
-      const options = [];
+      // available_table_ids stays singles-only and in the restaurant's own table order. It is
+      // computed here exactly as stage 2 computed it, so S3-002's byte-identical assertion holds
+      // whether or not explain was requested.
+      const options_ = [];
       for (const table of restaurant.tables) {
-        if (table.capacity >= partySize && !isOccupied(state, restaurant.id, [table.id], startMs, endMs, null)) {
-          options.push({ table_ids: [table.id], capacity: table.capacity });
+        const capacity = policyRules.policyCapacity(selected, table.id);
+        if (capacity >= partySize && !isOccupied(state, restaurant.id, [table.id], startMs, endMs, null)) {
+          options_.push({ table_ids: [table.id], capacity });
         }
       }
       for (const pair of restaurant.combinable || []) {
-        const capacity = capacityOf(restaurant, pair);
+        const capacity = policyRules.capacityUnder(selected, pair);
         if (capacity < partySize) continue;
         if (isOccupied(state, restaurant.id, pair, startMs, endMs, null)) continue;
-        options.push({ table_ids: [pair[0], pair[1]], capacity });
+        options_.push({ table_ids: [pair[0], pair[1]], capacity });
       }
-      slots.push({
+      const slot = {
         starts_at_local: time.wallToString(wall),
         starts_at: time.formatInZone(restaurant.timezone, startMs),
         available_table_ids: available,
-        available_options: options,
-      });
+        available_options: options_,
+      };
+      // explain is omitted entirely unless asked for. A response that always carried it would pass
+      // every other row in this group and fail S3-002, which is why the key is added conditionally
+      // rather than being written and then deleted.
+      if (settings.explain) {
+        const tables = explainRules.explainForSlot(state, restaurant, selected, partySize, startMs, endMs);
+        const pairs = [];
+        for (const pair of restaurant.combinable || []) {
+          pairs.push(explainRules.explainForPair(state, restaurant, selected, pair, partySize, startMs, endMs));
+        }
+        slot.explain = tables.concat(pairs);
+      }
+      slots.push(slot);
     }
   }
   return {
     restaurant_id: restaurant.id,
-    date: time.dateToString(date),
+    date: dateString,
     timezone: restaurant.timezone,
     slots,
   };
@@ -424,6 +535,7 @@ module.exports = {
   placeSetContext,
   refusedSetContext,
   dayOpeningHours,
+  policyForStart: policyRules.policyForStart,
   resolveStartMs,
   requireSlotInsideOpeningHours,
   isOccupied,
@@ -437,4 +549,6 @@ module.exports = {
   amendReservation,
   cancelReservation,
   availabilityFor,
+  expectedRevision,
+  checkExpectedRevision,
 };

@@ -74,6 +74,8 @@ const STATUS_BY_CODE = Object.freeze({
   outside_opening_hours: 422,
   party_exceeds_capacity: 422,
   combination_not_allowed: 422,
+  stale_revision: 409,
+  already_in_series: 409,
   invalid_local_time: 422,
 });
 
@@ -294,6 +296,22 @@ const MESSAGES = {
     return named
       ? `${named} cannot be booked together at this restaurant. ${offer}`
       : `That combination of tables cannot be booked at this restaurant. ${offer}`;
+  },
+
+  // Stage 3 sentences. Both name the thing that is out of date so a person can act on it rather
+  // than being told only that something failed.
+  stale_revision: (ctx) => {
+    const named = ctx.reference ? `Booking ${ctx.reference}` : 'That booking';
+    // Deliberately not span(), which formats minutes: a revision is a version number, not a
+    // duration, and "version 2 minutes" would be a sentence no person wrote.
+    const current = Number.isInteger(ctx.revision) ? String(ctx.revision) : '';
+    return current
+      ? `${named} has moved on since you last saw it: it is now at version ${current}. Read it again, then make your change.`
+      : `${named} has moved on since you last saw it. Read it again, then make your change.`;
+  },
+
+  already_in_series: (ctx) => {
+    return 'That booking is already the first night of a repeating series. Cancel the series, or adopt a different booking.';
   },
 
   invalid_local_time: (ctx) => {
