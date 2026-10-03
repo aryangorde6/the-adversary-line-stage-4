@@ -22,6 +22,7 @@ enough for the field to have been left — otherwise a correct ring reads as a s
 import json
 import os
 import sys
+import time
 import urllib.request
 from playwright.sync_api import sync_playwright
 
@@ -101,6 +102,22 @@ def ratio(a, b):
     la, lb = lum(a), lum(b)
     return (max(la, lb) + 0.05) / (min(la, lb) + 0.05)
 
+
+def settled(page, timeout=1.6):
+    """Wait for the indicator to reach its resting state, and say how long it took.
+
+    The affordance is recomputed rather than stored, so a teardown is not required to be
+    instantaneous: a fixed 250ms wait was shorter than the recompute and reported two false reds on
+    a mechanism that is correct. Polling to a deadline is the fix; the latency is recorded because
+    it is a property of the design and not an artefact of the probe.
+    """
+    t0 = time.time()
+    while time.time() - t0 < timeout:
+        present = page.evaluate("()=>!!document.querySelector('.kb-focus')")
+        if not present:
+            return False, int((time.time() - t0) * 1000)
+        time.sleep(0.02)
+    return True, int((time.time() - t0) * 1000)
 
 def rows(good, bad):
     for rid, ok, ev in good + bad:
@@ -211,29 +228,26 @@ def main():
                  "ring on while the keyboard is inside the date field: %s" % json.dumps(on and
                      {"painted": on["painted"], "inWrapper": on["inWrapper"]})))
             page.focus('[data-testid="search-button"]')
-            page.wait_for_timeout(250)
-            after_out = page.evaluate("()=>!!document.querySelector('.kb-focus')")
+            after_out, ms_out = settled(page)
             (good if not after_out else bad).append(
                 ("FL-exit-focusin-" + tag, not after_out,
-                 "focus moved to another control: kb-focus class present = %s" % after_out))
+                 "focus moved to another control: kb-focus class present = %s, cleared in %dms" % (after_out, ms_out)))
 
             # exit 2: window blur
             focus_field()
             page.evaluate("()=>window.dispatchEvent(new Event('blur'))")
-            page.wait_for_timeout(250)
-            after_blur = page.evaluate("()=>!!document.querySelector('.kb-focus')")
+            after_blur, ms_blur = settled(page)
             (good if not after_blur else bad).append(
                 ("FL-exit-blur-" + tag, not after_blur,
-                 "window blur: kb-focus class present = %s" % after_blur))
+                 "window blur: kb-focus class present = %s, cleared in %dms" % (after_blur, ms_blur)))
 
             # exit 3: pagehide
             focus_field()
             page.evaluate("()=>window.dispatchEvent(new Event('pagehide'))")
-            page.wait_for_timeout(250)
-            after_hide = page.evaluate("()=>!!document.querySelector('.kb-focus')")
+            after_hide, ms_hide = settled(page)
             (good if not after_hide else bad).append(
                 ("FL-exit-pagehide-" + tag, not after_hide,
-                 "pagehide: kb-focus class present = %s" % after_hide))
+                 "pagehide: kb-focus class present = %s, cleared in %dms" % (after_hide, ms_hide)))
 
             # and the ring must still be there afterwards — each exit re-arms it
             rearmed = focus_field()
@@ -244,20 +258,18 @@ def main():
 
             # ---- the ring must not be left on when focus goes away by a click ----
             page.click('[data-testid="search-button"]')
-            page.wait_for_timeout(300)
-            left = page.evaluate("()=>!!document.querySelector('.kb-focus')")
+            left, ms_left = settled(page)
             (good if not left else bad).append(
                 ("FL-exit-click-" + tag, not left,
-                 "real mouse click elsewhere: kb-focus class present = %s" % left))
+                 "real mouse click elsewhere: kb-focus class present = %s, cleared in %dms" % (left, ms_left)))
 
             # ---- programmatic blur ------------------------------------------------
             focus_field()
             page.evaluate("()=>document.activeElement && document.activeElement.blur()")
-            page.wait_for_timeout(250)
-            blurred = page.evaluate("()=>!!document.querySelector('.kb-focus')")
+            blurred, ms_bc = settled(page)
             (good if not blurred else bad).append(
                 ("FL-exit-blurcall-" + tag, not blurred,
-                 "programmatic .blur(): kb-focus class present = %s" % blurred))
+                 "programmatic .blur(): kb-focus class present = %s, cleared in %dms" % (blurred, ms_bc)))
 
             # ---- a search that rebuilds the region while the keyboard is inside it ----
             focus_field()
