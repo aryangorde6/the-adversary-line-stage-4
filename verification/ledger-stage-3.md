@@ -42,6 +42,15 @@ by whoever reported last.** Three points of substance:
    recurring reservations (22), history and decision (12), availability explanations (11) — so the
    six-to-seven failures are representative of the work rather than a corner of it.
 
+**And the suite's failures are not all the same kind of failure, which matters for reading them.** Two
+of the stage-3 failures are **422 on `POST /reservations`** — a route stage 2 has — while the others are
+404s or a missing key. **A refusal from a route that exists is a different fault from an absent route,
+and a status code cannot tell them apart:** a refused seed, a refused body and a refused field all
+arrive as 422 and send an implementer to three different places. So the suite probes the stage's real
+bulk *and* some of its failures are refusals rather than absences. `S3-020` and `S3-024` are the two
+rows to amend **when a run shows the distinction mattering** — one run is evidence about a failure
+mode, not evidence about twenty rows.
+
 **One more measured fact, about the tree rather than the stage.** A local `docker build` of `stage-3/`
 at `0283f55` produces an image that **cannot start**: `Error: Cannot find module './series'` from
 `src/api.js`, while `src/` already contains `explain.js`, `history.js` and `policy.js`. The folder is
