@@ -32,7 +32,6 @@
 
   function hide(node) {
     if (!node) return;
-    node.textContent = '';
     node.hidden = true;
   }
 
@@ -384,7 +383,6 @@
           starts_at_local: attempt.startsAtLocal,
           party_size: attempt.partySize,
         };
-        if (attempt.tableIds.length === 1) payload.table_id = attempt.tableIds[0];
 
         if (bookingSubmit) bookingSubmit.disabled = true;
         api('POST', '/reservations', payload, { 'Idempotency-Key': selection.key }).then(function (result) {
