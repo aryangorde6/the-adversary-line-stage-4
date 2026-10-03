@@ -406,6 +406,19 @@ because they have now failed to travel into a new file twice.**
     both leave the author stuck. One said `204` and seeded nothing; the other said `422` and refused
     something correct. **A refusal that is *wrong* is worse than no refusal**, because the author cannot
     distinguish it from the state being genuinely unsupported.
+31. **A measurement whose failure mode is silence must have its setup checked first**, because silence is
+    indistinguishable from slowness **and slowness is the more comfortable story.** All four screen suites
+    read their base URL from `process.argv[2]` with **no connection timeout**, so a wrong URL produces
+    silence rather than an error — and a 20-minute silence was reported as a hang and as a flaky suite
+    before the invocation was checked twice. **A suite must also assert it reached its service**
+    (`GET /health`) before running a single row, so "I could not start it" and "it found nothing" can never
+    look alike.
+32. **One argument must have one convention, and an undocumented second convention is a trap with the
+    reader's name on it.** `verification-probes/` carried both `process.env.BASE` (the two API suites) and
+    `argv[2]` (the four screen suites), **with a README documenting only the argv form** — so the env
+    convention could only be learned by reading the source, which is exactly what a verifier should not
+    have to do. **Where an instrument's convention is discoverable only from its implementation, the
+    convention is the defect**, and the fix is to accept both forms and document both.
 30. **A row's green tells the reader less than it appears to when a subset of its assertions is
     load-bearing, and the row must say which.** A row with a hole announces itself; **a row whose visible
     green overstates its coverage does not.** `S4-167` is the standing example: `terms_exclude_all` has
@@ -589,6 +602,26 @@ assertions), **and the supplied stage-1 availability rows, whose key sets I have
 therefore be changing blind.** **A discriminator that grows every existing row's expected key set is a
 change to rows this ledger's author did not write, and it is not mine to make quietly** — so the ruling is
 conditional, and the cost is on the record for whoever revisits it.
+
+### Instrument ruling on the four screen suites (`1e56016`)
+
+**Proposal accepted, and it is assigned rather than taken.** `ui-lib.mjs` should accept
+**`argv[2]` and `process.env.BASE`**, and the README should show both. **I am not making that edit myself:
+the file lives in the Builder's folder, and more importantly I cannot run the suite to verify the change** —
+**`playwright-core` is not installed anywhere in this environment, so I cannot re-run `ui-grid` or its three
+siblings at all.** **So I am not reporting `210/0` as verified by me. It is reported by the seat that ran
+it, and the honest record says so** — an instrument's result is only as good as the seat's ability to
+reproduce it, and mine cannot currently reproduce this one.
+
+**The second half is the actual defect and it is not optional:** a **connection timeout on every request**,
+so an unreachable service fails in seconds with an error instead of hanging, **plus a `GET /health` assertion
+before any row runs.** Accepting both argument forms removes the trap; **the timeout and the reachability
+assertion remove the failure mode that made the trap cost a reported finding.**
+
+**And the deeper half is procedural: a suite that cannot reach its service does not fail, it goes quiet, so
+"the suite is slow" and "the suite is pointing at the wrong port" are the same observation until the
+invocation is checked.** Silence is the answer you get when the question was never asked, and it is the most
+comfortable answer available.
 
 ## Probes owed, recorded as owed rather than as coverage
 
