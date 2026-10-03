@@ -173,6 +173,37 @@ def main():
                           "S4-171b would be asserting one of two feasible answers rather than the "
                           "optimisation's" % (mirror, by_ref), by_ref == mirror)
 
+    # Control for S4-171c: the plan a rank-greedy search returns when level 1 ties -- this is the answer
+    # the build gave at 75bb37e, so it is a wrong answer a real build actually returned.
+    ranked = {"users": [{"id": "u_ada", "email": "ada@example.com", "password": "correct horse",
+                         "display_name": "Ada"}],
+              "restaurants": [{"id": "r_anker", "name": "Zum Anker", "timezone": "Europe/Berlin",
+                               "manager_user_ids": ["u_ada"], "slot_minutes": 30,
+                               "reservation_duration_minutes": 90,
+                               "cancellation_cutoff_minutes": 120, "opening_hours": HOURS,
+                               "tables": [{"id": "t_1", "label": "1", "capacity": 2},
+                                          {"id": "t_4", "label": "4", "capacity": 4},
+                                          {"id": "t_2", "label": "2", "capacity": 2},
+                                          {"id": "t_3", "label": "3", "capacity": 6}]}],
+              "reservations": [{"id": "res_aaaaaa", "reference": "AAAAAA", "user_id": "u_ada",
+                                "restaurant_id": "r_anker", "table_ids": ["t_3"], "party_size": 2,
+                                "starts_at_local": "2026-09-28T19:00"},
+                               {"id": "res_bbbbbb", "reference": "BBBBBB", "user_id": "u_ada",
+                                "restaurant_id": "r_anker", "table_ids": ["t_1"], "party_size": 2,
+                                "starts_at_local": "2026-09-28T19:00"}]}
+    call("POST", "/_test/reset", ranked)
+    st, lg = call("POST", "/auth/login", {"email": "ada@example.com", "password": "correct horse"})
+    tok = lg.get("token")
+    st, body = call("POST", "/restaurants/r_anker/replans",
+                    {"table_id": "t_1", "from": "2026-09-28T18:00:00+02:00",
+                     "to": "2026-09-28T23:00:00+02:00"}, token=tok, key="nco-3")
+    by_ref = {a.get("reference"): a.get("table_ids") for a in body.get("assignments", [])} \
+        if st == 201 else {}
+    rank_greedy = {"AAAAAA": ["t_3"], "BBBBBB": ["t_4"]}
+    expect_fail("NC-007", "within the level-1 tie the plan is NOT the rank-greedy one %s (got %s) -- this "
+                          "is the answer 75bb37e gave, and S4-171c exists because of it"
+                          % (rank_greedy, by_ref), by_ref == rank_greedy)
+
     good = [r for r, ok in RESULTS if ok]
     bad = [r for r, ok in RESULTS if not ok]
     print("SUMMARY %d/%d passed" % (len(good), len(RESULTS)))

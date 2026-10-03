@@ -177,3 +177,67 @@ fixtures for levels 2 and 3, and **`S4-152`'s path debt**, which is owed to the 
 the refusal is not mutating it. **The browser half remains reported rather than verified by me**, and the
 Builder's own statement of that limit is the honest form: **its suites are the only browser evidence in the
 room and it runs them, so they are verified by the seat whose code they exercise.**
+
+
+---
+
+# Stage-4 acceptance at `827005e` — PASS, and the accepted hash moves here
+
+**Why the hash moves and not just the verdict: `345bbe6`, `379379b` and `75bb37e` were all graded PASS over an
+optimiser that did not implement the specification's second objective at all.** Three green commits over a
+planner that put a party of two on a six-seat table because that table was first in fixture order. The stage's
+record now says so in those words.
+
+## Measured by me at `827005e`
+
+| | result |
+|---|---|
+| supplied | stage 1 **120/120** · stage 2 **25/25** · stage 3 **7/7** · **stage 4 6/6** · **highest contiguous 4** |
+| `s4/planner_property.py` | **14 / 14** — including `S4-171c`, written for the defect the Builder found |
+| `s4/negative_control.py` | **7 / 7** — seven rows proven capable of failing |
+| `s4/write_family.py` · `s4/discriminator.py` | **9 / 9** · **16 / 16** |
+| `s3/api_core.py` · `terms_history_series.py` · `fixture_arrival.py` | **48/48** · **34/34** · **36/36** |
+| stage-2 screens at **1280 and 375** | `closed_day` **26/26** · `out_of_order_lost` **14/14** · `focus_lifecycle` **48/48, 0 residual** · `focus_reentry` **17/17, 0 residual** · `states_set` **11/11** |
+
+## `S4-171c`, and the honest correction to my own earlier claim
+
+**My `S4-171a` could not have caught this defect, and saying otherwise would be the wrong kind of green.** In
+that fixture the only plan tying on level 1 was **unique**, so the row separated *level-1-first from
+level-2-first* and said nothing about the seat term **within** a tie. My disclosure of a thinness described a
+real gap — and the first separating fixture found a defect my row did not reach.
+
+`S4-171c` reaches it, and the fixture is built so the two candidate plans are **different plans**:
+
+```
+t_4 (cap 4) is DECLARED BEFORE t_2 (cap 2)   ->  a rank-greedy search puts BBBBBBB on t_4, wasting 2 seats
+AAAAAA (party 2) holds t_3 and may stay      ->  the correct plan puts BBBBBBB on t_2, wasting none
+both plans change exactly ONE booking       ->  level 1 ties; only the seat total separates them
+```
+
+**`75bb37e` answered `{AAAAAA: t_3, BBBBBB: t_4}` — the rank-greedy plan. `827005e` answers
+`{AAAAAA: t_3, BBBBBB: t_2}`.** And `NC-007` asserts the old answer **must not** be returned, so the row
+cannot pass on the defect returning.
+
+## What this adds to the record rather than to the ledger's optimism
+
+**The Builder's control is the finding, and it is about instruments rather than about the planner:** with
+objective 2 deleted from the comparison, `optimiser.mjs` reports failures and **`invariants.mjs` — 31
+assertions that caught a planner defect the turn before — reports all green.** **A 31-assertion invariant
+probe cannot see a missing middle objective at all.** That is the strongest evidence yet for the standing
+instruction that every objective needs a row naming **the plan that must come out**: **a number reported
+honestly by a wrong plan satisfies every assertion about numbers.**
+
+**And the correct claim is falsifiability, not correctness.** Three fixtures passing does not make the
+optimiser right; it makes it **falsifiable**, which it was not an hour ago. **A green surface over an
+unfalsifiable property and a green surface over a defective one look identical from the outside**, and the
+difference only ever shows up as a row someone was asked to write on purpose.
+
+## Open, with owners
+
+1. **`S4-152`'s path debt, plus stage 3's fixture-refusal half-application** — unpaid, and owed to the next
+   defect round.
+2. **The browser half is self-verified** — the Builder's suites are the only browser evidence in the room and
+   the Builder runs them, so **verified by the seat whose code they exercise; 400-odd rows must not be read as
+   independence**, and this seat cannot drive a browser at all.
+
+**Verdict: PASS at `827005e`.**

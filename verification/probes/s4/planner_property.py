@@ -303,6 +303,42 @@ def main():
               "assignment is feasible and both tie on the first two terms, so only the vector "
               "separates them)" % (by_ref, expected))
 
+    # ---- The case the Builder's fixture found and mine did NOT: among plans that TIE on level 1,
+    # the least wasteful must come out. My S4-171a could not see this, because in that fixture the only
+    # level-1-tied plan was unique -- so it separated level-1-first from level-2-first and said nothing
+    # about the seat term *within* a tie. Stated honestly: my row was thin for this mutant after all.
+    #
+    # Tables are listed so that the rank-first option and the seat-first option are DIFFERENT tables:
+    # t_4 (cap 4) is declared before t_2 (cap 2), so a rank-greedy search puts BBBBBBB on t_4 and wastes
+    # 2 seats, while the correct plan puts it on t_2 and wastes none. Both plans change exactly one
+    # booking, so level 1 ties and only the seat total separates them.
+    ranked_fixture = {"users": [{"id": "u_ada", "email": "ada@example.com",
+                                 "password": "correct horse", "display_name": "Ada"}],
+                      "restaurants": [{"id": "r_anker", "name": "Zum Anker",
+                                       "timezone": "Europe/Berlin", "manager_user_ids": ["u_ada"],
+                                       "slot_minutes": 30, "reservation_duration_minutes": 90,
+                                       "cancellation_cutoff_minutes": 120, "opening_hours": HOURS,
+                                       "tables": [{"id": "t_1", "label": "1", "capacity": 2},
+                                                  {"id": "t_4", "label": "4", "capacity": 4},
+                                                  {"id": "t_2", "label": "2", "capacity": 2},
+                                                  {"id": "t_3", "label": "3", "capacity": 6}]}],
+                      "reservations": [booking("AAAAAA", ["t_3"], 2, 19),
+                                       booking("BBBBBB", ["t_1"], 2, 19)]}
+    st, _ = call("POST", "/_test/reset", ranked_fixture)
+    st2, lg = call("POST", "/auth/login", {"email": "ada@example.com", "password": "correct horse"})
+    tok = lg.get("token") if st2 == 200 else None
+    if tok:
+        st3, body = plan(tok, "p3f")
+        by_ref = {a.get("reference"): a.get("table_ids") for a in body.get("assignments", [])} \
+            if st3 == 201 else {}
+        expected = {"AAAAAA": ["t_3"], "BBBBBB": ["t_2"]}
+        check("S4-171c", st3 == 201 and by_ref == expected,
+              "within a tie on changed table sets the least wasteful plan must come out -> the plan is "
+              "%s (expected %s: t_4 is declared before t_2, so a rank-greedy search puts BBBBBBB on the "
+              "four-seat table and wastes two seats, while t_2 wastes none. Both plans change one "
+              "booking, so only the seat term separates them -- and at 75bb37e this build chose t_4)"
+              % (by_ref, expected))
+
     return rows()
 
 
