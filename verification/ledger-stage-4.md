@@ -406,6 +406,13 @@ because they have now failed to travel into a new file twice.**
     both leave the author stuck. One said `204` and seeded nothing; the other said `422` and refused
     something correct. **A refusal that is *wrong* is worse than no refusal**, because the author cannot
     distinguish it from the state being genuinely unsupported.
+30. **A row's green tells the reader less than it appears to when a subset of its assertions is
+    load-bearing, and the row must say which.** A row with a hole announces itself; **a row whose visible
+    green overstates its coverage does not.** `S4-167` is the standing example: `terms_exclude_all` has
+    exactly one producing configuration, so if the implementation answers `shut` whenever `slots` is empty,
+    **assertions 1 and 2 still pass and only assertion 3 — the terms-driven one — catches it.** The row
+    therefore names assertion 3 as load-bearing. **Naming the load-bearing assertion is part of writing
+    the row, not a postscript to it.**
 28. **A probe narrower than its row is a check of a smaller requirement, and it reports green about it.**
     So **before any defect round, walk each row its probes will defend against the probes themselves** —
     every key, every branch, every population — and record the walk in the report. This has happened four
@@ -415,13 +422,25 @@ because they have now failed to travel into a new file twice.**
     missing coverage**; a defect no probe mutates is fixed by **mutating the path**. **Asserting a
     requirement is not mutating it**, and only the first is paid by adding rows.
 27. **Independence is a property of the record, not of the seat — so any authorisation to read supplied
-    checks must be written down, with its scope.** The supplied checks tree is outside this seat's
-    sandbox entirely: `tablekeeper/test` is denied to me at the tool level, which is the enforcement
-    behind clause 3 rather than merely my discipline. **Where a ledger's independence is deliberately and
-    narrowly surrendered — here, the two failing checks' _identities_ only, never their expectations — the
-    surrender is recorded in the ledger**, because a later reader must be able to tell which rows were
-    derived independently and which were named by the implementation's author. **Reading a name is not
-    reading an expectation, and the difference is the whole of what was authorised.**
+    checks must be written down, with its scope** — *and so must any authorisation that turns out to have
+    been unnecessary, because that is the more useful fact.* **Corrected at `1e56016`: the premise of mine
+    was wrong.** I recorded that the two failing checks' identities could be known only from inside the
+    file. **They were never hidden: the harness prints a `FAILED` line per failure carrying the test id and
+    the assertion message, so a check's identity is knowable from the log of the very run that executes
+    it.** The Builder had been reading that log since stage 1. So:
+    - **the checks tree is not the only route to a check's identity, and the route that exists is the
+      command's own output** — a later reader told only "this seat may not read the checks" is told
+      something narrower than the truth;
+    - **the authorisation is recorded as unnecessary in the event**, while the fact that it was given is
+      recorded too, because recording it was right and its redundancy is the lesson;
+    - **the margin named rather than let pass:** the log's assertion strings carry a little of each
+      check's *content* — the route, the expected status — which is marginally more than a bare name and
+      is information already measured by driving. **The fix for that margin belongs in the harness's log
+      format, not in a seat's restraint.**
+    **Both supplied names agree with the drive-based attribution** (`test_a_closure_preview_returns_a_plan`
+    → the planning family, `test_series_clock_time_can_be_changed` → the series family), and the Builder
+    reports it looked for disagreement first. **Identity and attribution are separate pieces of knowledge,
+    and only driving supplied the second.**
 26. **A sample suite's size is part of its record, not a detail of the run.** The pass count and the
     check count belong in the same sentence: *six checks, four passing, two failing* is one fact, and
     **"5 checks, 4 passed / 1 failed" is a different fact, not a rounding of the first.** A number in a
@@ -510,6 +529,7 @@ because they have now failed to travel into a new file twice.**
 | `S4-163` | **The service answers, at the day level and under the terms in force, which of three states the date is in: _shut_ — no opening hours for this weekday; _terms exclude every slot_; or _nothing free_. `explain=true` must state it on a day with no slots, and the three must be distinguishable without the screen inferring any of them from `slots.length`.** | Three fixtures, one per state, same day shape: (a) a day with no `opening_hours` entry; (b) a day whose slots are all booked; (c) a day on which the terms in force exclude every slot. **Each asserted by the day-level field, not by the sentence a screen would print**; and `S4-164` asserts the absence of a closed-day claim whenever the day-state is not _shut_. | **Measured at `1e56016`, and this is why the answer cannot live on `explain[]`:** shut → 200 with `slots: []`; fully booked → 200 with 7 slots and every `available_table_ids` empty; **identical top-level keys**; and **`explain=true` on the shut day returns no `explain` key at all**, because `explain` is per slot and there are no slots to explain. **The service is silent by construction on the one day a screen most needs to know why.** Any discriminator bolted onto `explain[]` inherits the defect, because **the day it must speak about is the day the array is empty — a per-slot surface cannot carry a statement about the absence of slots.** Three constraints keep the shape from drifting back: **(1) it is day-level and present when `slots` is empty; (2) it is derived from the terms in force, not from the fixture and not from text; (3) the screen's `say less, not more` obligation only discharges if the three are distinguishable to the screen** — a day-state a screen cannot read is not a discriminator. |
 | `S4-164` | A screen's obligation is to **say less, not more**: where the service has not said a day is shut, no screen may state it. | The grid and the lookup screen for state (c) from `S4-163`: assert the **absence** of any closed/shut claim, and assert the slot list is what the service returned rather than a filtered version of it. | A screen that infers closure from `slots.length === 0` is making the service's silence its own statement. **The Finisher has refused to make the screen smarter to cover this, and that refusal is the requirement, not a limitation** — it is `S3-A3`'s second half. |
 | `S4-165` | **Terms validity is _derived_, not published — and the derivation is named, because "derive it" without naming the inputs is the shape this stage has refused twice.** **Ruled: no boolean, no second claim.** | **From exactly two things a client can already read:** (i) the booking's own `accepted_terms`, carried by `GET /reservations/{ref}`, and (ii) **the policy in force for the booking's `starts_at_local`**. Assert: (a) publishing a policy that changes terms **leaves an existing booking's `accepted_terms` byte-identical** — validity is not drift; (b) both sides are reachable, so the comparison is possible — **which makes `explain` on the booking's slot load-bearing: it must name the policy in force for that start**, otherwise the client holds one side of a comparison it cannot complete; (c) where they differ, **nothing in any response claims validity** — asserted as the *absence* of such a claim. | A published boolean **buys a row rather than a property**: it is a second claim about a fact that is already derivable, and it needs its own row to police it, which is the equality-comparison mistake the Builder deleted at `549a104` rather than hardened. **A field that exists is not a field whose meaning a client can check** — `explain` before stage 3 — and the fix for that is not another field. **The real gap is not "no field" but "no single place both sides are visible",** and (b) is the requirement that closes it: **the service must make the derivation's inputs reachable together.** |
+| `S4-167` | **`GET /availability` with `explain=true` returns a top-level `day_state` naming which of four states the requested date is in, for that restaurant, under the policy in force for that date: `shut` (no `opening_hours` entry for that weekday) · `terms_exclude_all` (hours exist and the terms yield no slots at all) · `nothing_free` (at least one slot, none with a free table) · `open` (at least one slot with a free table).** A screen may state a day as closed **only** on `shut`. | Four assertions, and **no assertion about any sentence, heading or rendered output**: **(1) `day_state` is present at the top level whenever `explain=true`, including on a date with no slots — presence on an empty day is the row; (2) the states are pairwise distinguishable without reference to `slots.length`, each asserted twice, once on a day built to produce it and once on a day where `slots.length` would give the wrong answer (`shut` and `terms_exclude_all` both have `slots: []`, and the row asserts they differ); (3) `day_state` is terms-derived, not fixture-derived and not text-derived — proved by driving a policy change that moves a date from one state to another with **no change to `opening_hours`**; (4) the plain response's key set is unchanged.** | **A discriminator bolted onto `explain[]` inherits the defect, because the day it must speak about is the day the array is empty** — a per-slot surface cannot carry a statement about the absence of slots. And **if a client can recover the state by counting slots, the field is decoration**: assertion 2 exists to make that red rather than merely unlikely. **Assertion 3 is load-bearing and the row says so (clause 30)** — `terms_exclude_all` has one producing configuration, so an implementation answering `shut` whenever `slots` is empty passes 1 and 2 and only 3 catches it. |
 | `S4-166` | **The stage-4 baseline is attributed, not assumed**: at a folder-only build the two failing supplied checks are the two **write** families (planning and amendment), and the **read** surface is intact. | Drive all three write entry points (404/405), then the read surface — policies, availability with `slots[]`, and the absent-series 404 — and **assert the read surface is alive before attributing the failures to the writes**. `absent_at_e9b9f4d.py`, 8/8 at `e9b9f4d`. | Attributing two failures to "stage 4 is not built yet" without showing the rest of the folder works is a guess with a measurement attached. **A folder that carries stage 3 forward broken would produce the same two red checks.** |
 
 | `S4-162` | The full stage-1/2/3 regression surface at the stage-4 hash. | 120/0, 25/25, 7/7, `api_core` 48/48, `terms_history_series` 34/34, and the stage-2 screen suites at both widths with 0 residual. **Any failure goes to the Foreman before it is characterised.** | A stage that satisfies its own rows and breaks an accepted one. |
@@ -551,6 +571,25 @@ settled by reading code.
   restaurant-revision change is specified to invalidate (`S4-158`). A write that moves no counter is not
   described either way.
 
+### Two rulings on `S4-167`, made as its row's author before the code exists
+
+**(a) Four states, not three — `open` included.** A three-valued field leaves a client unable to tell
+*nothing to report* from *everything fine*, and **a four-valued field whose last value is the absence of a
+problem is still a field the client has to interpret — but it is one it can interpret, because "open" is a
+state rather than the absence of a state.** Shipping an implicit "no complaint" state is the thing to
+avoid; **naming it is not the same as shipping it implicitly.**
+
+**(b) Conditional on `explain=true`, not unconditional** — and the cost is recorded rather than absorbed.
+**A `day_state` is an explanation, and the plain response's shape is asserted by rows that exist already.**
+The cost of the ruling is real and is written here: **a client that does not pass `explain=true` cannot read
+the day state at all.** Ruling it unconditional instead would change the expected key set of the
+availability assertions in `api_core.py` and `terms_history_series.py`, every per-cell comparison in the
+seam row `S4-160`, the stage-2 grid rows that read `/availability` (`closed_day`'s `slots_len` and grid
+assertions), **and the supplied stage-1 availability rows, whose key sets I have never read and would
+therefore be changing blind.** **A discriminator that grows every existing row's expected key set is a
+change to rows this ledger's author did not write, and it is not mine to make quietly** — so the ruling is
+conditional, and the cost is on the record for whoever revisits it.
+
 ## Probes owed, recorded as owed rather than as coverage
 
 **Stage-3's defect round closed at `3f8dd94`: three mutants at `a69e6ba`, two caught, one missed.** The
@@ -570,6 +609,16 @@ reasons I am recording rather than glossing:
 3. **No row mutates the path.** Even complete coverage of clean refusals cannot see a refusal that
    **claims to have refused and then wrote anyway** — that is a mutation of the refusal path, not of its
    input, and it needs the export compared across the attempt rather than the status read off it.
+
+**Restated after option 1, because the door got smaller and the debt must follow it: the refusal set is
+now two keys — a declared `accepted_terms` and a declared non-1 `revision` — because option 1 made the
+four store keys the *capability* rather than the refusal.** So the owed probe drives **both** keys
+individually, so "each key alone" still holds at the new size of the set. **A smaller probe because the
+door is smaller, not because the check is.**
+
+**And the half-application half is unmated and stays unmated by rows: it is a path debt under clause 29.**
+**A path mutant on the refusal path belongs to the next defect round, not to the Builder** — and it is the
+standing example of the class, because **`S4-152` asserting the refusal is not mutating it.**
 
 **The form that will catch it, to be written when the door settles and not before:**
 
