@@ -432,7 +432,7 @@ because they have now failed to travel into a new file twice.**
 |---|---|---|---|
 | `S4-150` (**both halves true only at `a69e6ba`+**) | Seed and import must not be able to express the same inconsistent booking. Both halves: the import path derives policy-0 terms (true since `387ed26`), **and** the seed path cannot produce `revision: 5` with `accepted_terms: null` (true only at `a69e6ba`; **open at `77c69f8`**). | Fixture-seed that state → **422**; and a differential row: seed a booking, export, import the export, compare the two bookings' `revision`/`accepted_terms`/terms-derived quantities field by field. | The `S3-121` defect returns through the other door. Fixing one arrival path and leaving the other able to express the state is the defect, not the fix. |
 | `S4-151` (**re-measured at `549a104` or later**; refusal satisfied there; **capability still missing**) | `/_test/reset` must refuse the four keys it cannot seed, naming the key and the door that works — **and, in stage 4, be able to seed them.** | At `a69e6ba` this is 422 `fixture_unsupported`, key named, import door named, import verified to really seed (`S3-303`/`S3-304`). **The stage-4 half is the positive control:** a fixture that declares a 15-minute policy, one series, one history entry and `batch_counters` must reset **204** and the grid must then read **15-minute slots** — so a row cannot assert policy 0 while believing it asserts a policy. And a store that holds something must appear in the export: **absent while empty cannot be told from silence** (`S3-302a`). | A probe author writing a stage-4 fixture gets 204 and believes it seeded a policy, and every downstream assertion is *about* policy 0 with nothing red. **That is the defect this row's second half exists to make impossible rather than merely unlikely.** |
-| `S4-152` (**re-measured at `549a104` or later**) | A refused fixture changes nothing at all: **no store may be half-seeded**. | Byte-equal full-state export around a refused reset — for each key alone, for all four together, and for a fixture carrying a refusal alongside legal seeds. Then the split-refusal half: **a build that refuses one key and silently drops another is caught**, which is the mutant this row now has a job for. | A refusal that half-applies is worse than no refusal. **The refusal is now load-bearing behaviour at `a69e6ba`** — it is a new code on a new path — so a mutant returning 422 while writing some declared stores passes every other row in this section. |
+| `S4-152` (**re-measured at `549a104` or later**; **a probe is owed — see _Probes owed_, and the stage-3 round missed this at `a69e6ba`**) | A refused fixture changes nothing at all: **no store may be half-seeded**. | Byte-equal full-state export around a refused reset — for each key alone, for all four together, and for a fixture carrying a refusal alongside legal seeds. Then the split-refusal half: **a build that refuses one key and silently drops another is caught**, which is the mutant this row now has a job for. | A refusal that half-applies is worse than no refusal. **The refusal is now load-bearing behaviour at `a69e6ba`** — it is a new code on a new path — so a mutant returning 422 while writing some declared stores passes every other row in this section. |
 
 ## B. Preview and apply: revisions, atomicity, idempotency
 
@@ -536,6 +536,39 @@ settled by reading code.
 - **A6 — whether a preview's stored plan expires or is invalidated by a non-revision write.** Only a
   restaurant-revision change is specified to invalidate (`S4-158`). A write that moves no counter is not
   described either way.
+
+## Probes owed, recorded as owed rather than as coverage
+
+**Stage-3's defect round closed at `3f8dd94`: three mutants at `a69e6ba`, two caught, one missed.** The
+miss was the predicted one and it is mine: **the fixture refusal's half-application** — a mutant that
+returns 422 and **still writes some of the four declared stores**. `S4-152` asserts it; **no probe drove
+it.** `fixture_arrival.py`'s `S3-340`/`S3-341` hold the *clean* half and did not catch it, for three
+reasons I am recording rather than glossing:
+
+1. **Those rows postdate the round's hash.** They were written and first run at `549a104`+; the round
+   planted at `a69e6ba`, where they did not exist. **A row written after a round cannot have caught it**,
+   which is the ordinary reason and not an excuse.
+2. **Their coverage is narrower than the requirement.** `S3-340` drives **`policies` and
+   `batch_counters` only** — two of the four keys — and `S3-341` drives `revision: 2` plus `policies`.
+   **A mutant that half-writes `series` or `history` passes every row I have.** The row text says "for
+   each key alone" and the probe did not; **the text was the requirement and the probe was narrower than
+   its own row**, which is the failure clause 18 exists to prevent and which I did not catch in myself.
+3. **No row mutates the path.** Even complete coverage of clean refusals cannot see a refusal that
+   **claims to have refused and then wrote anyway** — that is a mutation of the refusal path, not of its
+   input, and it needs the export compared across the attempt rather than the status read off it.
+
+**The form that will catch it, to be written when the door settles and not before:**
+
+> **A refused fixture must leave the exported state byte-equal to what it was before the reset attempt** —
+> export, attempt a reset with **each of the four keys** declared, export again, compare the two documents
+> byte for byte. **And the reverse half: a fixture declaring two refusable faults is refused once and
+> changes nothing at all.** **Assert the export, not the status** — a status-only row passes this mutant,
+> which is exactly why it did.
+
+**Written after option 1, deliberately.** Option 1 changes what the reset door accepts and therefore what
+a refusal *is*, so a probe written now would inherit whatever the door currently does not do — the same
+reason the multi-timezone fixture came before its probes. **Recorded here as owed, with its form, so it
+is a debt with a specification rather than a gap.**
 
 ## Mutation and defect rounds for stage 4
 
