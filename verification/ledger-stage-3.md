@@ -10,13 +10,45 @@ specification text, and none of it has been measured yet. Ordered by how likely 
 graded and how unlikely a competent first attempt is to satisfy it. Rows at the top decide the stage.
 Every status, code and literal string is taken from the specification, not from an implementation.
 
-**Known state of the stage, measured rather than assumed:** the stage-3 sample suite reports
-**7 collected / 1 failed / 0 passed** against a stage-2 image — the counts show the other six never
-reported either, so **stage 3 has never been run green and six rows are unknowns, not passes.** The
-one failure isolated so far is `POST /restaurants/r_anker/policies` returning **404 because the route
-does not exist**, and `git diff --name-only cd32234 HEAD` shows no routing change at all, so that is
-stage 3 not yet implemented rather than a stage-2 regression. Nothing in this ledger may be written
-as if it had been observed.
+**Known state of the stage, measured rather than assumed, and corrected twice.** The first figure
+reported was 7 collected / 1 failed / 0 passed, with the caveat that six checks had never reported.
+The Builder then re-ran the supplied command and measured **6 failed / 1 passed**, all six being
+missing stage-3 surface rather than a stage-2 regression. **My own run of the same command, at HEAD
+`0283f55`, measures 7 failed / 0 passed** — and the seventh failure is one the Builder's list does not
+contain:
+
+    test_booking_carries_the_effective_policy_and_decision   404  POST /restaurants/r_anker/policies
+    test_explain_accounts_for_every_table                   422  GET /availability
+    test_explain_agrees_with_available_table_ids            422  GET /availability
+    test_availability_is_unchanged_without_explain           422  GET /availability     <- not in the Builder's six
+    test_history_records_the_creation                       422  POST /reservations     <- route exists here
+    test_history_records_a_change_with_the_old_value        422  POST /reservations     <- route exists here
+    test_adopt_one_booking_as_a_recurring_agreement         KeyError: 'reference'
+
+So **two readings of the same command disagree, and the disagreement is recorded rather than settled
+by whoever reported last.** Three points of substance:
+
+1. **The fourth check in file order is `test_availability_is_unchanged_without_explain`, and it
+   FAILS in my run.** I therefore **cannot name a passing check**: in my run nothing passed. The
+   Builder's "one passed" was measured on a different tree state, and the check that passed there is
+   the one that fails here.
+2. **Two of the failures are `422` on routes that exist**, not 404s. `test_history_records_*` fail
+   at `POST /reservations`, which stage 2 has. A 422 from an existing route is a different fault from
+   an absent one — a refused seed or a refused body — and **a probe must be able to tell "the route is
+   absent" from "the request was refused"**, because the two lead to different fixes. Rows S3-020 and
+   S3-024 both assert a status; neither asserts *why*, and this run shows why that matters.
+3. **The sample suite is a fair sample of the stage rather than an unrepresentative corner.** The
+   missing surfaces map onto the ledger's four largest groups — publishing policies (21 rows),
+   recurring reservations (22), history and decision (12), availability explanations (11) — so the
+   six-to-seven failures are representative of the work rather than a corner of it.
+
+**One more measured fact, about the tree rather than the stage.** A local `docker build` of `stage-3/`
+at `0283f55` produces an image that **cannot start**: `Error: Cannot find module './series'` from
+`src/api.js`, while `src/` already contains `explain.js`, `history.js` and `policy.js`. The folder is
+mid-implementation — a service is being built in the right order and has not landed yet. It is
+recorded here because of clause 1 in its plainest form: **a build that does not start invalidates
+every measurement taken against it**, including a suite's, and a reader of this ledger who ran the
+command at the wrong moment would get numbers that mean nothing.
 
 ## Standing clauses, restated here because they do not travel into a new ledger by themselves
 
