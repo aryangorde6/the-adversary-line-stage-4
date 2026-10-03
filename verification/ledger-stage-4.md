@@ -420,15 +420,29 @@ because they have now failed to travel into a new file twice.**
     the **policy's**. **The shape was found by re-deriving; the source was found by driving.** So the walk's
     standing question, of any row asserting wording or state: **what would have to be true for this row to be
     right, is that asserted, and is it read from the surface the implementation reads?**
+39. **Assert the comparison is over a population neither side can shrink, _before_ asserting anything about
+    it** — an assertion over a reduced population is worse than no assertion, **since it looks like
+    coverage.** And the loss is not always a map: the three instances are the pair-indexing map · the answer
+    map keyed by local time · **`explain[]` absent while the array is empty**, where no map is involved at
+    all. **The common form is a surface that cannot carry the statement it is being asked to carry, and every
+    one of the three was invisible to a row built on that surface.** So the question is asked of the surface
+    rather than of the data structure: **can this surface state this fact at all?**
 38. **Fix the loss before asserting over it.** Every assertion added to a lossy structure is a row that
     reports green about a population it never held, **and a green row over a shrunken population is worse
     than no row because it spends the assertion.** So the ordering is not stylistic: **make the collapse
-    impossible first** — key by `(time, table set)` or by index — **and only then add the reverse direction
-    and the counts.** This is the same defect three times over: the pair-indexing map that dropped every
-    pair cell, `ui-grid.mjs`'s answer map keyed by local time where two slots sharing a time collapse, and
-    `explain[]` absent while the array is empty. **All three ask one question — what is in the population I
-    am not looking at? — and in the first two the answer is an entire class of thing, dropped by a map
-    that says nothing. A map is the most dangerous kind of helper, because it launders a loss into a lookup.**
+    impossible first**, and only then add the reverse direction and the counts. **Equal-looking counts alone
+    cannot distinguish the two cases — the reverse loop is the diagnosis and the count is the label on it.**
+    And keying by position rather than by a value the surface happens to carry is what makes the collapse
+    impossible; **if two slots ever shared a local time, that is a fact about the product, and the row should
+    say so rather than tolerate a collision in its own keying.**
+40. **A row that asserts a refusal passes trivially against a surface that says nothing, so whether it says
+    anything must itself be asserted.** The Finisher's `ui-booking-terms` work: the row asserts the lookup
+    screen **may state the booking's own terms or say nothing, and may never present it as being on the terms
+    now in force** — and it is green **because the screen currently says nothing.** So **"does it show terms
+    at all" became its own assertion, printed as well as checked: a future screen that starts showing terms
+    cannot inherit that green from a version that showed none — it has to satisfy the row about _whose_ terms
+    they are.** This is the difference between **a refusal that discharges an obligation and a refusal that
+    hides behind one**, and it belongs beside `S4-164`.
 37. **A handoff must name the surface a row reads, not only what it asserts.** Both of the Foreman's errors
     this stage, and 3b, would have been prevented by *"read the effective hours from the policies surface"*
     rather than *"assert the day is not shut."* **A row specified by assertion alone invites the implementer
