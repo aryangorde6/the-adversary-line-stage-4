@@ -4,6 +4,7 @@ const { fail } = require('./errors');
 const time = require('./time');
 const store = require('./state');
 const { parseRestaurant } = require('./fixture');
+const policyRules = require('./policy');
 const { isPlainObject, has } = require('./fields');
 const domain = require('./domain');
 
@@ -119,7 +120,13 @@ function validateReservations(raw, restaurants) {
       // required: that is what lets a stage-2 document import into a stage-3 service unchanged
       // (S3-121), and it is why an imported booking reads as revision 1 under policy 0 (S3-052).
       revision: entry.revision === undefined ? 1 : requireInteger(entry.revision, 'revision'),
-      accepted_terms: entry.accepted_terms === undefined ? null : entry.accepted_terms,
+      // A stage 1 or stage 2 document carries no terms, so stage 3 derives them the same way a
+      // seeded booking does: policy 0, read from the fixture's own rules. Deriving them here rather
+      // than leaving them null is what makes an imported booking behave like a seeded one, and
+      // S3-121 asks for exactly that — revision 1 under policy-0 terms.
+      accepted_terms: entry.accepted_terms === undefined
+        ? policyRules.acceptedTermsOf(policyRules.policyZeroOf(restaurant))
+        : entry.accepted_terms,
       series_id: entry.series_id === undefined ? null : entry.series_id,
       series_index: entry.series_index === undefined ? null : entry.series_index,
     };
