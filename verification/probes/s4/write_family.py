@@ -104,12 +104,27 @@ def main():
           "2xx; a 404 would mean the route is missing, a 400 that the documented body is unreadable)"
           % (st, code_of(body), reached))
 
-    if isinstance(body, dict) and body.get("plan_id"):
-        st2, applied = call("POST", "/restaurants/r_anker/replans/%s/apply" % body["plan_id"],
+    # Found by the walk (question 1) against my own file: this row used to be CONDITIONAL on the plan
+    # succeeding, so the documented apply body was only asserted when the preview happened to work -- a row
+    # that vanishes when the thing it checks is broken, which is the coverage-debt shape in miniature.
+    # It now fails when there is no plan to apply.
+    check("S4-150-plan", isinstance(body, dict) and bool(body.get("plan_id")),
+          "the preview returned a plan_id -> %r (expected one; without it the apply rows below cannot "
+          "run, and a row that cannot run must fail rather than be skipped)" % (body or {}).get("plan_id"))
+    plan_id = (body or {}).get("plan_id")
+    if plan_id:
+        st2, applied = call("POST", "/restaurants/r_anker/replans/%s/apply" % plan_id,
                             {}, token=token, key="ap-1")
         check("S4-150-apply-shape", st2 in (200, 201),
               "apply with the specification's empty body -> %s code=%s (expected 2xx; the apply body is "
               "`{}` and nothing else)" % (st2, code_of(applied)))
+        keys = sorted(applied.keys()) if isinstance(applied, dict) else []
+        expected_keys = sorted(["plan_id", "restaurant_revision", "reservations"])
+        check("S4-150-apply-keys", keys == expected_keys,
+              "the 201 body's key set -> %s (expected exactly plan_id, restaurant_revision, "
+              "reservations -- asserted as a shape because the specification names a shape; the "
+              "expected list is sorted too, because a probe that sorts the actual and not the expected "
+              "fails on the alphabet rather than on the shape)" % keys)
 
     # The validation the specification names, on the documented body: no offset, reversed interval.
     for name, override in (("naive-instants", {"from": "2026-09-28T18:00:00",

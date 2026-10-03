@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
-"""Which stage-4 behaviours are absent at the folder-only build, driven rather than read.
+"""BASELINE PROBE, PINNED TO `e9b9f4d` -- not part of the standing stage-4 suite.
+
+`S4-001` and `S4-002` assert that the write family is ABSENT at the folder-only build. That is true at
+`e9b9f4d` and false from `2a88cc6` onward, **so on a conforming build this file reports red on purpose**: it
+is an attribution probe whose premise is a build that no longer exists. It is kept because it is the evidence
+for the baseline in the ledger's §0 -- "the two failures are the two absent write families" -- and that claim
+was established by driving rather than by counting. **Run it only against `e9b9f4d`.**
+
+Which stage-4 behaviours are absent at the folder-only build, driven rather than read.
 
     BASE=http://127.0.0.1:8110 python verification/probes/s4/absent_at_e9b9f4d.py
 

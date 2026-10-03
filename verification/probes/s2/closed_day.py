@@ -185,16 +185,31 @@ def main():
                 grid = page.query_selector('[data-testid="availability-grid"]')
                 ns = page.query_selector('[data-testid="no-slots"]')
                 text = ns.inner_text().strip() if ns is not None else None
-                where = ("signed %s, short-window day, searched %s, slots length %s"
-                         % (tag, DATE, slots_len))
-                (good if slots_len == 0 and grid is None and ns is not None and ns.is_visible()
-                 and bool(text) and "closed" in text.lower() else bad).append(
-                    ("CD-short-window-" + tag,
-                     slots_len == 0 and grid is None and ns is not None and ns.is_visible()
-                     and bool(text) and "closed" in text.lower(),
-                     "%s: grid in document=%s ; no-slots present=%s visible=%s ; text=%r"
-                     % (where, grid is not None, ns is not None,
-                        ns is not None and ns.is_visible(), (text or "")[:90])))
+                _st, _body = get("/availability?restaurant_id=r_anker&date=%s&party_size=2"
+                                 "&explain=true" % DATE)
+                day_state = _body.get("day_state") if isinstance(_body, dict) else None
+                where = ("signed %s, short-window day, searched %s, slots length %s, day_state %s"
+                         % (tag, DATE, slots_len, day_state))
+                # Re-worded at 345bbe6, and the reason is the standing one: this row used to require the
+                # word "closed" on any day with no slots, which was correct while `slots: []` MEANT shut
+                # and is false now that the service distinguishes shut from terms-exclude-every-slot.
+                # The build is right and the row was wrong. So the row reads the service's own answer
+                # first and asserts the wording only where the day is reported shut -- and asserts the
+                # ABSENCE of a closed claim where it is not, which is the direction that actually catches
+                # a screen inferring closure from an empty slot list.
+                shut = day_state == "shut"
+                if shut:
+                    ok = (slots_len == 0 and grid is None and ns is not None and ns.is_visible()
+                          and bool(text) and "closed" in text.lower())
+                else:
+                    ok = (slots_len == 0 and ns is not None and ns.is_visible() and bool(text)
+                          and "closed" not in text.lower())
+                (good if ok else bad).append(
+                    ("CD-short-window-" + tag, ok,
+                     "%s: grid in document=%s ; no-slots present=%s visible=%s ; closed claimed=%s ; "
+                     "text=%r" % (where, grid is not None, ns is not None,
+                                  ns is not None and ns.is_visible(),
+                                  "closed" in (text or "").lower(), (text or "")[:90])))
 
             # ---- the open day, on load: the blocking item ------------------------
             status, _ = post("/_test/reset", FIXTURE)
