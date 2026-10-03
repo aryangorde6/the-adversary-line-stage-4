@@ -13,6 +13,8 @@ node ui-grid.mjs        # the search results region: empty, loading, results, no
 node ui-messages.mjs    # the lookup screen, and message integrity
 node ui-a11y.mjs        # labels, sideways scrolling, clipped text, contrast
 node ui-states-a11y.mjs # seven looks, focus at every stop, booking by keyboard alone
+node ui-day-state.mjs   # what a screen may say about a day
+node ui-booking-terms.mjs # what a screen may say about a booking's terms
 node stage3-api.mjs     # policies, explain, accepted terms, history and series
 
 docker rm -f tk-fin
@@ -77,3 +79,13 @@ If a setup step can fail, assert that it succeeded before asserting anything abo
 rejected `/_test/reset` leaves the previous store in place, so every reading after it would be
 stale. And assert the shape of what you read before drawing a conclusion from it: a missing key is
 not a zero.
+
+`ui-day-state.mjs` — what a screen may say about a day: only a day the service reports as `shut` may
+be described as closed, and a day whose terms exclude every slot is described as having no times to
+book. Each of the four day states is produced by a real fixture and read back from the service before
+the screen is driven, so the row cannot pass against a field that does not exist.
+
+`ui-booking-terms.mjs` — what a screen may say about the terms a booking was made under once the
+restaurant has published new ones. A booking keeps the terms it was accepted under, and nothing in
+the reservation response says those terms still apply, so a screen may state the booking's own terms
+or nothing at all — and never that the booking is on the terms now in force.
