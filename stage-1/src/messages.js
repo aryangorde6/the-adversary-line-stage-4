@@ -1,19 +1,79 @@
 "use strict";
 
-const WEEKDAY_NAMES = Object.freeze({
-  mon: "Monday",
-  tue: "Tuesday",
-  wed: "Wednesday",
-  thu: "Thursday",
-  fri: "Friday",
-  sat: "Saturday",
-  sun: "Sunday",
+const ERROR_CODES = [
+  "malformed_request",
+  "missing_idempotency_key",
+  "unauthenticated",
+  "forbidden",
+  "not_found",
+  "idempotency_key_reuse",
+  "validation_failed",
+  "email_taken",
+  "table_unavailable",
+  "not_on_slot_grid",
+  "outside_opening_hours",
+  "party_exceeds_capacity",
+  "invalid_local_time",
+  "cutoff_passed",
+  "reservation_cancelled",
+];
+
+const WEEKDAYS = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
+
+const MONTHS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+const WEEKDAY_BY_KEY = Object.freeze({
+  sun: WEEKDAYS[0],
+  mon: WEEKDAYS[1],
+  tue: WEEKDAYS[2],
+  wed: WEEKDAYS[3],
+  thu: WEEKDAYS[4],
+  fri: WEEKDAYS[5],
+  sat: WEEKDAYS[6],
 });
 
 const RESOURCE_NOUNS = Object.freeze({
   reservation: "booking",
   restaurant: "restaurant",
   table: "table",
+});
+
+const FIELD_NOUNS = Object.freeze({
+  email: "email address",
+  password: "password",
+  display_name: "name",
+  party_size: "number of people",
+  starts_at_local: "start time",
+  table_id: "table",
+  restaurant_id: "restaurant",
+  date: "date",
+  reference: "booking reference",
+  moves: "list of bookings",
+  restaurant: "restaurant",
+  table: "table",
+  name: "restaurant name",
+  timezone: "time zone",
 });
 
 const STATUS_BY_CODE = Object.freeze({
@@ -32,14 +92,21 @@ const STATUS_BY_CODE = Object.freeze({
   outside_opening_hours: 422,
   party_exceeds_capacity: 422,
   invalid_local_time: 422,
-  internal_error: 500,
 });
 
 const FALLBACK =
   "Something went wrong at our end and we could not finish that. Please try again in a moment.";
 
-function text(value) {
+function word(value) {
   return typeof value === "string" && value.trim() !== "" ? value.trim() : "";
+}
+
+function noun(ctx, key) {
+  return RESOURCE_NOUNS[ctx[key]] || "";
+}
+
+function fieldNoun(ctx) {
+  return FIELD_NOUNS[word(ctx.field)] || "";
 }
 
 function span(count) {
@@ -49,36 +116,53 @@ function span(count) {
   return `${whole} ${whole === 1 ? "minute" : "minutes"}`;
 }
 
-function noun(ctx) {
-  return RESOURCE_NOUNS[ctx.resource] || "";
-}
-
 function dayName(ctx) {
   const key = String(ctx.weekday || "").toLowerCase();
-  return Object.prototype.hasOwnProperty.call(WEEKDAY_NAMES, key) ? WEEKDAY_NAMES[key] : "";
+  return Object.prototype.hasOwnProperty.call(WEEKDAY_BY_KEY, key) ? WEEKDAY_BY_KEY[key] : "";
 }
 
-const MESSAGES = Object.freeze({
+function longDate(value) {
+  const parts = /^(\d{4})-(\d{2})-(\d{2})$/.exec(word(value));
+  if (!parts) return "";
+  const year = Number(parts[1]);
+  const month = Number(parts[2]);
+  const day = Number(parts[3]);
+  const stamp = Date.UTC(year, month - 1, day);
+  const back = new Date(stamp);
+  if (back.getUTCFullYear() !== year || back.getUTCMonth() !== month - 1 || back.getUTCDate() !== day) {
+    return "";
+  }
+  return `${WEEKDAYS[back.getUTCDay()]} ${day} ${MONTHS[month - 1]} ${year}`;
+}
+
+const MESSAGES = {
   malformed_request: () =>
-    "We could not read what you sent. Some of the details were in the wrong form. Check them and try again.",
+    "We could not read what you sent. Check the details you entered and try again.",
 
   missing_idempotency_key: () =>
-    "We could not book this without a repeat-protection key, which is what stops us booking you twice by accident. Please try again.",
+    "We could not book this without a repeat-protection key, so nothing was booked. Please try again.",
 
   unauthenticated: (ctx) =>
     ctx.reason === "sign_in"
       ? "That email address and password do not match an account. Check for typing mistakes and try again."
       : "You are not signed in, or your sign-in has expired. Please sign in again to carry on.",
 
-  forbidden: (ctx) =>
-    noun(ctx)
-      ? `You are not allowed to change that ${noun(ctx)}. If you booked it with another account, sign in with that account and try again.`
-      : "You are not allowed to do that here. Check you are signed in with the right account, and try again.",
+  forbidden: (ctx) => {
+    const thing = noun(ctx, "resource");
+    const who = word(ctx.restaurant);
+    return thing
+      ? `You are not allowed to change that ${thing}${at(who)}. If you booked it with another account, sign in with that one and try again.`
+      : `You are not allowed to do that here${at(who)}. Check you are signed in with the right account, and try again.`;
+  },
 
   not_found: (ctx) => {
+    const ref = word(ctx.reference);
+    const who = word(ctx.restaurant);
     switch (ctx.resource) {
       case "reservation":
-        return "We could not find that booking. Check the reference and try again.";
+        return ref
+          ? `We could not find booking ${ref}${at(who)}. Check the reference and try again.`
+          : `We could not find that booking${at(who)}. Check the reference and try again.`;
       case "restaurant":
         return "We could not find that restaurant. It may no longer be listed.";
       case "table":
@@ -89,56 +173,77 @@ const MESSAGES = Object.freeze({
   },
 
   idempotency_key_reuse: () =>
-    "That repeat-protection key was already used for a different booking, so nothing was changed. Use a fresh key for a new booking, or resend the original details unchanged.",
+    "That repeat-protection key was already used for a different booking, so nothing was changed. Use a fresh key for a new booking.",
 
   email_taken: () =>
-    "There is already an account with that email address. Sign in instead, or sign up with a different email address.",
+    "There is already an account with that email address. Sign in instead, or sign up with a different one.",
 
-  table_unavailable: () =>
-    "That table is already booked for part of that time. Pick another table, or another time.",
+  table_unavailable: (ctx) => {
+    const label = word(ctx.table);
+    const when = longDate(ctx.date);
+    const time = word(ctx.starts_at_local);
+    const whenText = [when, time].filter(Boolean).join(" at ");
+    return label
+      ? `Table ${label} is already booked${forWhen(whenText)}. Pick another table, or another time.`
+      : `That table is already booked${forWhen(whenText)}. Pick another table, or another time.`;
+  },
 
   not_on_slot_grid: (ctx) => {
     const step = span(ctx.slot_minutes);
-    const opens = text(ctx.opens);
+    const opens = word(ctx.opens);
     return step && opens
       ? `Bookings start every ${step} from ${opens}. Pick one of the start times shown.`
       : "That is not one of the booking start times. Pick one of the times shown.";
   },
 
   outside_opening_hours: (ctx) => {
-    const opens = text(ctx.opens);
-    const closes = text(ctx.closes);
+    const opens = word(ctx.opens);
+    const closes = word(ctx.closes);
     const hours = opens && closes ? `${opens} to ${closes}` : "";
     const day = dayName(ctx);
+    const who = word(ctx.restaurant);
     if (hours && day) {
-      return `On ${day}s the restaurant is open ${hours}, and a booking has to finish before closing. Pick a start time inside those hours.`;
+      const where = who ? `at ${who}, ` : "";
+      return `On ${day}s, ${where}the restaurant is open ${hours}, and a booking has to finish before closing. Pick a start time inside those hours.`;
     }
-    return hours
-      ? `The restaurant is open ${hours}, and a booking has to finish before closing. Pick a start time inside those hours.`
-      : "That time is outside the restaurant's opening hours, or the booking would run past closing time. Pick a time inside opening hours.";
+    if (hours) {
+      const lead = who ? `The restaurant ${who}` : "The restaurant";
+      return `${lead} is open ${hours}, and a booking has to finish before closing. Pick a start time inside those hours.`;
+    }
+    return "That time is outside the restaurant's opening hours, or the booking would run past closing time. Pick a time inside opening hours.";
   },
 
   party_exceeds_capacity: (ctx) => {
     const capacity = Math.floor(Number(ctx.capacity));
-    return Number.isFinite(capacity) && capacity >= 1
-      ? `That table seats ${capacity} at most. Book for fewer people, or pick a larger table.`
-      : "That table is too small for your party. Book for fewer people, or pick a larger table.";
+    const label = word(ctx.table);
+    const seats = Number.isFinite(capacity) && capacity >= 1 ? `seats ${capacity} at most` : "is too small";
+    return label
+      ? `Table ${label} ${seats}. Book for fewer people, or pick a larger table.`
+      : `That table ${seats}. Book for fewer people, or pick a larger table.`;
   },
 
-  invalid_local_time: () =>
-    "That time does not exist on that date, because the clocks change that day and skip it. Pick a time after the change.",
+  invalid_local_time: (ctx) => {
+    const when = longDate(ctx.date);
+    return when
+      ? `That start time does not exist on ${when}, because the clocks change that day and skip it. Pick a time after the change.`
+      : "That start time does not exist on that date, because the clocks change that day and skip it. Pick a time after the change.";
+  },
 
   cutoff_passed: (ctx) => {
-    const cutoff = span(ctx.cutoff_minutes);
+    const cutoff = span(ctx.cutoff_minutes) || span(ctx.minutes);
+    const ref = word(ctx.reference);
+    const who = ref ? `booking ${ref}` : "this booking";
     return cutoff
-      ? `Bookings can only be changed or cancelled more than ${cutoff} before they start, and this one is too close. Please call the restaurant instead.`
-      : "This booking is too close to its start time to be changed or cancelled. Please call the restaurant instead.";
+      ? `${cap(who)} can only be changed or cancelled more than ${cutoff} before it starts, and it is too close now. Please call the restaurant instead.`
+      : `${cap(who)} is too close to its start time to be changed or cancelled. Please call the restaurant instead.`;
   },
 
-  reservation_cancelled: () =>
-    "That booking is cancelled, so it cannot be changed. Make a new booking instead.",
-
-  internal_error: () => FALLBACK,
+  reservation_cancelled: (ctx) => {
+    const ref = word(ctx.reference);
+    return ref
+      ? `Booking ${ref} is cancelled, so it cannot be changed. Make a new booking instead.`
+      : "That booking is cancelled, so it cannot be changed. Make a new booking instead.";
+  },
 
   validation_failed: (ctx) => {
     switch (ctx.reason) {
@@ -148,8 +253,12 @@ const MESSAGES = Object.freeze({
         return "That does not look like an email address. Use the form name@example.com and try again.";
       case "party_size":
         return "The number of people has to be a whole number of at least 1. Check it and try again.";
-      case "time_format":
-        return "That start time is not a date and time we recognise. Pick one of the times shown.";
+      case "time_format": {
+        const when = longDate(ctx.date);
+        return when
+          ? `That start time is not a date and time we recognise for ${when}. Pick one of the times shown.`
+          : "That start time is not a date and time we recognise. Pick one of the times shown.";
+      }
       case "key_length":
         return "A repeat-protection key has to be between 1 and 255 characters. Shorten it and try again.";
       case "moves_shape":
@@ -158,38 +267,64 @@ const MESSAGES = Object.freeze({
         return "Bookings changed together have to be at the same restaurant. Try again with bookings from one restaurant.";
       case "missing_search_details":
         return "To show you free times we need a restaurant, a date and the number of people. Fill in what is missing.";
-      default:
-        return "Some of the details you entered are not valid. Check them and try again.";
+      default: {
+        const named = fieldNoun(ctx);
+        return named
+          ? `The ${named} you entered is not valid. Check it and try again.`
+          : "Some of the details you entered are not valid. Check them and try again.";
+      }
     }
   },
-});
+};
 
-function message(code, ctx) {
-  const entry = MESSAGES[code];
-  if (typeof entry === "function") return entry(ctx && typeof ctx === "object" ? ctx : {});
-  if (typeof entry === "string") return entry;
-  return FALLBACK;
+for (const code of ERROR_CODES) {
+  if (typeof MESSAGES[code] !== "function") MESSAGES[code] = () => FALLBACK;
 }
 
-function statusFor(code) {
-  return STATUS_BY_CODE[code] || 500;
+function at(place) {
+  const name = word(place);
+  return name ? ` at ${name}` : "";
+}
+
+function forWhen(text) {
+  return text ? ` for ${text}` : "";
+}
+
+function cap(text) {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+function messageFor(code, details) {
+  const entry = MESSAGES[code];
+  if (typeof entry !== "function") return FALLBACK;
+  try {
+    const value = entry(details && typeof details === "object" ? details : {});
+    return typeof value === "string" && value.trim() !== "" ? value : FALLBACK;
+  } catch {
+    return FALLBACK;
+  }
 }
 
 function isKnownCode(code) {
   return Object.prototype.hasOwnProperty.call(MESSAGES, code);
 }
 
-function errorBody(code, ctx) {
-  return { error: { code, message: message(code, ctx) } };
+function statusFor(code) {
+  return STATUS_BY_CODE[code] || 500;
+}
+
+function errorBody(code, details) {
+  return { error: { code, message: messageFor(code, details) } };
 }
 
 module.exports = {
+  ERROR_CODES,
   MESSAGES,
   STATUS_BY_CODE,
-  WEEKDAY_NAMES,
   FALLBACK,
-  message,
-  statusFor,
+  messageFor,
+  message: messageFor,
   isKnownCode,
+  statusFor,
   errorBody,
 };
