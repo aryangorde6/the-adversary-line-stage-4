@@ -586,8 +586,11 @@ probe. So the pre-registration gains a fourth horn — and the rule it is made o
 
 **And a convergence worth recording, because two seats reached the same restatement from opposite
 directions:** I proposed asserting that **the export succeeds and carries its records** — the defect cannot be
-*read*, but it can be *heard* — and the Foreman measured the same thing independently from the mutant run:
-**under a circular key the export comes back without its records at all.** So Invariant 2 becomes **three
+*read*, but it can be *heard* — and the Foreman measured the same thing **from a run in which the key was never planted** — a replan
+issued and never confirmed, so the export answered 200 with records present, **and that measurement is
+withdrawn** (clause 58). **The Builder's run, which did plant the key, answers 422 `validation_failed`** — so
+the signal is **the export being refused, loudly and with a registered code**, not a silent shape
+difference. So Invariant 2 becomes **three
 rows**: the export is well-formed and carries every seeded reservation, asserted **by reference so a record
 that cannot be serialised is a red row rather than a missing object**; each exported record carries no
 planner scratch key, enumerated **per record inside its own guard**; and **the view allowlist stays,
@@ -612,13 +615,12 @@ Builder:   with the circular scratch key planted,  GET /_test/export  ->  422 va
 Foreman:   under AUDIT MUTANT A, a seeded booking plus a replan,     ->  200
 ```
 
-**Both are single instances of "the mutant is planted", read as the whole — which is this stage's one shape
-again, and the first time two seats produced contradictory numbers about the same defect inside a minute.**
-I am not adjudicating it by argument. The likely discriminator is **which reservation carries the key**: a key
-stashed by the planner during a replan may sit on an object the export path never walks, while a key on a
-fixture-seeded reservation is inside it. **So the row must be written against the state the mutant actually
-produces, not against either seat's description of it** — and the way to settle which state that is, is to
-plant once and read the export's status **and** its `reservations` length in the same run.
+**Both were single instances of "the mutant is planted", read as the whole — the first time two seats produced
+contradictory numbers about one defect inside a minute. RESOLVED, and not by argument:** the Builder's run
+planted the key and answers **422**; the Foreman's run **never confirmed its replan succeeded, so no key
+existed**, and it read that clean export as a finding about the product (**clause 58**). **So the row is
+written against the state the mutant actually produces — an export that is _refused_ — and the state is named
+in the row rather than assumed.
 
 **Which is also why the completeness half is not optional, and the Foreman's amendment is right on the merits
 whichever number is correct:**
@@ -633,6 +635,25 @@ the completeness half is red.** A row asserting both is red either way, **which 
 worth writing when two measurements of the same mutant disagree** — it does not require the disagreement to
 be resolved first. **And this is the negative-control discipline arriving from the other side: a control asks
 how weakly the subject can be satisfied, and this asks the same question of a positive row.**
+
+58. **A finding about a defect must state the defect's presence in the same breath as the finding.** A
+    measurement taken before the subject exists **is not a weak measurement — it is a measurement of nothing,
+    and it produces a number that reads exactly like knowledge.** So **every planted-defect result names the
+    state that was planted, the call that planted it, and what that call answered.**
+
+    And the newest form of this stage's one shape, which is unique to the Foreman and worth keeping precisely
+    because it is not an assumption: **a stale assumption announces itself as a mistake, while a _misdirected
+    verification_ produces a number that looks like knowledge.** Nothing was assumed; the wrong thing was
+    verified, in a state where the subject of the measurement had not been created, and the clean result was
+    reported as a property of the product. **The Builder's version is the mirror image: a patch that did not
+    apply, read as a property of the code.** Between them they are the same error — *a measurement of a state
+    other than the one under discussion* — arriving once from the reader and once from the writer.
+
+    **What this does to a clause's worked example: the rule survives, the illustration does not.** Clause 57's
+    mechanism was never in doubt — **a migration of credit, not a failure to test, is what put an unrun
+    invariant inside a green suite** — but its example cited the withdrawn measurement, so the example has been
+    corrected above rather than kept. **A rule illustrated by a retracted measurement is a rule with a
+    borrowed proof.**
 
 ### Settled from the history: what `ee04207`'s red actually reported
 
