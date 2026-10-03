@@ -62,7 +62,8 @@ command at the wrong moment would get numbers that mean nothing.
 ## Standing clauses, restated here because they do not travel into a new ledger by themselves
 
 Every clause below was added after a real reading error on this build. Each costs one line and each
-removes a class of confident wrong number. **Restate them at the top of every stage-3 probe file too.**
+removes a class of confident wrong number. **Restate them at the top of every stage-3 probe file too.** Clauses 1-13 are the whole of the
+method this project arrived at; none of them was anticipated at the start.
 
 1. **Assert the injected fault or the setup step actually happened before asserting the product's
    reaction to it.** A proxy that relays a request and then closes the socket has already written a
@@ -90,6 +91,18 @@ removes a class of confident wrong number. **Restate them at the top of every st
 10. **Every mechanism added on a story about why it was needed must have that story re-derived when its
     surroundings change — and removing a mechanism can uncover the defects it was covering, so the
     removal is not finished until those are found.**
+11. **The service you measure must be the service you started.** Before trusting any number from a run:
+    was the build started, does `/health` answer, is the port free, and is the marker you asserted
+    present in the build that answered? A green from a service that is not under test does not announce
+    itself — it looks like coverage.
+12. **Before reporting a miss, establish that the mutant is reachable.** An uncaught mutant may be a
+    gap in the probe or dead code. `grep` for the mutated symbol's call sites and read the count: three
+    stage-1 "misses" turned out to be invisible to a diner, to the transport, and to the call graph,
+    and all three would have been written up as "probe missed it".
+13. **The status a defect arrives with is not a reliable signature of the defect — assert the property,
+    not the symptom's usual costume.** Stage 3 is built on fields whose absence reads as a state: a
+    missing `explain` is not an empty explanation, `policy_version: 0` is not an absent version, and a
+    `200` is not proof a screen showed the right thing.
 
 **Standing convention: every row states both halves of its assertion.** Where a requirement says
 something must appear, the row also says what must *not* appear, and vice versa.
