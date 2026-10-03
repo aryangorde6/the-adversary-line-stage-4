@@ -186,4 +186,29 @@ well, so a verifier reading one row sees the interpretation it is checking again
 Rows: 70 (S2-001 to S2-070). Ambiguities: 6 (S2-A1 to S2-A6), all six ruled by the Foreman from the
 specification text before any stage-2 code was written; each ruling is stated inside the row it
 settles as well as in the table below.
+## Teardown latency for the focus indicator (measured at `e0e10eb`, 375 and 1280)
+
+The indicator is **recomputed** from where the focus actually is rather than stored, so a teardown is
+not instantaneous. Measured from the moment the exit is fired to the moment the indicator is gone:
+
+| exit | cleared in |
+| --- | --- |
+| `focusin` landing on another control | 1–4ms |
+| `window` blur | 3–4ms |
+| `pagehide` | 1–4ms |
+| real mouse click elsewhere | 4–14ms |
+| **programmatic `.blur()`** | **229–283ms** |
+| silent return (`element.focus()`, no event) — the indicator coming *back* | 45–83ms |
+
+The 229–283ms figure is the one worth keeping, and it is the slow one **because** it fires no handler
+the mechanism listens to and therefore waits on the 500ms tick. That is the tick's necessity shown as
+a measured latency rather than argued as a principle: a path that needs the poll is also visible as
+the path that takes longest to settle. The rows must therefore assert the indicator is gone **within
+a stated bound** rather than instantly, or they will read a correct recompute as a stuck ring — which
+is the same false red as the eight earlier ones, in a new place.
+
+Idle cost of the tick, measured: **0 DOM mutations** across four ticks on an idle page with focus
+outside the field, no residue after two navigations, no page errors, and a real click re-entry
+painted in **3–10ms** — so ordinary interaction never waits for it.
+
 Judgment rows: S2-008, S2-042 (contrast half), S2-043, S2-044, S2-045, S2-046.
