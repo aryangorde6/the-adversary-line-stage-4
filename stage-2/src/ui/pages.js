@@ -2,10 +2,6 @@
 
 const { escapeHtml, layout } = require('./html');
 
-function authErrorBlock() {
-  return '<p class="msg error" data-testid="auth-error" role="alert" hidden></p>';
-}
-
 function searchPage({ user, restaurants, defaults }) {
   const options = restaurants
     .map((r) => `<option value="${escapeHtml(r.id)}"${r.id === defaults.restaurantId ? ' selected' : ''}>${escapeHtml(r.name)}</option>`)
@@ -16,7 +12,7 @@ function searchPage({ user, restaurants, defaults }) {
 <p class="lede">Choose a restaurant, a date and how many you are, then pick a time. Tables marked
 with a tick are free for your whole visit.</p>
 
-<form class="card" id="search-form" novalidate>
+<form class="card" id="search-form" data-msg-host novalidate>
   <div class="grid-fields">
     <div>
       <label for="restaurant-select">Restaurant</label>
@@ -34,7 +30,6 @@ with a tick are free for your whole visit.</p>
     </div>
     <div class="row"><button type="submit" data-testid="search-button">Search</button></div>
   </div>
-  ${authErrorBlock()}
 </form>
 
 <p class="msg empty" data-testid="search-status" role="status" hidden></p>
@@ -44,8 +39,7 @@ with a tick are free for your whole visit.</p>
   <div class="card">
     <p class="msg empty" data-testid="no-slots" hidden>No tables are free on this date. Try another date, or a
     smaller party, and we will find you something.</p>
-    <div class="grid-scroll" data-testid="availability-grid" hidden>
-      <p class="msg empty" data-testid="grid-loading" role="status">Looking for tables&hellip;</p>
+    <div class="grid-scroll" data-testid="availability-grid" data-msg-host hidden>
       <table class="grid">
         <caption data-testid="grid-caption"></caption>
         <thead><tr data-testid="grid-head"></tr></thead>
@@ -57,7 +51,7 @@ with a tick are free for your whole visit.</p>
 
 <section aria-labelledby="booking-heading" data-testid="booking-section" hidden>
   <h2 id="booking-heading">Your booking</h2>
-  <form class="card" data-testid="booking-form" novalidate>
+  <form class="card" data-testid="booking-form" data-msg-host novalidate>
     <p data-testid="booking-summary"></p>
     <div class="grid-fields">
       <div>
@@ -67,8 +61,6 @@ with a tick are free for your whole visit.</p>
       </div>
       <div class="row"><button type="submit" data-testid="booking-submit">Book this table</button></div>
     </div>
-    <p class="msg error" data-testid="booking-error" role="alert" hidden></p>
-    <p class="msg uncertain" data-testid="booking-uncertain" role="alert" hidden></p>
   </form>
 </section>
 
@@ -96,7 +88,7 @@ function signupPage({ user }) {
   const body = `
 <h1>Create an account</h1>
 <p class="lede">An account lets you book, change and cancel. It takes a moment.</p>
-<form class="card" data-testid="signup-form" novalidate>
+<form class="card" data-testid="signup-form" data-msg-host novalidate>
   <div class="grid-fields">
     <div>
       <label for="signup-display-name">Name</label>
@@ -116,7 +108,6 @@ function signupPage({ user }) {
       <span class="hint">At least 8 characters.</span>
     </div>
   </div>
-  ${authErrorBlock()}
   <div class="row" style="margin-top:0.9rem">
     <button type="submit" data-testid="signup-submit">Create account</button>
     <span class="hint">Already have one? <a href="/login">Sign in</a>.</span>
@@ -130,7 +121,7 @@ function loginPage({ user, notice }) {
 <h1>Sign in</h1>
 <p class="lede">Welcome back. Your bookings are waiting.</p>
 ${notice ? `<p class="msg empty" role="status">${escapeHtml(notice)}</p>` : ''}
-<form class="card" data-testid="login-form" novalidate>
+<form class="card" data-testid="login-form" data-msg-host novalidate>
   <div class="grid-fields">
     <div>
       <label for="login-email">Email</label>
@@ -142,7 +133,6 @@ ${notice ? `<p class="msg empty" role="status">${escapeHtml(notice)}</p>` : ''}
              autocomplete="current-password" required>
     </div>
   </div>
-  ${authErrorBlock()}
   <div class="row" style="margin-top:0.9rem">
     <button type="submit" data-testid="login-submit">Sign in</button>
     <span class="hint">No account yet? <a href="/signup">Create one</a>.</span>
@@ -155,7 +145,7 @@ function lookupPage({ user }) {
   const body = `
 <h1>My booking</h1>
 <p class="lede">Enter the reference from your confirmation to see the booking, or to cancel it.</p>
-<form class="card" data-testid="lookup-form" novalidate>
+<form class="card" data-testid="lookup-form" data-msg-host novalidate>
   <div class="grid-fields">
     <div>
       <label for="lookup-reference-input">Booking reference</label>
@@ -165,7 +155,6 @@ function lookupPage({ user }) {
     </div>
     <div class="row"><button type="submit" data-testid="lookup-submit">Find booking</button></div>
   </div>
-  <p class="msg error" data-testid="reservation-error" role="alert" hidden></p>
 </form>
 
 <section aria-labelledby="detail-heading" data-testid="reservation-detail" hidden>

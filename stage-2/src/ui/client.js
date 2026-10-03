@@ -35,6 +35,39 @@
     node.hidden = true;
   }
 
+  // auth-error, booking-error, booking-uncertain and reservation-error are specified as present only
+  // in their state, so they are inserted when there is something to say and removed when there is
+  // not. A permanently hidden element would let an assertion pass against something no diner can
+  // see, and it would put a testid in the document that the product can never actually produce.
+  var KINDS = { error: 'msg error', uncertain: 'msg uncertain', empty: 'msg empty' };
+
+  function hostFor(key) {
+    if (!key) return document.querySelector('[data-msg-host]');
+    return pick(key) || document.getElementById(key);
+  }
+
+  function showMessage(hostTestId, testid, kind, text) {
+    var host = hostFor(hostTestId);
+    if (!host) return null;
+    var node = host.querySelector('[data-testid="' + testid + '"]');
+    if (!node) {
+      node = document.createElement('p');
+      node.className = KINDS[kind] || KINDS.error;
+      node.setAttribute('data-testid', testid);
+      node.setAttribute('role', kind === 'empty' ? 'status' : 'alert');
+      host.appendChild(node);
+    }
+    node.textContent = text;
+    return node;
+  }
+
+  function clearMessage(hostTestId, testid) {
+    var host = hostFor(hostTestId);
+    if (!host) return;
+    var node = host.querySelector('[data-testid="' + testid + '"]');
+    if (node && node.parentNode) node.parentNode.removeChild(node);
+  }
+
   function api(method, path, body, headers) {
     var init = { method: method, headers: {}, credentials: 'same-origin' };
     if (body !== undefined && body !== null) {
@@ -138,10 +171,9 @@
   function wireAuthForm(testid, path, redirect) {
     var form = document.querySelector('[data-testid="' + testid + '"]');
     if (!form) return;
-    var errorBox = pick('auth-error');
     form.addEventListener('submit', function (event) {
       event.preventDefault();
-      hide(errorBox);
+      clearMessage(testid, 'auth-error');
       var data = new FormData(form);
       var payload = {};
       for (var pair of data.entries()) payload[pair[0]] = pair[1];
@@ -154,10 +186,12 @@
           window.location.href = redirect;
           return;
         }
-        show(errorBox, messageOf(result, 'We could not sign you in. Please try again.'));
+        showMessage(testid, 'auth-error', 'error',
+          messageOf(result, 'We could not sign you in. Please try again.'));
       }).catch(function () {
         if (button) button.disabled = false;
-        show(errorBox, 'We could not reach the restaurant service. Please try again.');
+        showMessage(testid, 'auth-error', 'error',
+          'We could not reach the restaurant service. Please try again.');
       });
     });
   }
@@ -174,18 +208,14 @@
     var gridHead = pick('grid-head');
     var gridBody = pick('grid-body');
     var gridCaption = pick('grid-caption');
-    var gridLoading = pick('grid-loading');
     var noSlots = pick('no-slots');
     var searchStatus = pick('search-status');
-    var authErrorBox = pick('auth-error');
 
     var bookingSection = pick('booking-section');
     var bookingForm = document.querySelector('[data-testid="booking-form"]');
     var bookingSummary = pick('booking-summary');
     var bookingParty = pick('booking-party-size');
     var bookingSubmit = pick('booking-submit');
-    var bookingError = pick('booking-error');
-    var bookingUncertain = pick('booking-uncertain');
     var confirmation = pick('confirmation');
     var confirmationRef = pick('confirmation-reference');
     var confirmationTables = pick('confirmation-tables');
@@ -200,8 +230,8 @@
     function resetBooking() {
       selection = null;
       if (bookingSection) bookingSection.hidden = true;
-      hide(bookingError);
-      hide(bookingUncertain);
+      clearMessage('booking-form', 'booking-error');
+      clearMessage('booking-form', 'booking-uncertain');
     }
 
     function signatureOf(choice) {
@@ -284,7 +314,7 @@
           if (available) {
             button.addEventListener('click', function () {
               if (!readToken()) {
-                show(authErrorBox, 'Please sign in to book a table.');
+                showMessage('search-form', 'auth-error', 'error', 'Please sign in to book a table.');
                 return;
               }
               openBooking({
@@ -313,14 +343,14 @@
       currentSlots = slots;
       if (!slots.length) {
         grid.hidden = true;
-        hide(gridLoading);
+        clearMessage('availability-grid', 'grid-loading');
         noSlots.hidden = false;
         resetBooking();
         return;
       }
       noSlots.hidden = true;
       grid.hidden = false;
-      hide(gridLoading);
+      clearMessage('availability-grid', 'grid-loading');
       renderGrid(restaurant, slots, Number(partyInput.value));
     }
 
@@ -338,8 +368,8 @@
     }
 
     function openBooking(choice) {
-      hide(bookingError);
-      hide(bookingUncertain);
+      clearMessage('booking-form', 'booking-error');
+      clearMessage('booking-form', 'booking-uncertain');
       hide(confirmation);
       selection = choice;
       selection.signature = signatureOf(choice);
@@ -354,12 +384,12 @@
       bookingForm.addEventListener('submit', function (event) {
         event.preventDefault();
         if (!selection) return;
-        hide(bookingError);
-        hide(bookingUncertain);
+        clearMessage('booking-form', 'booking-error');
+        clearMessage('booking-form', 'booking-uncertain');
 
         var partySize = Number(bookingParty.value);
         if (!Number.isFinite(partySize) || partySize < 1) {
-          show(bookingError, 'Please choose how many people are coming.');
+          showMessage('booking-form', 'booking-error', 'error', 'Please choose how many people are coming.');
           return;
         }
         var attempt = {
@@ -390,13 +420,13 @@
             renderConfirmation(attempt, result.body);
             return;
           }
-          show(bookingError, messageOf(result, 'We could not complete that booking.'));
+          showMessage('booking-form', 'booking-error', 'error', messageOf(result, 'We could not complete that booking.'));
           if (codeOf(result) === 'table_unavailable' || result.status === 409) {
             refreshAvailability();
           }
         }).catch(function () {
           if (bookingSubmit) bookingSubmit.disabled = false;
-          show(bookingUncertain,
+          showMessage('booking-form', 'booking-uncertain', 'uncertain',
             'We have not heard back about this booking, so we cannot say whether it went through. '
             + 'Your details are still here. Press book again and we will check safely, without booking twice.');
         });
@@ -407,8 +437,8 @@
       var reference = body && body.reference ? body.reference : '';
       var labels = attempt.labels.slice();
       var when = longDate(attempt.startsAtLocal) + ' at ' + labelTime(attempt.startsAtLocal);
-      hide(bookingError);
-      hide(bookingUncertain);
+      clearMessage('booking-form', 'booking-error');
+      clearMessage('booking-form', 'booking-uncertain');
       confirmationRef.textContent = reference;
       confirmationTables.textContent = 'Table' + (labels.length > 1 ? 's' : '') + ' ' + joinList(labels);
       confirmationDetails.textContent = attempt.restaurantName + ' · ' + joinList(labels) + ' · ' + when
@@ -418,11 +448,11 @@
 
     searchForm.addEventListener('submit', function (event) {
       event.preventDefault();
-      hide(authErrorBox);
+      clearMessage('search-form', 'auth-error');
       var mine = issued += 1;
       hide(searchStatus);
       if (grid) grid.hidden = false;
-      show(gridLoading, 'Looking for tables' + String.fromCharCode(8230));
+      showMessage('availability-grid', 'grid-loading', 'empty', 'Looking for tables' + String.fromCharCode(8230));
       noSlots.hidden = true;
       resetBooking();
 
@@ -434,7 +464,7 @@
           applied = mine;
           if (result.status !== 200) {
             grid.hidden = true;
-            hide(gridLoading);
+            clearMessage('availability-grid', 'grid-loading');
             show(searchStatus, messageOf(result, 'We could not load availability just now.'));
             return;
           }
@@ -444,7 +474,7 @@
         if (mine <= applied) return;
         applied = mine;
         grid.hidden = true;
-        hide(gridLoading);
+        clearMessage('availability-grid', 'grid-loading');
         show(searchStatus, 'We could not reach the restaurant service. Please try again.');
       });
     });
@@ -453,7 +483,6 @@
   var lookupForm = document.querySelector('[data-testid="lookup-form"]');
   if (lookupForm) {
     var referenceInput = pick('lookup-reference-input');
-    var lookupError = pick('reservation-error');
     var detail = pick('reservation-detail');
     var statusPill = pick('reservation-status');
     var detailTables = pick('reservation-tables');
@@ -492,11 +521,11 @@
       return api('GET', '/reservations/' + encodeURIComponent(reference)).then(function (result) {
         if (result.status !== 200 || !result.body) {
           detail.hidden = true;
-          show(lookupError, messageOf(result, 'We could not find that booking.'));
+          showMessage('lookup-form', 'reservation-error', 'error', messageOf(result, 'We could not find that booking.'));
           return false;
         }
         var body = result.body;
-        hide(lookupError);
+        clearMessage('lookup-form', 'reservation-error');
         if (current && current.restaurant) {
           paint(body);
           return true;
@@ -515,12 +544,13 @@
       event.preventDefault();
       var reference = String(referenceInput.value || '').trim().toUpperCase();
       if (!reference) {
-        show(lookupError, 'Please enter the reference from your confirmation.');
+        showMessage('lookup-form', 'reservation-error', 'error',
+          'Please enter the reference from your confirmation.');
         return;
       }
-      hide(lookupError);
+      clearMessage('lookup-form', 'reservation-error');
       load(reference).catch(function () {
-        show(lookupError, 'We could not reach the restaurant service. Please try again.');
+        showMessage('lookup-form', 'reservation-error', 'error', 'We could not reach the restaurant service. Please try again.');
       });
     });
 
@@ -532,14 +562,14 @@
         api('POST', '/reservations/' + encodeURIComponent(reference) + '/cancel').then(function (result) {
           cancelButton.disabled = false;
           if (result.status === 200 && result.body) {
-            hide(lookupError);
+            clearMessage('lookup-form', 'reservation-error');
             paint(result.body);
             return;
           }
-          show(lookupError, messageOf(result, 'We could not cancel that booking.'));
+          showMessage('lookup-form', 'reservation-error', 'error', messageOf(result, 'We could not cancel that booking.'));
         }).catch(function () {
           cancelButton.disabled = false;
-          show(lookupError, 'We could not reach the restaurant service. Please try again.');
+          showMessage('lookup-form', 'reservation-error', 'error', 'We could not reach the restaurant service. Please try again.');
         });
       });
     }
