@@ -106,6 +106,13 @@ method this project arrived at; none of them was anticipated at the start.
     until another account took the anchor's table at the first generated slot. Assert the fault landed
     before asserting the product's reaction — and if you cannot cause the fault, delete the row rather
     than weaken it.
+16. **An invariant believed rather than produced.** A comment that describes a shape the code does not
+    emit is the same failure as a field defaulted rather than derived, one layer down and far easier to
+    miss: `series.js` documented *"the occurrence carries its own reference beside index and
+    exception"* while `seriesView()` returned `{index, exception, reservation}`, and it survived a
+    commit whose message was about a different defect, so nobody announced an omission. **A comment is a
+    claim about code; a row is a check.** Where a shape is stated, assert the shape's *keys* exactly —
+    reading a value out of a nested object passes whether or not the outer object carries it.
 
 **Standing convention: every row states both halves of its assertion.** Where a requirement says
 something must appear, the row also says what must *not* appear, and vice versa.
