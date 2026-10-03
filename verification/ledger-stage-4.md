@@ -406,6 +406,12 @@ because they have now failed to travel into a new file twice.**
     both leave the author stuck. One said `204` and seeded nothing; the other said `422` and refused
     something correct. **A refusal that is *wrong* is worse than no refusal**, because the author cannot
     distinguish it from the state being genuinely unsupported.
+33. **A requirement can be wrong in the direction its author intends to prevent, so a ruling is measured
+    against the build's own conventions before it is implemented, not after.** `S4-167`'s precedence was
+    ruled twice — once by the Foreman, once by me — and both times from the restaurant's calendar, which
+    is not where this product reads hours from. **Implementing it as ruled would have reported `shut` over
+    seven bookable times: the row producing the defect it exists to prevent.** A carefully reasoned
+    requirement is still a guess until something drives it.
 31. **A measurement whose failure mode is silence must have its setup checked first**, because silence is
     indistinguishable from slowness **and slowness is the more comfortable story.** All four screen suites
     read their base URL from `process.argv[2]` with **no connection timeout**, so a wrong URL produces
@@ -653,6 +659,51 @@ if (domCells.size !== explained.size) {
 asserted, and **recording the direction in a comment is part of the assertion** — otherwise the next reader
 cannot tell whether the asymmetry was chosen or merely forgotten, **which is exactly how a population error
 becomes invisible in the first place.**
+
+### The precedence, corrected by measurement: a requirement can be wrong in the direction it intends to prevent
+
+**My ruling, and the Foreman's before it, was wrong, and the Builder measured that before implementing it.**
+The ruled precedence read `shut` from **the restaurant's own `opening_hours`**, so that a policy could not
+override the calendar. **Stage 3 reads hours from the SELECTED POLICY** — its own comment says so — and
+measured both directions:
+
+```
+policy names a Thursday the restaurant's calendar lacks  ->  200, 7 slots
+policy omits a Friday the restaurant's calendar has     ->  200, 0 slots
+```
+
+**So the rule as ruled would have reported `shut` over seven bookable times — the precise defect `S4-167`
+exists to prevent, produced by `S4-167` itself.** Corrected, and now measured by me at `69d8914`
+(`verification/probes/s4/discriminator.py`, `S4-167-prec` and `S4-167-prec2`):
+
+> **`shut` is decided from the EFFECTIVE HOURS for that date — the hours of the policy in force — absent
+> → `shut`; present but yielding no slot → `terms_exclude_all`; slots but nothing free → `nothing_free`;
+> else `open`.**
+
+**And the architectural property that makes it a discriminator rather than a summary, which the row now
+asserts: the first branch reads the effective hours computed BEFORE the slot loop runs, so it cannot be a
+restatement of the loop's output.** A `day_state` computed after the loop would agree with it by
+construction; computed before, **it is a decision the loop does not constrain.**
+
+> **A requirement can be wrong in the direction its author intends to prevent.** This row was written to
+> stop a screen inferring closure from absence, and it specified that inference in the service **from the
+> wrong source**. **A ruling that has not been measured against the build's own conventions is a guess,
+> however carefully it is reasoned** — and this one was reasoned carefully by two seats.
+
+### The thinness closed, and the producers found by driving
+
+**`terms_exclude_all` is reachable, and reachable two ways**, so the thinness I recorded is closed:
+
+```
+bookable window 12:00-12:44 with a 90-minute reservation, 15-minute slots  ->  terms_exclude_all, 0 slots
+bookable window 12:00-13:29 with a 90-minute reservation, 30-minute slots  ->  terms_exclude_all, 0 slots
+```
+
+**The obvious producer does not exist**: a 10-minute window is refused by the reader, because a bookable
+window shorter than one reservation is not a policy this product accepts. **So the second configuration is
+not a variation of the first — it took driving to find, and assertion 3 could not have been satisfied by
+anyone reasoning from the row alone.** That is the return on clause 30: **the thinness was named in the row
+before the code, found by driving, and never became a defect.**
 
 ### Re-read of `S4-167`: is assertion 3 sufficient as the sole discriminator?
 

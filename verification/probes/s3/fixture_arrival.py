@@ -144,91 +144,137 @@ def main():
         return rows()
 
     # =====================================================================
-    # Group 1 -- the four stage-3 keys are refusals, and the door the refusal
-    # names is a door that works
-    # =====================================================================
+    # Group 1 -- the four stage-3 keys are SEEDED at 1e56016+, not refused.
+    #
+    # Re-worded at the stage-4 fixture door. These rows were written against the door that REFUSED
+    # them (a69e6ba) and they went red when option 1 made them seedable -- which is the ruled change,
+    # not a defect. A row that outlives its subject is a row asserting a shape nothing produces, so
+    # they now assert the thing that IS true and that the stage-4 rows need: a fixture that declares
+    # stage-3 state seeds it, and the state is then really there. The refusal rows moved to Group 2,
+    # which is where the refusal set now lives.
     payloads = {
-        "policies": [{"effective_from": "2026-06-01", "slot_minutes": 15,
+        "policies": [{"restaurant_id": "r_anker", "policy_version": 7,
+                      "effective_from": "2026-06-01", "slot_minutes": 15,
                       "reservation_duration_minutes": 90, "cancellation_cutoff_minutes": 60,
                       "opening_hours": HOURS, "capacities": {"t_1": 2, "t_2": 4, "t_3": 6}}],
-        "series": [{"id": "ser_x", "restaurant_id": "r_anker", "owner_user_id": "u_ada",
-                    "local_time": "20:00", "party_size": 2, "table_ids": ["t_1"],
-                    "weekdays": ["mon"], "count": 2, "effective_from": "2026-06-01"}],
-        "history": [{"reservation_id": "res_seed", "kind": "created", "table_ids": ["t_1"]}],
+        # A series' occurrence references must be SEEDED reservations -- discovered by being refused
+        # with "the booking reference you entered is not valid" for a series whose occurrences named
+        # references no booking carried. The door composes state rather than inventing it, which is
+        # the right way round and is not written down anywhere.
+        "series": [{"series_id": "ser_x", "user_id": "u_ada", "restaurant_id": "r_anker",
+                    "anchor_reference": "SEED0001", "count": 2, "interval_weeks": 1,
+                    "revision": 1,
+                    "occurrences": [{"index": 0, "reference": "SEED0002", "exception": False},
+                                    {"index": 1, "reference": "SEED0003", "exception": False}]}],
+        # shapes read off the door's own reader: `changes` is an ARRAY, the event is one of
+        # created/changed/cancelled, and every identifier is fixtureId-shaped.
+        "history": [{"reference": "SEED0001", "seq": 1, "at": "2026-09-28T10:00:00.000Z",
+                     "event": "created", "changes": [{"table_ids": ["t_1"]}], "revision": 1,
+                     "accepted_terms": derived_policy_zero_terms(
+                         base_fixture()["restaurants"][0])}],
         "batch_counters": {"r_anker": 7},
     }
-    for key, value in payloads.items():
+    def fixture_with_occurrences():
+        """A fixture whose bookings include the two the series below names.
+
+        Two payload faults cost time here and both are recorded in the rows: the occurrence references
+        must be SEEDED reservations (a series naming references no booking carries is refused), and the
+        bookings need unique ids AND a well-formed start time -- "1%d:00" % 10 produced "T110:00", and
+        the door's refusal named the start time rather than the series under test.
+        """
         fx = base_fixture()
+        fx["reservations"] = [{
+            "id": "res_seed_%s" % hour,
+            "reference": ref,
+            "user_id": "u_ada",
+            "restaurant_id": "r_anker",
+            "table_ids": ["t_1"],
+            "party_size": 2,
+            "starts_at_local": "2026-09-28T%s:00" % hour,
+        } for hour, ref in zip(["18", "19", "20"], ["SEED0001", "SEED0002", "SEED0003"])]
+        return fx
+
+    for key, value in payloads.items():
+        if key == "history":
+            fx = seeded_fixture()
+        elif key == "series":
+            fx = fixture_with_occurrences()
+        else:
+            fx = base_fixture()
         fx[key] = value
         st, body = call("POST", "/_test/reset", fx)
-        named = key in json.dumps(body)
-        mentions_import = "import" in message_of(body).lower()
-        check("S3-301-" + key,
-              st == 422 and code_of(body) == "fixture_unsupported" and named and mentions_import,
-              f"fixture declaring {key} -> {st} code={code_of(body)} key named in body={named} "
-              f"names the import door={mentions_import} (expected 422 fixture_unsupported)")
+        st_x, doc_after = call("GET", "/_test/export")
+        after = doc_after.get("state", {}) if st_x == 200 else {}
+        held = st_x == 200 and key in after and len(after.get(key, []) if isinstance(
+            after.get(key), list) else [after.get(key)]) >= 1
+        check("S3-301-" + key, st == 204 and held,
+              f"a fixture declaring {key} now SEEDS it -> reset {st} code={code_of(body)} "
+              f"message={message_of(body)!r}, and the export carries {key}={after.get(key)!r} "
+              f"(expected 204 and the store really populated; asserted against a state that holds "
+              f"the thing, never against an empty one -- clause 23)")
 
-    # The refusal must point at a working alternative, not close the capability. A document carrying
-    # the four stores still imports, and the export carries them once they hold something -- the
-    # stores are absent while empty, so this row is asserted AFTER the import that seeds them and
-    # never against an empty state where absence would be indistinguishable from silence.
-    st, doc = call("GET", "/_test/export")
-    store_keys = ["policies", "series", "history", "batch_counters"]
-    check("S3-302a", st == 200 and all(k not in doc for k in store_keys),
-          f"the four stores are absent from an export while empty -> {st} absent="
-          f"{[k for k in store_keys if k not in doc] if st == 200 else 'no document'} (expected all "
-          f"four absent; this is why S3-302b is asserted after the import and not before it)")
+    # policy_version must be preserved verbatim, not renumbered by position: a row asserting that a
+    # tie on effective_from goes to the greater version cannot be written otherwise.
+    fx = base_fixture()
+    fx["policies"] = payloads["policies"]
+    st_r, _ = call("POST", "/_test/reset", fx)
+    st, body = call("GET", "/restaurants/r_anker/policies")
+    versions = [p.get("policy_version") for p in body.get("policies", [])]
+    check("S3-305", st == 200 and versions == [7],
+          f"the seeded policy's version reads back as declared -> {versions} (expected [7]; a door "
+          f"that renumbered by position would make S4-112 unwriteable rather than merely untested)")
 
-    # A document nests its state under `state`. Putting these three stores at the top level instead
-    # imports 204 and seeds nothing -- recorded as S3-303a, because a 204 for state that was not read
-    # is the same shape as the 204 this file was written about, one level up.
-    misplaced = dict(doc)
-    misplaced["policies"] = payloads["policies"]
-    misplaced["series"] = payloads["series"]
-    misplaced["batch_counters"] = payloads["batch_counters"]
+    # And the grid the policy implies must be the policy's, not the fixture's: this is the positive
+    # control S4-151 asks for -- a 15-minute policy must produce a 15-minute grid.
+    st, avail = call("GET", "/availability?restaurant_id=r_anker&date=2026-12-05&party_size=2")
+    starts = [sl.get("starts_at_local") for sl in avail.get("slots", [])] if isinstance(
+        avail.get("slots"), list) else []
+    minutes = sorted({int(s.split("T")[1][:2]) * 60 + int(s.split("T")[1][3:5]) for s in starts
+                      if "T" in s})
+    grid_is_15 = len(minutes) > 1 and (minutes[1] - minutes[0]) == 15
+    check("S4-151-control", st == 200 and grid_is_15,
+          f"a fixture declaring a 15-minute policy yields a 15-minute grid -> {len(starts)} slots, "
+          f"first transitions {minutes[:3]} (expected 15-minute steps; the failure this exists for is "
+          f"a 204 that seeds nothing and a row that silently asserts policy 0 instead)")
+
+    # The export carries the four stores once they hold something, and is silent while empty: both
+    # halves asserted, because the empty half alone cannot be told from a door that ignores them.
+    call("POST", "/_test/reset", base_fixture())
+    st, empty_doc = call("GET", "/_test/export")
+    empty_state = empty_doc.get("state", {}) if st == 200 else {}
+    empty_values = {k: empty_state.get(k) for k in payloads}
+    all_empty = st == 200 and all(
+        (empty_values[k] in ([], {}, None)) for k in payloads)
+    check("S3-302a", all_empty,
+          f"the four stores are present but EMPTY in an export of an untouched state -> "
+          f"{ {k: v for k, v in empty_values.items()} } (expected four empty collections; asserted "
+          f"together with S3-302b so an empty store cannot be read as a store that was dropped, and "
+          f"NOT as an absent key -- at this build the keys are always present, which is a change from "
+          f"a69e6ba and is why the row was re-worded rather than kept)")
+
+    fx = base_fixture()
+    fx["batch_counters"] = payloads["batch_counters"]
+    call("POST", "/_test/reset", fx)
+    st, doc2 = call("GET", "/_test/export")
+    state2 = doc2.get("state", {}) if st == 200 else {}
+    check("S3-302b", st == 200 and "batch_counters" in state2
+          and state2.get("batch_counters", {}).get("r_anker") == 7,
+          f"and present once it holds something -> batch_counters={state2.get('batch_counters')!r} "
+          f"(expected r_anker=7; the two halves together are what make absence mean absence)")
+
+    # A document still carries the stores, and a document carrying them at the TOP level still imports
+    # without seeding -- the same 204-for-state-not-read as before, now on the import door only.
+    misplaced = {"track": doc2.get("track"), "format_version": doc2.get("format_version"),
+                 "state": copy.deepcopy(state2),
+                 "policies": payloads["policies"]}
     st, body = call("POST", "/_test/import", misplaced)
     st_mis, after_mis_doc = call("GET", "/_test/export")
     after_mis = after_mis_doc.get("state", {}) if st_mis == 200 else {}
-    seeded_misplaced = st == 204 and st_mis == 200 and len(after_mis.get("policies", [])) == 1
-    check("S3-303a", not seeded_misplaced,
-          f"a document carrying the three stores at the TOP level rather than under `state` -> "
-          f"import {st}, seeded={seeded_misplaced} policies="
-          f"{len(after_mis.get('policies', [])) if st_mis == 200 else '?'} (recorded, not a defect "
-          f"claim: unknown top-level fields are ignored, so the 204 is defensible -- but a 204 for "
-          f"state that was not read is the same shape as the one a fixture used to give, and a probe "
-          f"author placing a key in the wrong place gets the same silence)")
-
-    call("POST", "/_test/reset", base_fixture())
-    st, doc = call("GET", "/_test/export")
-    importable = copy.deepcopy(doc)
-    importable["state"].setdefault("users", [])
-    importable["state"].setdefault("restaurants", [])
-    importable["state"].setdefault("reservations", [])
-    importable["state"]["policies"] = payloads["policies"]
-    importable["state"]["series"] = payloads["series"]
-    importable["state"]["batch_counters"] = payloads["batch_counters"]
-    st, body = call("POST", "/_test/import", importable)
-    check("S3-303", st == 204,
-          f"a document carrying the state the fixture cannot seed imports -> {st} "
-          f"(expected 204; the refusal must name a door that works)")
-
-    st, after_doc = call("GET", "/_test/export")
-    after = after_doc.get("state", {}) if st == 200 else {}
-    seeded_by_import = st == 200 and len(after.get("policies", [])) == 1 \
-        and len(after.get("series", [])) == 1 \
-        and after.get("batch_counters", {}).get("r_anker") == 7
-    check("S3-304", seeded_by_import,
-          f"and that import really seeded the three stores the fixture refused to -> policies="
-          f"{len(after.get('policies', []))} series={len(after.get('series', []))} "
-          f"batch_counters.r_anker={after.get('batch_counters', {}).get('r_anker')} "
-          f"(expected 1 / 1 / 7; a 204 that seeded nothing is the defect this file exists for)")
-
-    carried = st == 200 and all(k in after for k in store_keys if k != "history")
-    check("S3-302b", carried,
-          f"the export carries the four stores once they hold something -> present="
-          f"{[k for k in store_keys if k in after]} (expected policies, series, batch_counters; "
-          f"history has no entry to carry, so its absence is not asserted here -- S3-301 already "
-          f"asserted the refusal for it)")
+    check("S3-303a", not (st == 204 and len(after_mis.get("policies", [])) == 1),
+          f"a document carrying `policies` at the TOP level rather than under `state` -> import "
+          f"{st}, policies={len(after_mis.get('policies', [])) if st_mis == 200 else '?'} (recorded, "
+          f"not a defect claim: unknown top-level fields are ignored -- but it is the same shape as "
+          f"the 204 that seeded nothing, and I found it by making the mistake myself)")
 
     # =====================================================================
     # Group 2 -- the seed path cannot express the booking the import path refuses
@@ -429,9 +475,17 @@ def main():
     # =====================================================================
     st, _ = call("POST", "/_test/reset", seeded_fixture())
     st, baseline = call("GET", "/_test/export")
-    for key in ("policies", "batch_counters"):
-        fx = seeded_fixture()
-        fx[key] = payloads[key]
+    # Re-pointed at 1e56016: the refusal set is now the two DERIVED claims -- a declared
+    # accepted_terms and a declared non-1 revision -- because the four store keys became the
+    # capability. Both are driven, so "each key alone" still holds at the new size of the set.
+    derived = copy.deepcopy(derived)
+    derived["cancellation_cutoff_minutes"] += 1
+    refusable = {
+        "declared-terms": {"accepted_terms": derived},
+        "declared-revision": {"revision": 5},
+    }
+    for key, override in refusable.items():
+        fx = seeded_fixture(override)
         st, body = call("POST", "/_test/reset", fx)
         st_now, now = call("GET", "/_test/export")
         check("S3-340-" + key,
@@ -441,7 +495,8 @@ def main():
               f"export unchanged={json.dumps(now, sort_keys=True) == json.dumps(baseline, sort_keys=True)} "
               f"(a refusal that half-applies is worse than no refusal)")
 
-    st, body = call("POST", "/_test/reset", seeded_fixture({"revision": 2, "policies": []}))
+    st, body = call("POST", "/_test/reset",
+                    seeded_fixture({"revision": 2, "accepted_terms": derived}))
     st_now, now = call("GET", "/_test/export")
     check("S3-341", st == 422 and st_now == 200
           and json.dumps(now, sort_keys=True) == json.dumps(baseline, sort_keys=True),
