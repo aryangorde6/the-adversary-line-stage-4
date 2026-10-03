@@ -67,6 +67,14 @@ export function baseFixture() {
 
 // A day tiled with legal single-table reservations: every table is committed at every slot, which
 // is a fully-booked day without any illegal three-table booking.
+// One table committed across the evening, so a day has both free and taken cells at once.
+export function oneTableTaken(tableId) {
+  return ['17:00', '18:00', '19:00'].map((time) => ({
+    restaurant_id: 'r_anker', table_id: tableId, user_id: 'u_ada',
+    starts_at_local: `2026-12-01T${time}`, party_size: 1,
+  }));
+}
+
 export function bookedDay(tableId) {
   return ['17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30']
     .map((time) => ({

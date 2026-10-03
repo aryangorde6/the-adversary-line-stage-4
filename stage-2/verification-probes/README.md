@@ -12,6 +12,7 @@ cd stage-2/verification-probes
 node ui-grid.mjs        # the search results region: empty, loading, results, no slots
 node ui-messages.mjs    # the lookup screen, and message integrity
 node ui-a11y.mjs        # labels, sideways scrolling, clipped text, contrast
+node ui-states-a11y.mjs # the seven states are seven looks; focus at every tab stop
 
 docker rm -f tk-fin
 ```
@@ -31,6 +32,11 @@ instead of the grid, never beside it.
 booking that can be seen shows its status, its table by name and its time as a person reads it, and
 the cancel action disappears once the booking is cancelled. Every inserted message appears at most
 once, and its host exists in the document at the moment of insertion.
+
+`ui-states-a11y.mjs` — the seven states named by the specification are seven distinct
+(background, text, border) triples, asserted as a set so two of them collapsing into one look
+cannot pass; and at every tab stop on all four routes, at both widths, a real `Tab` press yields a
+focus indicator that is visible against the surface behind it.
 
 `ui-a11y.mjs` — no sideways scrolling at 375 or 1280, every input labelled, no text clipped inside
 its own box, and every text node above its WCAG floor against the first non-transparent background

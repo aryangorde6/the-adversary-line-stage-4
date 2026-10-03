@@ -39,7 +39,8 @@
   // in their state, so they are inserted when there is something to say and removed when there is
   // not. A permanently hidden element would let an assertion pass against something no diner can
   // see, and it would put a testid in the document that the product can never actually produce.
-  var KINDS = { error: 'msg error', uncertain: 'msg uncertain', empty: 'msg empty' };
+  var KINDS = { error: 'msg error', uncertain: 'msg uncertain', empty: 'msg empty',
+    loading: 'msg loading' };
 
   function hostFor(key) {
     if (!key) return document.querySelector('[data-msg-host]');
@@ -54,7 +55,7 @@
       node = document.createElement('p');
       node.className = KINDS[kind] || KINDS.error;
       node.setAttribute('data-testid', testid);
-      node.setAttribute('role', kind === 'empty' ? 'status' : 'alert');
+      node.setAttribute('role', kind === 'empty' || kind === 'loading' ? 'status' : 'alert');
       host.appendChild(node);
     }
     node.textContent = text;
@@ -225,6 +226,7 @@
     var selection = null;
     var currentRestaurant = null;
     var currentSlots = [];
+    var selectedCellId = null;
 
     bindGrid();
     bindBooking();
@@ -354,6 +356,8 @@
 
     function resetBooking() {
       selection = null;
+      selectedCellId = null;
+      markSelected();
       removeBooking();
       removeConfirmation();
       clearMessage('booking-form', 'booking-error');
@@ -476,7 +480,9 @@
           button.type = 'button';
           button.className = 'cellbtn';
           button.setAttribute('data-available', available ? 'true' : 'false');
-          button.setAttribute('data-testid', 'slot-' + row.ids.join('+') + '-' + labelTime(slot.starts_at_local));
+          var cellId = 'slot-' + row.ids.join('+') + '-' + labelTime(slot.starts_at_local);
+          button.setAttribute('data-testid', cellId);
+          if (selectedCellId === cellId) button.setAttribute('data-selected', 'true');
           button.setAttribute('aria-label', (row.pair ? 'Tables ' + joinList(row.labels) : 'Table ' + row.labels[0])
             + ' at ' + labelTime(slot.starts_at_local) + (available ? ', free' : ', taken'));
           if (available) {
@@ -552,11 +558,24 @@
       });
     }
 
+    // The cell the diner has chosen is marked in the grid itself, so the state they are in is
+    // visible where they chose it and not only in the form below.
+    function markSelected() {
+      var cells = document.querySelectorAll('[data-selected], [data-testid^="slot-"]');
+      for (var i = 0; i < cells.length; i += 1) {
+        var cell = cells[i];
+        if (cell.getAttribute('data-testid') === selectedCellId) cell.setAttribute('data-selected', 'true');
+        else cell.removeAttribute('data-selected');
+      }
+    }
+
     function openBooking(choice) {
       clearMessage('booking-form', 'booking-error');
       clearMessage('booking-form', 'booking-uncertain');
       removeConfirmation();
       buildBooking();
+      selectedCellId = 'slot-' + choice.tableIds.join('+') + '-' + labelTime(choice.startsAtLocal);
+      markSelected();
       selection = choice;
       selection.signature = signatureOf(choice);
       selection.key = newKey();
@@ -646,7 +665,7 @@
       grid.hidden = false;
       if (gridEmpty) gridEmpty.hidden = true;
       if (gridTable) gridTable.hidden = true;
-      showMessage('availability-panel', 'grid-loading', 'empty', 'Looking for tables' + String.fromCharCode(8230));
+      showMessage('availability-panel', 'grid-loading', 'loading', 'Looking for tables' + String.fromCharCode(8230));
       clearMessage('availability-panel', 'no-slots');
       resetBooking();
 

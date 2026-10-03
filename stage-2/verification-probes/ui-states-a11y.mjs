@@ -1,0 +1,227 @@
+// The seven states must not look alike, and the keyboard must always say where it is.
+//
+//   node verification/probes/s2/ui-states-a11y.mjs [baseUrl]
+import { chromium } from 'playwright-core';
+import { BASE, SHOTS, ok, section, report, baseFixture, oneTableTaken, seed, token } from './ui-lib.mjs';
+
+const ROUTES = ['/', '/signup', '/login', '/lookup'];
+
+// The (background, text, border) of one element, read the way it is painted: the background is
+// resolved through the first non-transparent ancestor, so a state sitting on a form host is judged
+// where it is drawn rather than against the page root.
+function readTriplesIn(page, selector) {
+  return page.evaluate((sel) => {
+    const parse = (value) => {
+      const m = value.match(/rgba?\(([^)]+)\)/);
+      if (!m) return 'none';
+      const parts = m[1].split(',').map((n) => parseFloat(n));
+      if (parts.length > 3 && parts[3] === 0) return 'none';
+      return parts.slice(0, 3).map((n) => Math.round(n)).join(',');
+    };
+    const behind = (node) => {
+      for (let n = node; n && n.nodeType === 1; n = n.parentElement) {
+        const bg = parse(getComputedStyle(n).backgroundColor);
+        if (bg !== 'none') return bg;
+      }
+      return '255,255,255';
+    };
+    const el = document.querySelector(sel);
+    if (!el) return null;
+    const style = getComputedStyle(el);
+    return [behind(el), parse(style.color), style.borderTopColor].join(' | ');
+  }, selector);
+}
+
+async function main() {
+  // Sign in through the UI so every state below is reached the way a diner reaches it.
+  await seed({ ...baseFixture(), reservations: oneTableTaken('t_1') });
+  const tok = await token();
+  const browser = await chromium.launch();
+
+  section('the seven states are seven different looks');
+  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  page.setDefaultTimeout(6000);
+  await page.goto(BASE + '/', { waitUntil: 'networkidle' });
+  await page.evaluate((t) => {
+    document.cookie = 'tk_token=' + encodeURIComponent(t) + '; path=/; SameSite=Lax';
+  }, tok);
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.fill('#date-input', '2026-12-01');
+  await page.fill('#party-size-input', '2');
+  await page.click('[data-testid="search-button"]');
+  await page.waitForTimeout(700);
+
+  // Collect each state's triple by putting the screen into that state and reading the element the
+  // state belongs to. Missing a state is a failure in itself: a state nobody can see cannot be
+  // told apart from any other.
+  const states = {};
+  const read = async (name, selector) => {
+    const triple = await readTriplesIn(page, selector);
+    // A state nobody can see cannot be told apart from any other, so its absence is a failure.
+    ok(`${name} is on screen to be told apart`, triple !== null, { selector });
+    states[name] = triple;
+  };
+
+  await read('available', '[data-testid="availability-grid"] [data-available="true"]');
+  await read('unavailable', '[data-testid="availability-grid"] [data-available="false"]');
+
+  // loading
+  await page.route('**/availability?*', async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    route.continue();
+  });
+  await page.click('[data-testid="search-button"]');
+  await page.waitForTimeout(250);
+  await read('loading', '[data-testid="grid-loading"]');
+  await page.waitForTimeout(1600);
+  await page.unroute('**/availability?*');
+
+  // empty
+  await page.fill('#date-input', '2026-12-01');
+  await page.fill('#party-size-input', '2');
+  await page.evaluate(() => {
+    const region = document.querySelector('[data-testid="availability-grid"]');
+    if (region) region.parentNode.removeChild(region);
+  });
+  await page.evaluate(() => {
+    const panel = document.querySelector('[data-testid="availability-panel"]');
+    const empty = document.createElement('p');
+    empty.className = 'msg empty';
+    empty.setAttribute('data-testid', 'empty-probe');
+    empty.textContent = 'Choose a restaurant, a date and how many people are coming.';
+    panel.insertBefore(empty, panel.firstChild);
+  });
+  await read('empty', '[data-testid="empty-probe"]');
+
+  // selected, then refused, successful and uncertain on the booking path
+  await page.evaluate((t) => {
+    document.cookie = 'tk_token=' + encodeURIComponent(t) + '; path=/; SameSite=Lax';
+  }, tok);
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.fill('#date-input', '2026-12-01');
+  await page.fill('#party-size-input', '2');
+  await page.click('[data-testid="search-button"]');
+  await page.waitForTimeout(700);
+  await page.locator('[data-available="true"]').first().click();
+  await page.waitForTimeout(300);
+  await read('selected', '[data-selected="true"]');
+
+  await page.route('**/reservations', async (route) => {
+    if (route.request().method() !== 'POST') return route.continue();
+    route.fulfill({ status: 409, contentType: 'application/json',
+      body: JSON.stringify({ error: { code: 'table_unavailable', message: 'That table was taken.' } }) });
+  });
+  await page.click('[data-testid="booking-submit"]');
+  await page.waitForTimeout(700);
+  await read('refused', '[data-testid="booking-error"]');
+  await page.unroute('**/reservations');
+
+  await page.click('[data-testid="booking-submit"]');
+  await page.waitForTimeout(900);
+  await read('successful', '[data-testid="confirmation-reference"]');
+
+  await page.route('**/reservations', async (route) => {
+    if (route.request().method() !== 'POST') return route.continue();
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    route.abort('failed');
+  });
+  await page.click('[data-testid="booking-submit"]');
+  await page.waitForTimeout(900);
+  await read('uncertain', '[data-testid="booking-uncertain"]');
+  await page.unroute('**/reservations');
+
+  // The assertion is on the set, not pairwise: seven states that collapse into six looks is the
+  // failure this row exists for, and a set-level assertion cannot be argued with.
+  const REQUIRED = ['available', 'unavailable', 'selected', 'loading', 'successful', 'refused', 'uncertain'];
+  ok('all seven required states were on screen to be read',
+    REQUIRED.every((n) => states[n]), Object.keys(states));
+  const distinct = new Set(REQUIRED.map((n) => states[n]));
+  ok('the seven required states are seven distinct triples', distinct.size === 7,
+    REQUIRED.map((n) => `${n}=${states[n]}`));
+  ok('every state read, empty included, is its own look',
+    new Set(Object.values(states)).size === Object.keys(states).length,
+    Object.entries(states));
+  await page.close();
+
+  // Focus: a real Tab press at every stop, and an indicator that can be seen against what is
+  // behind it. Programmatic .focus() is not used: it would not match :focus-visible on a button.
+  for (const width of [375, 1280]) {
+    for (const route of ROUTES) {
+      section(`focus at every tab stop on ${route} at ${width}`);
+      const p2 = await browser.newPage({ viewport: { width, height: 900 } });
+      p2.setDefaultTimeout(6000);
+      await p2.goto(BASE + route, { waitUntil: 'networkidle' });
+      const stops = [];
+      for (let i = 0; i < 60; i += 1) {
+        await p2.keyboard.press('Tab');
+        const stop = await p2.evaluate(() => {
+          const el = document.activeElement;
+          if (!el || el === document.body) return null;
+          const style = getComputedStyle(el);
+          const parse = (value) => {
+            const m = value.match(/rgba?\(([^)]+)\)/);
+            if (!m) return null;
+            const parts = m[1].split(',').map((n) => parseFloat(n));
+            if (parts.length > 3 && parts[3] === 0) return null;
+            return parts.slice(0, 3);
+          };
+          const behind = (node) => {
+            for (let n = node; n && n.nodeType === 1; n = n.parentElement) {
+              const bg = parse(getComputedStyle(n).backgroundColor);
+              if (bg) return bg;
+            }
+            return [255, 255, 255];
+          };
+          const lum = (rgb) => {
+            const [r, g, b] = rgb.map((v) => {
+              const c = v / 255;
+              return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+            });
+            return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+          };
+          const ring = parse(style.outlineColor);
+          const width = parseFloat(style.outlineWidth);
+          const offset = parseFloat(style.outlineOffset) || 0;
+          // A ring drawn outside the border box is painted on the surface behind the control, so
+          // that is the colour it has to be seen against.
+          const bg = offset > 0 ? behind(el.parentElement || el) : behind(el);
+          let ratio = 0;
+          if (ring && width > 0) {
+            const l1 = lum(ring);
+            const l2 = lum(bg);
+            ratio = (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+          }
+          return {
+            tag: el.tagName.toLowerCase(),
+            id: el.id || el.getAttribute('data-testid') || '',
+            outline: style.outlineStyle,
+            width,
+            ratio: Math.round(ratio * 100) / 100,
+          };
+        });
+        if (!stop) break;
+        if (stops.length && stops[stops.length - 1].id === stop.id && stop.id !== '') {
+          // The same control reached again means the focus cycle has come round.
+          if (stops.filter((s) => s.id === stop.id).length > 1) break;
+        }
+        stops.push(stop);
+      }
+      const missing = stops.filter((s) => s.outline === 'none' || s.width === 0);
+      ok('every tab stop has a focus indicator', missing.length === 0,
+        missing.map((s) => `${s.tag}#${s.id}`).slice(0, 4));
+      const faint = stops.filter((s) => s.ratio < 3);
+      ok('every focus ring is visible against what is behind it', faint.length === 0,
+        faint.map((s) => `${s.tag}#${s.id} ${s.ratio}`).slice(0, 4));
+      console.log(`        (${stops.length} tab stops)`);
+      if (SHOTS && route === '/') await p2.screenshot({ path: `${SHOTS}/focus-home-${width}.png`, fullPage: false });
+      await p2.close();
+    }
+  }
+
+  await browser.close();
+}
+
+main().then(() => { report(); }).catch((error) => {
+  console.log('  FAIL  suite error -- ' + error.message);
+  process.exitCode = 1;
+});

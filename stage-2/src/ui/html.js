@@ -42,6 +42,14 @@ function styles() {
     outline-offset: 2px;
     border-radius: 4px;
   }
+  /* A native date input has its own segments inside it, and each is a separate place the keyboard
+     can be. Drawing the ring on the field itself, in :focus rather than :focus-visible, is what
+     keeps an indicator on screen at every one of those stops. */
+  input:focus, select:focus, textarea:focus {
+    outline: 3px solid ${COLOURS.warm};
+    outline-offset: 1px;
+  }
+  input[type="date"]:focus { border-color: ${COLOURS.warm}; }
   .skip {
     position: absolute; left: -9999px; top: 0;
     background: ${COLOURS.card}; padding: 0.6rem 1rem; z-index: 10;
@@ -101,6 +109,11 @@ function styles() {
   .msg.uncertain { background: ${COLOURS.amberSoft}; border-color: #ecd6a4; color: ${COLOURS.amber}; }
   .msg.good { background: ${COLOURS.greenSoft}; border-color: #bcdfcb; color: ${COLOURS.green}; }
   .msg.empty { background: ${COLOURS.warmSoft}; border-color: #e8cdb9; color: ${COLOURS.muted}; }
+  /* Looking for tables is not the same as nothing to show yet: one is dashed and open, the other is
+     settled, so the two are never mistaken for each other. */
+  .msg.loading {
+    background: ${COLOURS.card}; border: 1px dashed #d9b89c; color: ${COLOURS.muted};
+  }
   .grid-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   table.grid { border-collapse: collapse; width: 100%; min-width: 34rem; }
   table.grid caption { text-align: left; color: ${COLOURS.muted}; font-size: 0.9rem; padding-bottom: 0.5rem; }
@@ -125,6 +138,12 @@ function styles() {
   button.cellbtn[data-available="false"] { cursor: default; opacity: 0.75; }
   button.cellbtn[data-available="false"]::after { content: "\\2013"; }
   button.cellbtn:focus-visible { outline: 3px solid ${COLOURS.warm}; outline-offset: 1px; }
+  /* The table a diner has chosen must not look like one they could still choose: a different
+     background, a different border and a different mark, all clear of the contrast floor. */
+  button.cellbtn[data-selected="true"] {
+    background: ${COLOURS.warmSoft}; border: 2px solid ${COLOURS.warm}; color: ${COLOURS.warm};
+  }
+  button.cellbtn[data-selected="true"]::after { content: "\\25C6"; }
   .ref {
     font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
     font-size: 1.3rem; letter-spacing: 0.08em; font-weight: 700;
