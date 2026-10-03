@@ -605,6 +605,35 @@ repair story:**
 guard has to be at the level where the failure actually occurs, which is never the level you first think of.**
 The first attempt guarded the fetch; the throw was one level in, in the iteration.
 
+### Two measurements of one mutant, taken in the same minute, disagree — and that is the finding
+
+```
+Builder:   with the circular scratch key planted,  GET /_test/export  ->  422 validation_failed
+Foreman:   under AUDIT MUTANT A, a seeded booking plus a replan,     ->  200
+```
+
+**Both are single instances of "the mutant is planted", read as the whole — which is this stage's one shape
+again, and the first time two seats produced contradictory numbers about the same defect inside a minute.**
+I am not adjudicating it by argument. The likely discriminator is **which reservation carries the key**: a key
+stashed by the planner during a replan may sit on an object the export path never walks, while a key on a
+fixture-seeded reservation is inside it. **So the row must be written against the state the mutant actually
+produces, not against either seat's description of it** — and the way to settle which state that is, is to
+plant once and read the export's status **and** its `reservations` length in the same run.
+
+**Which is also why the completeness half is not optional, and the Foreman's amendment is right on the merits
+whichever number is correct:**
+
+> **An assertion's strength is set by the weakest way its subject can be satisfied.** Status codes are the
+> weakest — they say the request did not fail, not that it did the thing. **The comfortable version of a row
+> is usually the one that cannot fail**, and this stage has now produced that failure three times: a view
+> allowlist, an export status, and a probe's own summary line.
+
+**If the export answers 422, a status row is red immediately. If it answers 200 with the records omitted, only
+the completeness half is red.** A row asserting both is red either way, **which is the property that makes it
+worth writing when two measurements of the same mutant disagree** — it does not require the disagreement to
+be resolved first. **And this is the negative-control discipline arriving from the other side: a control asks
+how weakly the subject can be satisfied, and this asks the same question of a positive row.**
+
 ### Settled from the history: what `ee04207`'s red actually reported
 
 **Read from the commit, not from the reports, as instructed — and the answer splits the probe in two.**
