@@ -720,6 +720,49 @@ async function run() {
     assert.equal(after.body.created_at, anchor.body.created_at, "the anchor's timestamp is unchanged");
   });
 
+  await row('S3-105 an occurrence names its reference even when its reservation is absent', async () => {
+    // The occurrence reference is emitted from the series record rather than read back off the
+    // reservation, so it survives a reservation that is not there. Every other assertion in this file
+    // has a reservation behind every occurrence, which means without this row the design could be
+    // replaced by a lookup and nothing here would notice.
+    await seed();
+    const ada = await tokenFor('ada@example.com');
+    const anchorBooking = await book(ada, '2026-12-24T19:00', 't_2', 4, 'abs1');
+    const adopted = await call('POST', '/series', {
+      body: { anchor_reference: anchorBooking.body.reference, count: 3, interval_weeks: 1 },
+      token: ada, key: 'abs2',
+    });
+    assert.equal(adopted.status, 201);
+    const expected = adopted.body.occurrences.map((o) => o.reference);
+    // A document whose series record names reservations that are not present: the record survives and
+    // the reservations do not, which is the only way to reach the case from outside.
+    const exported = await call('GET', '/_test/export');
+    assert.equal(exported.status, 200);
+    const document = exported.body;
+    document.state.reservations = document.state.reservations.filter(
+      (r) => r.reference === expected[0],
+    );
+    const imported = await call('POST', '/_test/import', { body: document });
+    assert.equal(imported.status, 204, 'a series may name reservations that are not present');
+    const read = await call('GET', `/series/${adopted.body.series_id}`, { token: ada });
+    assert.equal(read.status, 200);
+    const occurrences = read.body.occurrences;
+    assert.equal(occurrences.length, 3, 'every occurrence is still listed');
+    assert.deepEqual(
+      occurrences.map((o) => o.reservation),
+      [occurrences[0].reservation, null, null],
+      'the two whose reservations are gone read reservation: null',
+    );
+    assert.deepEqual(
+      occurrences.map((o) => o.reference),
+      expected,
+      'and every occurrence still names its own reference with nothing behind it',
+    );
+    for (const occurrence of occurrences) {
+      assert.ok('reference' in occurrence, 'the key is on the occurrence, not borrowed from a nested object');
+    }
+  });
+
   await row('S3-112 occurrences are ordinary reservations', async () => {
     await seed();
     const ada = await tokenFor('ada@example.com');
