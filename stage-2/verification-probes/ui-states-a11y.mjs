@@ -267,7 +267,9 @@ async function main() {
           });
           ok(`the ring stays on the field through ${name}, because the keyboard is still in it`, held);
           await p2.locator('[data-testid="search-button"]').click();
-          await p2.waitForTimeout(700);
+          // A click moves the focus, so the ring must be gone as soon as the click has been handled;
+          // the wait is for the search round trip, not for the ring to be taken off.
+          await p2.waitForTimeout(50);
           const dropped = await p2.evaluate(() => {
             const f = document.querySelector('[data-date-field]');
             return getComputedStyle(f).outlineStyle === 'none';
@@ -278,14 +280,16 @@ async function main() {
         await rearm('the page being hidden', () => window.dispatchEvent(new Event('pagehide')));
         await p2.evaluate(() => window.dispatchEvent(new Event('blur')));
         await p2.locator('#date-input').click();
-        const backFromBlur = await p2.evaluate(async () => {
-          document.querySelector('#date-input').blur();
-          document.querySelector('#date-input').focus();
-          await new Promise((r) => setTimeout(r, 700));
+        // Read with no wait at all. The ring has to be right because an event put it there, not
+        // because something later noticed: this build has no poll to notice with.
+        const backFromBlur = await p2.evaluate(() => {
+          const input = document.querySelector('#date-input');
+          input.blur();
+          input.focus();
           const f = document.querySelector('[data-date-field]');
           return getComputedStyle(f).outlineStyle !== 'none';
         });
-        ok('the ring is back after the field loses and regains the keyboard', backFromBlur);
+        ok('the ring is back at once after the field loses and regains the keyboard', backFromBlur);
         const innerBefore = await innerStop();
         ok('the inner segment carries a ring before any exit has fired', innerBefore === true,
           { innerBefore });
