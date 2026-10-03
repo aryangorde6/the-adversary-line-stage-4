@@ -420,6 +420,15 @@ because they have now failed to travel into a new file twice.**
     the **policy's**. **The shape was found by re-deriving; the source was found by driving.** So the walk's
     standing question, of any row asserting wording or state: **what would have to be true for this row to be
     right, is that asserted, and is it read from the surface the implementation reads?**
+38. **Fix the loss before asserting over it.** Every assertion added to a lossy structure is a row that
+    reports green about a population it never held, **and a green row over a shrunken population is worse
+    than no row because it spends the assertion.** So the ordering is not stylistic: **make the collapse
+    impossible first** — key by `(time, table set)` or by index — **and only then add the reverse direction
+    and the counts.** This is the same defect three times over: the pair-indexing map that dropped every
+    pair cell, `ui-grid.mjs`'s answer map keyed by local time where two slots sharing a time collapse, and
+    `explain[]` absent while the array is empty. **All three ask one question — what is in the population I
+    am not looking at? — and in the first two the answer is an entire class of thing, dropped by a map
+    that says nothing. A map is the most dangerous kind of helper, because it launders a loss into a lookup.**
 37. **A handoff must name the surface a row reads, not only what it asserts.** Both of the Foreman's errors
     this stage, and 3b, would have been prevented by *"read the effective hours from the policies surface"*
     rather than *"assert the day is not shut."* **A row specified by assertion alone invites the implementer
@@ -903,6 +912,21 @@ row text against my own probe list. **It would have caught `S3-340` before the r
 — that row says "for each key alone" and the probe drove two of the four — **and it is the same walk that
 catches a row whose population was sampled rather than asserted.** **If the walk finds a gap, that finding
 is worth more than a catch**, and it goes in the report whether or not it is convenient.
+
+**The walk's four questions, in the order they are asked:**
+
+1. **Coverage** — does the probe drive every element the row names: every key, branch and population?
+2. **Direction and counts** — for any comparison, is the reverse direction asserted and are the counts checked?
+3. **Precondition** — for any row asserting wording or state, what would have to be true for it to be right,
+   is that asserted, and is it read from the surface the implementation reads?
+4. **Lossiness** — for any comparison, **is either side lossy?** A count over a map that dropped a class of
+   thing is a count of the wrong population, **and no assertion added afterwards can recover it** (clause 38).
+
+**Question 4 is the newest and it is the one that found a defect no row could have found:** the audit of
+`ui-grid.mjs` was done **by reading, by a seat that cannot execute the file**, and found a map that silently
+collapses two slots sharing a local time. **Three thinnesses in this stage were found by reading rather than
+running, in three different files, none of them reachable by questions 1 to 3** — which is the first evidence
+of how often clause 30's "a thinness looks like coverage" actually bites.
 
 **Two classes of miss, and they need different remedies:**
 
