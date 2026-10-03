@@ -338,6 +338,44 @@ states, that is a service requirement and the screen's obligation is to say less
 
 ---
 
+## The deletion audit, run on my own rows first
+
+**The Foreman's second step is a deletion audit rather than another mutant: delete or invert one assertion
+at a time and confirm the suite reports it.** I ran it on my own stage-4 rows before anyone else, because a
+row I cannot show failing is a row I am reporting green for.
+
+| row | assertion inverted | result |
+|---|---|---|
+| `S4-171a` | the expected plan's second assignment (`BBBBBB` → `t_3`, which would make the two bookings share a table) | **FAIL, 13/14** — the suite reports it and names the plan it got |
+| `S4-167-a1` | `day_state` **absent** instead of present on a no-slot day | **FAIL, 15/16** — reported with the value the service returned |
+
+**Two inversions, two reports, both naming what was observed rather than that something differed.** Combined
+with `negative_control.py` — **7 rows proven capable of failing, each against the wrong answer a real build
+returned** — the audit covers the rows I wrote *about a shape* and the rows I wrote *about a plan*.
+
+**And the honest limit of my own audit, which the round should hold me to: inverting an assertion proves the
+row can fail, and it does not prove the row is pointed at the right thing.** The only measurement of that is a
+mutant in the product, which is what the round is for. **Deletion establishes that a probe is not vacuous;
+only a mutant establishes that it is aimed.**
+
+## Clauses 52 and 53: provenance and reproduction, which are the two rules the room earned
+
+52. **No ruling may rest on a fault that has not been reproduced over the interface the claim is about.** A
+    reporter states the call it made and what it observed; a seat ruling on one reproduces it first. **An
+    unreproduced report is a hypothesis with a severity attached, and a ruling on it converts a hypothesis
+    into a decision** — which is how a `TypeError` from a probe's own line of code became a product defect in
+    the record for an hour. **The burden of that proof sits with the reporter**, because the reporter is the
+    only one who knows what they ran. **The general form, and it binds every seat including this one: run
+    something, read the result as a property of the subject, and never ask whether the setup was what you
+    believed it was.**
+
+53. **A mutant caught by a row that predates the mutant is evidence about the surface; a mutant caught by a
+    row from the same commit is evidence about the row.** Nothing else counts, **and the distinction is
+    checkable from the history rather than from the report** — which is the whole reason it is worth writing
+    down. **"I watched it fail" is the most available and least informative sentence in this project**, and
+    "I built the net and the butterfly in the same commit and watched the butterfly hit it" is what it looks
+    like when the author means well. **A probe's coverage is unknown until something is removed.**
+
 ## Stage 4 closed at `75bb37e`
 
 **PASS at `75bb37e`, graded by me from `git archive`: supplied 120/120 · 25/25 · 7/7 · stage 4 6/6, highest
