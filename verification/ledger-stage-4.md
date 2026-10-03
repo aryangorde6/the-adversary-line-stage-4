@@ -497,6 +497,40 @@ surface is not blind at objective 3; it is blind only to a mutant that changes n
 commits; they get planted on a seat with write access, on the accepted hash, with the commit discipline this
 round could not honour.
 
+### The ledger half: why the third term of `betterThan` exists
+
+**The Builder put the reason at the loop rather than here, and the reasoning is better than the framing it
+corrects — so both halves are recorded, in both directions.**
+
+> **A ledger clause governs behaviour; a comment at the code governs survival.** When a decision would
+> otherwise look like dead code to the next reader — a redundant tie-break, an unreachable branch, an
+> assertion that cannot fail — **the reason belongs in the code, because the ledger cannot warn the person
+> holding the delete key.** And the ledger still carries it, **because the ledger carries it for the seat that
+> never opens the file.**
+
+**So, as record rather than as advice: `betterThan`'s third term exists because the search enumerates
+options in rank order, and therefore the first complete plan it finds is already the rank-vector minimum.**
+Deleting the loop changes no reachable behaviour — **M2 is an equivalent mutant, not a survivor, and no
+black-box probe can distinguish it** — so the enumeration order performs the tie-break and the loop states
+the specification's third term explicitly. **That redundancy is insurance, not waste:** `M2'` reverses the
+enumeration while keeping the loop, and `S4-171d` catches it (14/15). **A tie-break that is currently
+unreachable is the only kind worth keeping, because the day it becomes reachable is the day it is needed —
+and a future seat deleting it as unreachable would be acting reasonably on the evidence available to it,
+which is exactly why the reason has to live at the loop.**
+
+**And the accurate status of objective 3, which supersedes the wording `optimiser.mjs` carried while it was
+true:** **implemented redundantly; the enumeration performs the tie-break; unfalsifiable by driving;
+`S4-171d` catches the divergent-order build.** Not "unverified" — that was accurate when written and is now
+understated, **which is the same class of error in the safer direction.**
+
+### A summary must not overstate or understate what a probe establishes
+
+**Overstating is a lie a reader believes; understating is a courtesy that leaves a known gap looking open.
+Both are defects in the report, and the probe's exit status is the only place either is allowed to appear.**
+This is now the symmetric counterpart of clause 51 — a summary claiming what its assertions do not establish
+(`the three objectives are separated`) and a summary understating what they do establish (`objective 3
+UNVERIFIED`) are the **same mistake pointing in opposite directions**, and the room has now committed both.
+
 ### Settled from the history: what `ee04207`'s red actually reported
 
 **Read from the commit, not from the reports, as instructed — and the answer splits the probe in two.**
