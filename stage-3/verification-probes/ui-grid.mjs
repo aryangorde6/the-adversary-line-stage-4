@@ -149,7 +149,36 @@ async function main() {
     await page.close();
   }
 
+  // Stage 3 adds explanations and policies to the service. The screens read the stage-1 shape, so
+  // what the grid depends on is asserted here rather than assumed: the fields it reads are present,
+  // and the ones stage 3 adds are absent unless asked for. If a response starts carrying them
+  // unasked, a screen that grows to depend on them would still look correct here.
+  section('the screens only depend on the shape they were written against');
+  await seed(baseFixture());
+  const plain = await page_fetch('restaurant_id=r_anker&date=2026-12-01&party_size=2');
+  ok('the availability response still carries slots', Array.isArray(plain.body.slots), Object.keys(plain.body));
+  const firstSlot = (plain.body.slots || [])[0] || {};
+  ok('a slot still carries the list the grid paints from',
+    Array.isArray(firstSlot.available_table_ids));
+  ok('a slot still carries the pairs the grid builds its paired rows from',
+    Array.isArray(firstSlot.available_options));
+  ok('no explanation fields appear unless they were asked for',
+    !('explain' in plain.body) && !(plain.body.slots || []).some((s) => 'explain' in s),
+    Object.keys(firstSlot));
+  const asked = await page_fetch('restaurant_id=r_anker&date=2026-12-01&party_size=2&explain=true');
+  const askedFirst = (asked.body.slots || [])[0] || {};
+  ok('asking for explanations does not change the list the grid paints from',
+    JSON.stringify(askedFirst.available_table_ids) === JSON.stringify(firstSlot.available_table_ids),
+    { asked: askedFirst.available_table_ids, plain: firstSlot.available_table_ids });
+
   await browser.close();
+}
+
+// A request made the way the screen makes it: same origin, same shape, no explanation parameter.
+async function page_fetch(query) {
+  const response = await fetch(BASE + '/availability?' + query);
+  const body = await response.json().catch(() => null);
+  return { status: response.status, body: body || {} };
 }
 
 main().then(() => {
