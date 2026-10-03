@@ -406,6 +406,20 @@ because they have now failed to travel into a new file twice.**
     both leave the author stuck. One said `204` and seeded nothing; the other said `422` and refused
     something correct. **A refusal that is *wrong* is worse than no refusal**, because the author cannot
     distinguish it from the state being genuinely unsupported.
+35. **A row that asserts wording must also assert the condition that makes that wording true** — the
+    precondition is part of the assertion, not a note beside it. A wording row with no precondition is a
+    row about vocabulary, **and vocabulary is the part of a screen least likely to change and therefore
+    least likely to be caught when the meaning underneath it moves.**
+36. **Stale rows are caught by re-deriving; under-specified rows only by asking what would have to be true
+    for the row to be right.** A stale row asserts something that was once true; an under-specified row
+    asserts something **that was never pinned down**, so **re-derivation finds nothing and reports green.**
+    So the walk's standing second question, of any row asserting wording or state: **what would have to be
+    true for this row to be right, and is that asserted?**
+34. **A guard in the shared library is five guards** — **the cheapest place for a precondition is the one
+    place everything already goes through**, and a precheck a suite can forget to call is not a precheck.
+    Measured: with the service stopped, all five screen suites print `FATAL: cannot reach the service` and
+    none is ambiguous about whether it ran. **And the honest count is five of six, not six of six** —
+    `stage3-api.mjs` predates the guard. **"All my suites are guarded" was a claim that was not measured.**
 33. **A requirement can be wrong in the direction its author intends to prevent, so a ruling is measured
     against the build's own conventions before it is implemented, not after.** `S4-167`'s precedence was
     ruled twice — once by the Foreman, once by me — and both times from the restaurant's calendar, which
@@ -549,6 +563,7 @@ because they have now failed to travel into a new file twice.**
 | `S4-164` | A screen's obligation is to **say less, not more**: where the service has not said a day is shut, no screen may state it. | The grid and the lookup screen for state (c) from `S4-163`: assert the **absence** of any closed/shut claim, and assert the slot list is what the service returned rather than a filtered version of it. | A screen that infers closure from `slots.length === 0` is making the service's silence its own statement. **The Finisher has refused to make the screen smarter to cover this, and that refusal is the requirement, not a limitation** — it is `S3-A3`'s second half. |
 | `S4-165` | **Terms validity is _derived_, not published — and the derivation is named, because "derive it" without naming the inputs is the shape this stage has refused twice.** **Ruled: no boolean, no second claim.** | **From exactly two things a client can already read:** (i) the booking's own `accepted_terms`, carried by `GET /reservations/{ref}`, and (ii) **the policy in force for the booking's `starts_at_local`**. Assert: (a) publishing a policy that changes terms **leaves an existing booking's `accepted_terms` byte-identical** — validity is not drift; (b) both sides are reachable, so the comparison is possible — **which makes `explain` on the booking's slot load-bearing: it must name the policy in force for that start**, otherwise the client holds one side of a comparison it cannot complete; (c) where they differ, **nothing in any response claims validity** — asserted as the *absence* of such a claim. | A published boolean **buys a row rather than a property**: it is a second claim about a fact that is already derivable, and it needs its own row to police it, which is the equality-comparison mistake the Builder deleted at `549a104` rather than hardened. **A field that exists is not a field whose meaning a client can check** — `explain` before stage 3 — and the fix for that is not another field. **The real gap is not "no field" but "no single place both sides are visible",** and (b) is the requirement that closes it: **the service must make the derivation's inputs reachable together.** |
 | `S4-167` | **`GET /availability` with `explain=true` returns a top-level `day_state` naming which of four states the requested date is in, for that restaurant, under the policy in force for that date: `shut` (no `opening_hours` entry for that weekday) · `terms_exclude_all` (hours exist and the terms yield no slots at all) · `nothing_free` (at least one slot, none with a free table) · `open` (at least one slot with a free table).** A screen may state a day as closed **only** on `shut`. | Four assertions, and **no assertion about any sentence, heading or rendered output**: **(1) `day_state` is present at the top level whenever `explain=true`, including on a date with no slots — presence on an empty day is the row; (2) the states are pairwise distinguishable without reference to `slots.length`, each asserted twice, once on a day built to produce it and once on a day where `slots.length` would give the wrong answer (`shut` and `terms_exclude_all` both have `slots: []`, and the row asserts they differ); (3) `day_state` is terms-derived, not fixture-derived and not text-derived — proved by driving a policy change that moves a date from one state to another with **no change to `opening_hours`**; (4) the plain response's key set is unchanged.** | **A discriminator bolted onto `explain[]` inherits the defect, because the day it must speak about is the day the array is empty** — a per-slot surface cannot carry a statement about the absence of slots. And **if a client can recover the state by counting slots, the field is decoration**: assertion 2 exists to make that red rather than merely unlikely. **Assertion 3 is load-bearing and the row says so (clause 30)** — `terms_exclude_all` has one producing configuration, so an implementation answering `shut` whenever `slots` is empty passes 1 and 2 and only 3 catches it. |
+| `S4-168` | **Which policy governs a date must be readable, not re-derivable by guesswork.** `day_state` is decided from the policy in force for that date, and the policies surface carries each policy's `opening_hours` and `effective_from` — **but nothing states which one governs a given date.** | Assert (a) the policies surface exposes everything the derivation needs — `effective_from`, `opening_hours`, `policy_version` — per policy, in publication order; (b) **a client can select the governing policy for a date from those fields alone** (greatest `effective_from` at or before the date), and where **two policies share an `effective_from`**, the greater `policy_version` wins; (c) **the selection is asserted against the service's own `day_state`** for at least one date on each side of a policy boundary. | The shut-day silence, one level in and a different shape: **the hours are readable but the choice among them is not stated**, so a client must re-implement the selection to check the discriminator — and a client that guesses wrong concludes the screen is wrong when the service is right. **A value a client cannot reach is not a value; a value it cannot locate is the same defect with more steps.** |
 | `S4-166` | **The stage-4 baseline is attributed, not assumed**: at a folder-only build the two failing supplied checks are the two **write** families (planning and amendment), and the **read** surface is intact. | Drive all three write entry points (404/405), then the read surface — policies, availability with `slots[]`, and the absent-series 404 — and **assert the read surface is alive before attributing the failures to the writes**. `absent_at_e9b9f4d.py`, 8/8 at `e9b9f4d`. | Attributing two failures to "stage 4 is not built yet" without showing the rest of the folder works is a guess with a measurement attached. **A folder that carries stage 3 forward broken would produce the same two red checks.** |
 
 | `S4-162` | The full stage-1/2/3 regression surface at the stage-4 hash. | 120/0, 25/25, 7/7, `api_core` 48/48, `terms_history_series` 34/34, and the stage-2 screen suites at both widths with 0 residual. **Any failure goes to the Foreman before it is characterised.** | A stage that satisfies its own rows and breaks an accepted one. |
@@ -689,6 +704,32 @@ construction; computed before, **it is a decision the loop does not constrain.**
 > stop a screen inferring closure from absence, and it specified that inference in the service **from the
 > wrong source**. **A ruling that has not been measured against the build's own conventions is a guess,
 > however carefully it is reasoned** — and this one was reasoned carefully by two seats.
+
+### Assertion 3b asked the wrong calendar: measured, re-pointed, and the finding recorded
+
+**The Builder's reservation was right and my 3b was wrong, and it was wrong in the direction it was written
+to prevent.** Measured at `8cbc1cf` (`S4-167-cal`), the two calendars disagree **in both directions**:
+
+```
+restaurant detail says Sunday present, policy omits Sunday  ->  detail: sun present   day_state: shut,0 slots
+restaurant detail lacks Sunday,     policy covers Sunday    ->  detail: sun ABSENT    day_state: open,45 slots
+```
+
+**So `GET /restaurants/{id}` reports the BASE restaurant's hours, and the day state follows the POLICY's.**
+My 3b would have passed because **the restaurant had hours for that weekday while the policy excluded every
+slot** — which is exactly the shortcut 3b exists to make falsifiable. **A row that passes for the wrong
+reason is worse than no row, because it spends the assertion.**
+
+**Ruling: 3b reads the effective hours — the policy in force for the date, from the policies surface.**
+**And the third option is NOT the answer, which matters:** the effective hours *are* client-readable, from
+`GET /restaurants/{id}/policies`, which carries each policy's `opening_hours` with its `effective_from`.
+**So this is not the shut-day silence a second time — it is a derivation the client must perform**, because
+nothing states which policy governs a given date; the client selects it. `S4-168` carries that.
+
+> **A precondition row must read the same source the implementation reads.** A row asserting a condition
+> from a different surface than the code uses **does not narrow the implementation's freedom — it only
+> appears to.** This is the second time this stage a row has been wrong in the direction it was written to
+> prevent, and both times it was written by someone who had just been right about something else.
 
 ### The thinness closed, and the producers found by driving
 

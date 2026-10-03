@@ -181,16 +181,13 @@ def main():
              len(day.get("slots", [])) if isinstance(day.get("slots"), list) else "no slots key"))
 
     # =====================================================================
-    # Assertion 3b: for a day reported terms_exclude_all, the RESTAURANT's own
-    # calendar must have an entry for that weekday while slots is empty. This is
-    # what makes an implementation answering `shut` whenever slots is empty
-    # falsifiable rather than merely unlikely.
+    # Assertion 3b, RE-POINTED. It used to read `GET /restaurants/{id}`, and that surface reports the
+    # BASE restaurant's hours, not the effective ones -- measured below and in S4-167-cal. So 3b reads
+    # the policy in force for the date from the policies surface, which is where the slot loop's hours
+    # actually come from. A precondition row must read the same source the implementation reads: the
+    # old wording would have passed because the RESTAURANT had hours for that weekday while the POLICY
+    # excluded every slot, which is exactly the shortcut 3b exists to make falsifiable.
     # =====================================================================
-    # Producer: hours present, but the bookable window is shorter than one reservation.
-    # Producer discovered by driving, not by reading: the bookable window is shorter than one
-    # reservation but long enough to pass validation (12:00-12:44 with a 90-minute duration), so
-    # hours are present and no slot can fit. A 10-minute window is refused by the reader, which is why
-    # the obvious producer does not exist.
     narrow = policy_doc(slot_minutes=15, duration=90, cutoff=60,
                         hours=[{"weekday": w, "opens": "12:00", "closes": "12:44"}
                                for w in ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]],
@@ -201,22 +198,65 @@ def main():
           "reservation -> %s (expected 204; asserted before the state under test is read)" % st)
     if st != 204:
         return rows()
+
+    st_pol, pols = call("GET", "/restaurants/r_anker/policies")
+    effective = next((p for p in pols.get("policies", [])
+                      if p.get("effective_from") == "2026-06-01"), None)
+    eff_has_weekday = bool(effective) and hours_contain_weekday(
+        "2026-12-06", effective.get("opening_hours", []))
     st, day = availability("2026-12-06")
     ds = day.get("day_state") if isinstance(day, dict) else None
-    cal_has_weekday = hours_contain_weekday("2026-12-06", rest.get("opening_hours", []))
     check("S4-167-a3b", st == 200 and ds == "terms_exclude_all" and day.get("slots") == []
-          and cal_has_weekday,
-          "a day the RESTAURANT's calendar covers, with terms that yield no slot -> %s day_state=%r "
-          "n_slots=%s restaurant_calendar_has_that_weekday=%s (expected terms_exclude_all, slots [], and "
-          "the calendar entry present -- read from the service, not assumed by the probe)"
+          and eff_has_weekday,
+          "a day the POLICY in force covers, with terms that yield no slot -> %s day_state=%r "
+          "n_slots=%s effective_hours_cover_the_weekday=%s (expected terms_exclude_all, slots [], and "
+          "the effective hours read from the policies surface -- NOT from the restaurant detail, which "
+          "reports the base calendar and would make this row pass for the wrong reason)"
           % (st, ds, len(day.get("slots", [])) if isinstance(day.get("slots"), list) else "no slots key",
-             cal_has_weekday))
+             eff_has_weekday))
+
+    # The finding that forced the re-point, asserted so it cannot be quietly forgotten: the two
+    # calendars disagree, and only one of them decides.
+    st_r, _ = call("POST", "/_test/reset", fixture())
+    st_a, _ = call("POST", "/_test/reset", fixture(policy=policy_doc(
+        hours=[{"weekday": w, "opens": "00:00", "closes": "23:30"}
+               for w in ["mon", "tue", "wed", "thu", "fri", "sat"]],
+        effective_from="2026-06-01", version=2)))
+    _, detail_a = call("GET", "/restaurants/r_anker")
+    detail_weekdays = sorted(h["weekday"] for h in detail_a.get("opening_hours", []))
+    st_day, day_a = availability("2026-12-06")
+    st_b, _ = call("POST", "/_test/reset", fixture(policy=policy_doc(
+        effective_from="2026-06-01", version=2)))
+    # The other direction needs a POLICY covering Sunday as well, or the effective hours fall back to
+    # policy zero -- which is derived from the restaurant and would agree with it, making the two
+    # calendars indistinguishable and the half of the assertion vacuous.
+    fixture_b = fixture(policy=policy_doc(effective_from="2026-06-01", version=2))
+    fixture_b["restaurants"][0]["opening_hours"] = [
+        h for h in HOURS if h["weekday"] != "sun"]
+    st_b, _ = call("POST", "/_test/reset", fixture_b)
+    _, detail_b = call("GET", "/restaurants/r_anker")
+    detail_b_weekdays = sorted(h["weekday"] for h in detail_b.get("opening_hours", []))
+    _, day_b = availability("2026-12-06")
+    calendars_disagree = (
+        "sun" in detail_weekdays and day_a.get("day_state") == "shut"
+        and "sun" not in detail_b_weekdays and day_b.get("day_state") == "open")
+    check("S4-167-cal", st_a == 204 and st_b == 204 and calendars_disagree,
+          "the restaurant detail and the policy disagree in both directions -> detail says Sunday "
+          "present=%s while day_state=%s; detail says Sunday present=%s while day_state=%s (expected the "
+          "detail to carry the BASE calendar and the day_state to follow the POLICY -- so a "
+          "precondition read from the detail is a precondition about the wrong calendar)"
+          % ("sun" in detail_weekdays, day_a.get("day_state"),
+             "sun" in detail_b_weekdays, day_b.get("day_state")))
 
     # =====================================================================
     # Assertion 2: the three states pairwise distinguishable WITHOUT reference to
     # slots.length -- shut and terms_exclude_all both report slots: [], so the row
     # asserts they differ while looking identical on that one field.
     # =====================================================================
+    # Re-establish the terms-excluded day first: the block above ends on the calendar-divergence case,
+    # and assertion 2 compares that day's answer against a shut day's, so the state under comparison has
+    # to be re-seeded rather than inherited from whatever the previous row left behind.
+    st, _ = call("POST", "/_test/reset", fixture(policy=narrow))
     st, shut_day_body = availability("2026-12-06")
     shut_state = shut_day_body.get("day_state") if isinstance(shut_day_body, dict) else None
     # `shut` producer: the policy's hours omit that weekday entirely (seeded once, above).
