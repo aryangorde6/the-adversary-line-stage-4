@@ -92,38 +92,40 @@ function fieldNoun(ctx) {
   return FIELD_NOUNS[word(ctx.field)] || "";
 }
 
-// Stage 2 books a set of tables. Labels are preferred so a sentence reads "Tables 1 and 2" rather
-// than "Tables t_1 and t_2". A caller may pass labels as an array or as a joined string; the joined
-// form is split, which is a guess, so an array is the better contract and the caller should send one.
-// Table ids are never printed: a diner picks tables by label, so naming ids back at them helps
-// nobody, and the specification asks for identifiers to stay out of the way.
+// Stage 2 books a set of tables, so a caller may pass labels under `tables` where stage 1 passed a
+// single one under `table`. Plurality therefore comes from which key the caller used, never from
+// inspecting the label text: a table labelled "Bar and Grill" is one table, and splitting on " and "
+// to recover a set would invent a second table that does not exist. An array is read as given; a
+// joined string is kept whole and only pluralised, which is the right answer for a caller joining
+// with " and " and a merely odd one for anything else. Table ids are never printed, because a diner
+// picks tables by label and the specification asks for identifiers to stay out of the way.
 function tableSet(ctx) {
-  const fromArray = (value) => (Array.isArray(value) ? value.map(word).filter(Boolean) : []);
-  const fromJoined = (value) => {
-    const joined = word(value);
-    if (!joined) return [];
-    return joined.includes(" and ") ? joined.split(" and ").map(word).filter(Boolean) : [joined];
-  };
-  const sources = [() => fromArray(ctx.tables), () => fromJoined(ctx.tables), () => fromArray(ctx.table_labels)];
-  for (const source of sources) {
-    const found = source();
-    if (found.length) return found;
+  if (ctx.tables !== undefined && ctx.tables !== null && ctx.tables !== "") {
+    const labels = Array.isArray(ctx.tables) ? ctx.tables.map(word).filter(Boolean) : [];
+    if (labels.length) return { labels, isSet: true };
+    const joined = word(ctx.tables);
+    if (joined) return { labels: [joined], isSet: true };
   }
-  return fromJoined(ctx.table);
+  const alt = Array.isArray(ctx.table_labels) ? ctx.table_labels.map(word).filter(Boolean) : [];
+  if (alt.length) return { labels: alt, isSet: alt.length > 1 };
+  const single = word(ctx.table);
+  return { labels: single ? [single] : [], isSet: false };
 }
 
 function setSize(ctx) {
   const counts = [ctx.tables, ctx.table_labels, ctx.table_ids].map((value) =>
     Array.isArray(value) ? value.filter((v) => word(v) !== "").length : 0
   );
-  return Math.max(tableSet(ctx).length, ...counts);
+  return Math.max(tableSet(ctx).labels.length, ...counts);
 }
 
 function tablePhrase(set) {
-  if (set.length === 1) return `Table ${set[0]}`;
-  if (set.length === 2) return `Tables ${set[0]} and ${set[1]}`;
-  if (set.length > 2) return `Tables ${set.slice(0, -1).join(", ")} and ${set[set.length - 1]}`;
-  return "";
+  const labels = set.labels;
+  if (labels.length === 0) return "";
+  if (labels.length === 1 && !set.isSet) return `Table ${labels[0]}`;
+  if (labels.length === 1) return `Tables ${labels[0]}`;
+  if (labels.length === 2) return `Tables ${labels[0]} and ${labels[1]}`;
+  return `Tables ${labels.slice(0, -1).join(", ")} and ${labels[labels.length - 1]}`;
 }
 
 function span(count) {
@@ -272,7 +274,7 @@ const MESSAGES = {
   party_exceeds_capacity: (ctx) => {
     const capacity = Math.floor(Number(ctx.capacity));
     const set = tableSet(ctx);
-    const many = set.length > 1;
+    const many = set.isSet || set.labels.length > 1;
     const seats = Number.isFinite(capacity) && capacity >= 1
       ? `${many ? "seat" : "seats"} ${capacity} at most`
       : `${many ? "are" : "is"} too small`;
