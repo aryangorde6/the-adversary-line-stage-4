@@ -152,9 +152,33 @@ MUTANTS = {
          '  found.sort((a, b) => a - b);\n  return found;',
          '  found.sort((a, b) => b - a);\n  return found;'),
     ]),
+    # m16: the receipt is stored on ANY completed request, so a key spent on a 4xx is spent. The
+    # retry then replays the refusal and a diner who corrects their request is told they already tried.
+    # The first attempt at this mutation was a NO-OP and the probe passed against it, which is worth
+    # recording: a 4xx never RETURNS from the handler, it THROWS, so widening the status test on the
+    # return path stores nothing. The mutation has to catch the failure and store the refusal, which
+    # is what a real "receipt on every completed request" implementation looks like.
+    'm16': ('R041_reuse_after_4xx.js', [
+        ('src/server.js',
+         '  const result = handler(state);',
+         '  let result;\n'
+         '  try {\n'
+         '    result = handler(state);\n'
+         '  } catch (err) {\n'
+         '    if (err instanceof ApiError) {\n'
+         '      const failure = { status: err.status, body: { error: { code: err.code, message: err.message } } };\n'
+         '      idem.remember(state, ctx.user.id, key, ctx.method, ctx.path, ctx.body, failure.status, failure.body);\n'
+         '      return failure;\n'
+         '    }\n'
+         '    throw err;\n'
+         '  }'),
+        ('src/server.js',
+         '  if (result.status >= 200 && result.status < 300) {',
+         '  if (result.status >= 200 && result.status < 600) {'),
+    ]),
 }
 
-ORDER = ['m01', 'm02', 'm03', 'm04', 'm05', 'm06', 'm08', 'm09', 'm10', 'm11', 'm12', 'm13', 'm14', 'm15']
+ORDER = ['m01', 'm02', 'm03', 'm04', 'm05', 'm06', 'm08', 'm09', 'm10', 'm11', 'm12', 'm13', 'm14', 'm15', 'm16']
 
 
 def probe_for(mid):

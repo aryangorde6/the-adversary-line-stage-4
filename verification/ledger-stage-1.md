@@ -71,7 +71,7 @@ Specification: /home/aryan/band_hack/dark-factory-wearedevs/tablekeeper/spec/sta
 
 ## Stage-1 probe evidence, extended: mutants 2, 14 and 3
 
-Eleven probe files, 163 asserted rows, all green against the unmutated stage-1 build; each file's
+Twelve probe files, 171 asserted rows, all green against the unmutated stage-1 build; each file's
 target caught when the corresponding mutation is applied, on its own port, with the marker asserted in
 the same run as the probe and an unmutated baseline required to pass.
 
@@ -80,6 +80,7 @@ the same run as the probe and an unmutated baseline required to pass.
 | `R006_occupancy_multizone.js` | 9 | R006, R048 | m13: occupancy decided on wall-clock values, the date dropped |
 | `R049_list_order_multizone.js` | 14 | R049 | m14: the list sorted on the local time **string** |
 | `R054_fallback_first.js` | 21 | R053, R054, R055, R056 | m15: an ambiguous fall-back hour resolved to the **second** occurrence |
+| `R041_reuse_after_4xx.js` | 8 | R041 (second half) | m16: the receipt is stored on a **failure**, so a key spent on a 4xx is spent |
 
 **The fixture came first, and that is why these three exist.** All earlier probes ran against one
 restaurant in one timezone, which masks three whole classes of defect: with one zone the local date
@@ -105,6 +106,21 @@ from the IANA database **inside the probe**, never read back out of the service.
    instant, which is false; the quantity that shows Tokyo has no daylight saving is the UTC **offset**,
    +540 minutes in both months. Asserting instants where offsets were meant is the ordinary
    wrong-quantity error, and it produced a red against a correct service.
+
+**Two more faults of my own in this row, both caught by clause 1 rather than by reading.**
+
+4. **My first mutation for #7 was a no-op and my probe passed against it.** I widened the status test
+   on the return path (`< 300` to `< 600`), which stores nothing at all: a 4xx never *returns* from the
+   handler, it **throws**. A mutation that cannot apply its own idea is worse than no mutation, because
+   it makes a probe look adequate. The real mutation catches the failure and stores the refusal, and
+   the probe then fails as it should: `R041k FAIL … -> 409 idempotency_key_reuse`.
+5. **Two leftover servers from earlier runs were still listening on the ports**, so the last two
+   verification runs never started their own service and the probes were answered by a **build that was
+   no longer under test** — the same port collision that produced two false NOT CAUGHT readings on
+   stage 1, now reproduced in my own harness. The runner now **refuses to start on a busy port**, and
+   the corrected run reads **mutant 2/4, baseline 8/8**. Three instances of this in one project is
+   enough to make it a standing requirement rather than a habit: *the service you measure must be the
+   service you started, and the check that it is costs one `ss` line.*
 
 **The general form, which is the same one stage 2 arrived at from the other end:** a probe that does
 not stage the condition it claims to test cannot fail, and the tell is always the marker and the
