@@ -1,34 +1,16 @@
 // The seam the Foreman named: the grid a person reads and the service's own explanation for the
 // same slot. This is the seam row of 0.4, re-driven against the stage-4 build: stage 4 changes
 // availability underneath the grid, so the two answers are compared in the state where they drift.
-const BASE = process.argv[2] || process.env.BASE || 'http://localhost:8080';
-const REQUEST_TIMEOUT_MS = Number(process.env.REQUEST_TIMEOUT_MS || 5000);
-
-// Same precheck as the screen suites, and for the same reason: a seam row that could not run must
-// not be able to report agreement. It runs before the rows rather than inside one.
-try {
-  const probe = await fetch(BASE + '/health', { signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
-  if (!probe.ok) throw new Error('HTTP ' + probe.status);
-} catch (cause) {
-  console.error(`FATAL: cannot reach the service at ${BASE} (GET /health). Pass it as argv[2] or set BASE.\n  Cause: ${cause && cause.message ? cause.message : cause}\n  Nothing was measured. This is a setup failure, not a result.`);
-  process.exit(1);
-}
 import { chromium } from 'playwright-core';
+import { BASE, call as baseCall } from './stage4-base.mjs';
 let pass = 0, fail = 0;
 const row = async (name, fn) => {
   try { await fn(); pass += 1; console.log('ok   ' + name); }
   catch (e) { fail += 1; console.log('FAIL ' + name + ': ' + (e && e.message ? e.message : e)); }
 };
-const call = async (method, path, { body, token, key } = {}) => {
-  const headers = {};
-  if (body !== undefined) headers['Content-Type'] = 'application/json';
-  if (token) headers.Authorization = 'Bearer ' + token;
-  if (key) headers['Idempotency-Key'] = key;
-  const r = await fetch(BASE + path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
-  const t = await r.text();
-  let p = null; try { p = t ? JSON.parse(t) : null; } catch { p = t; }
-  return { status: r.status, body: p };
-};
+// The base URL, the timeout and the precheck come from stage4-base.mjs; this suite keeps its own call
+// signature so the rows below read the way they did.
+const call = (method, path, opts = {}) => baseCall(method, path, opts);
 const OH = [{ weekday: 'thu', opens: '18:00', closes: '23:00' }];
 const fx = () => ({ users: [{ id: 'u_ada', email: 'ada@example.com', password: 'correct horse', display_name: 'Ada' }],
   restaurants: [{ id: 'r_anker', name: 'Zum Anker', timezone: 'Europe/Berlin', slot_minutes: 30,

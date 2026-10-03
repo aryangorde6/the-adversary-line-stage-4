@@ -25,28 +25,15 @@
 
 import { strict as assert } from 'node:assert';
 
-// argv[2] first, then BASE, then the name this file used before the folder had one convention,
-// then the default. Kept so an existing invocation does not silently start pointing somewhere else.
-const BASE = process.argv[2] || process.env.BASE || process.env.TK_BASE_URL || 'http://localhost:8080';
+// argv[2], then BASE, then TK_BASE_URL (what this file used before the folder had one convention),
+// then the default -- all of it resolved in stage4-base.mjs, which also runs the reachability precheck.
+import { BASE, call as baseCall } from './stage4-base.mjs';
 
 let failures = 0;
 let rows = 0;
 
-async function call(method, path, { body, token, key } = {}) {
-  const headers = {};
-  if (body !== undefined) headers['Content-Type'] = 'application/json';
-  if (token) headers.Authorization = `Bearer ${token}`;
-  if (key) headers['Idempotency-Key'] = key;
-  const response = await fetch(`${BASE}${path}`, {
-    signal: AbortSignal.timeout(Number(process.env.REQUEST_TIMEOUT_MS || 5000)),
-    method,
-    headers,
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-  const text = await response.text();
-  let parsed = null;
-  try { parsed = text ? JSON.parse(text) : null; } catch { parsed = text; }
-  return { status: response.status, body: parsed };
+async function call(method, path, opts = {}) {
+  return baseCall(method, path, opts);
 }
 
 async function row(name, fn) {

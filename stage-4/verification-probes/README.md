@@ -20,13 +20,16 @@ docker rm -f tk-fin
 
 ## Pointing a suite at a service
 
-Every suite reads its base URL the same way, in this order:
+**Every suite imports `stage4-base.mjs`**, which resolves the base URL once for the whole folder, in this
+order:
 
-    node ui-grid.mjs http://localhost:18099     # argv[2] wins
+    node ui-grid.mjs http://localhost:18099        # argv[2] wins
     BASE=http://localhost:18099 node ui-grid.mjs   # or the environment
+    TK_BASE_URL=... node stage3-api.mjs            # still accepted; kept so an existing invocation
+                                                   # does not silently start pointing elsewhere
 
-and falls back to its own default if neither is given. **All three forms work in every suite**,
-including `stage3-api.mjs`, which also still accepts `TK_BASE_URL`.
+and falls back to `http://localhost:18099`. **A suite cannot invent its own convention**, because none of
+them reads the environment for a base URL any more.
 
 **Every request is bounded** (`REQUEST_TIMEOUT_MS`, default 5000ms) and **every suite asserts
 `GET /health` before its first row** -- at import for the screen suites, before the rows for
