@@ -342,6 +342,38 @@ here neither is the value.
 
 ---
 
+## The written sources, indexed — so no requirement is discovered by being wrong
+
+**The Builder implemented a stage-4 write family without reading `tablekeeper/spec/stage-4.md`, and the whole
+feature was wrong in most of its particulars. It asked whether another written requirement existed that it had
+not read. These are all of them, with what each governs. This section is the answer, and it exists so that the
+next seat reads the list instead of finding out by shipping.**
+
+| source | what it governs | read before |
+|---|---|---|
+| `tablekeeper/spec/stage-1.md` (472 lines) | reservations, tables and pairs, moves, idempotency, time input, retries | any change to the booking path |
+| `tablekeeper/spec/stage-2.md` (240) | table combinations, capacity, the screens, accessibility, the hidden-grid and wrong-advice defects | any change to occupancy or a screen |
+| `tablekeeper/spec/stage-3.md` (240) | policies, publication order and versions, history, `explain`, series and occurrences, import/export | any change to terms, history or a series |
+| **`tablekeeper/spec/stage-4.md` (109)** | **the write family: request shapes, response shapes, the optimisation order, planning limits, the revision counter, every status code and every refusal** | **any stage-4 route — this is the document the last turn was lost in** |
+| `docs/participant-guide.md` (877) | the room's process, the sanctioned harness command, what may and may not be read | anything about how verification is run |
+| `kickoff-manifest.json` | the track's identity and the revisions under test | pinning a hash |
+| `verification/ledger-stage-*.md` | **my rows and clauses — a ledger of what to check, _not_ a specification.** It records what a seat must not miss; it does not define the product | never as a substitute for the four documents above |
+
+**Two of the ambiguities I carried were answered outright by `stage-4.md`** — `A2`'s rank-vector order and
+`A4`'s meaning of `changed` — **and both were recorded as "expected to be decidable only by driving".** So:
+
+> **A recorded ambiguity that a written requirement already answers is not an ambiguity; it is a failure to
+> read — and no question in the walk can find that class, because every question in it is asked of a probe and
+> this was a question about a document.**
+
+**And the walk gains a fifth question, from the Foreman, which is the right place for it:**
+
+5. **Conformance** — **is the written specification walked against what was built, field by field and status by
+   status?** Because **a document read once before designing is not a document checked afterwards**, and the
+   second reading is what would have caught the pair-indexing map, the time-keyed answer map, and `fail()`'s
+   coercion of an unregistered code. **The specification is a row too** — and it is the one row whose failure
+   mode is silence, because everything downstream of a misread requirement looks like an implementation bug.
+
 ## Standing clauses, restated in my own words
 
 **All twenty apply to every stage-4 row. They restate at the top of every stage-4 probe file too,
