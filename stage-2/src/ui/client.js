@@ -245,10 +245,11 @@
       });
       document.addEventListener('visibilitychange', syncDateRing);
       window.addEventListener('focus', syncDateRing);
-      // One event-free path remains: focus can return to a field the document already considers
-      // focused, and then no event of any kind is fired. A cheap recurring check is the only way to
-      // notice that, so the ring is also recomputed on a timer: one class toggle, twice a second.
-      window.setInterval(syncDateRing, 500);
+      // No timer. An earlier version recomputed the ring twice a second as well, on the belief that
+      // focus could return to the field without firing any event. Measured, it cannot: every way the
+      // focus arrives fires something this list already hears, and the paths that change the page
+      // rather than the focus leave the containment answer unchanged. A poll that fixes nothing is a
+      // mechanism nobody can later justify, so it is gone rather than defended.
       syncDateRing();
     }
 
