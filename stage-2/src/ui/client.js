@@ -424,7 +424,7 @@
       searchButton.disabled = true;
       hide(searchStatus);
       if (grid) grid.hidden = false;
-      hide(gridLoading);
+      show(gridLoading, 'Looking for tables' + String.fromCharCode(8230));
       noSlots.hidden = true;
       resetBooking();
 
