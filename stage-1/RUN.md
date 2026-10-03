@@ -86,9 +86,38 @@ curl -s -X POST http://localhost:8080/_test/reset \
 
 Seeded users can sign in with the seeded password straight away.
 
+## A first booking, end to end
+
+With the service running and the seed above posted, these three calls make one booking. The
+first returns a token; the second finds a free table; the third books it.
+
+```sh
+curl -s -X POST http://localhost:8080/auth/signup \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"sam@example.com","password":"correct horse","display_name":"Sam"}'
+# {"user_id":"...","display_name":"Sam","token":"..."}
+
+curl -s "http://localhost:8080/availability?restaurant_id=r_anker&date=2026-09-24&party_size=4"
+# {"restaurant_id":"r_anker","date":"2026-09-24","timezone":"Europe/Berlin","slots":[...]}
+
+curl -s -X POST http://localhost:8080/reservations \
+  -H 'Content-Type: application/json' \
+  -H "Authorization: Bearer $TOKEN" \
+  -H 'Idempotency-Key: first-booking-1' \
+  -d '{"restaurant_id":"r_anker","table_id":"t_2","starts_at_local":"2026-09-24T19:00","party_size":4}'
+# 201, with "reference" and "status":"confirmed"
+```
+
+Replace `$TOKEN` with the token from the first call, and use a fresh `Idempotency-Key` for each
+booking you make. Copy `starts_at_local` from the availability reply into the booking unchanged.
+The seed is open Thursday and Friday; 2026-09-24 is a Thursday.
+
 ## Errors
 
-Every 4xx and 5xx body is `{"error":{"code":"...","message":"..."}}`. Codes:
+Every 4xx and 5xx body is `{"error":{"code":"...","message":"..."}}`. The `code` is fixed by the
+API and is what a program should branch on. The `message` is written for the person who made the
+request — it says what went wrong and what to do about it, in their terms — so it is safe to show
+a diner as it stands. Codes:
 `malformed_request`, `missing_idempotency_key`, `unauthenticated`, `forbidden`,
 `not_found`, `idempotency_key_reuse`, `email_taken`, `table_unavailable`,
 `cutoff_passed`, `reservation_cancelled`, `validation_failed`,
