@@ -54,11 +54,22 @@ function tableLabel(table) {
 }
 
 // A diner reading a sentence about a two-table booking should be able to hear which tables, so
-// the context names every member of the set rather than only the first.
+// the context names every member of the set rather than only the first. The labels are handed over
+// as an array and never as a joined string: a table labelled "Bar and Grill" is one table, and a
+// sentence builder that cannot survive that label is a defect waiting for a fixture.
 function placeSetContext(restaurant, tableIds, wall) {
   const tables = tableIds.map((id) => store.findTable(restaurant, id)).filter(Boolean);
   const context = placeContext(restaurant, tables.length > 0 ? tables[0] : null, wall);
-  if (tables.length > 1) context.tables = tables.map(tableLabel).join(' and ');
+  if (tables.length > 1) context.tables = tables.map(tableLabel);
+  return context;
+}
+
+// A set the restaurant will not take is described exactly as a set it would, so the sentence can
+// name the tables by the labels the diner chose. Handing over ids instead would put a t_N in front
+// of someone who picked those tables by label.
+function refusedSetContext(restaurant, tableIds) {
+  const context = placeSetContext(restaurant, tableIds, undefined);
+  context.table_ids = tableIds.slice();
   return context;
 }
 
@@ -157,7 +168,7 @@ function capacityOf(restaurant, tableIds) {
 // of three is refused before any of that, since no restaurant may declare one.
 function canonicalTableSet(restaurant, requested) {
   if (requested.length > MAX_TABLES_PER_BOOKING) {
-    fail('combination_not_allowed', { restaurant: restaurant.name, table_ids: requested });
+    fail('combination_not_allowed', refusedSetContext(restaurant, requested));
   }
   if (new Set(requested).size !== requested.length) {
     fail('validation_failed', { field: 'table_ids', reason: 'duplicate_table' });
@@ -166,10 +177,7 @@ function canonicalTableSet(restaurant, requested) {
   if (requested.length === MAX_TABLES_PER_BOOKING) {
     const pair = declaredPair(restaurant, requested);
     if (!pair) {
-      fail('combination_not_allowed', {
-        restaurant: restaurant.name,
-        table_ids: requested.slice().sort(),
-      });
+      fail('combination_not_allowed', refusedSetContext(restaurant, requested));
     }
     return pair;
   }
@@ -212,7 +220,7 @@ function resolveSeededTableIds(raw, restaurant) {
     fail('validation_failed', { field: 'table_ids', reason: 'missing_table' });
   }
   if (requested.length > MAX_TABLES_PER_BOOKING) {
-    fail('combination_not_allowed', { restaurant: restaurant.name, table_ids: requested });
+    fail('combination_not_allowed', refusedSetContext(restaurant, requested));
   }
   if (new Set(requested).size !== requested.length) {
     fail('validation_failed', { field: 'table_ids', reason: 'duplicate_table' });
@@ -222,7 +230,7 @@ function resolveSeededTableIds(raw, restaurant) {
   }
   if (requested.length === MAX_TABLES_PER_BOOKING) {
     const pair = declaredPair(restaurant, requested);
-    if (!pair) fail('combination_not_allowed', { restaurant: restaurant.name, table_ids: requested.slice().sort() });
+    if (!pair) fail('combination_not_allowed', refusedSetContext(restaurant, requested));
     return pair;
   }
   return [requested[0]];
@@ -414,6 +422,7 @@ module.exports = {
   resolveSeededTableIds,
   occupiedTableId,
   placeSetContext,
+  refusedSetContext,
   dayOpeningHours,
   resolveStartMs,
   requireSlotInsideOpeningHours,

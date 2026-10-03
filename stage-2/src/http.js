@@ -21,6 +21,20 @@ function sendJson(res, status, payload) {
   res.end(body);
 }
 
+// A screen is not an API response, so it does not go out as JSON. no-store is the default because
+// a page carries whoever is signed in; the client script passes its own type and no cache header,
+// which leaves the browser free to cache it however it likes.
+function sendHtml(res, status, html, type) {
+  const body = Buffer.from(String(html), 'utf8');
+  const headers = {
+    'Content-Type': type || 'text/html; charset=utf-8',
+    'Content-Length': String(body.length),
+  };
+  if (type === undefined) headers['Cache-Control'] = 'no-store';
+  res.writeHead(status, headers);
+  res.end(body);
+}
+
 function sendError(res, err) {
   const apiError = err instanceof ApiError ? err : null;
   const code = apiError ? apiError.code : 'validation_failed';
@@ -82,4 +96,4 @@ function parseJsonValue(raw) {
   }
 }
 
-module.exports = { sendJson, sendNoContent, sendError, readRawBody, parseJsonObject, parseJsonValue };
+module.exports = { sendJson, sendHtml, sendNoContent, sendError, readRawBody, parseJsonObject, parseJsonValue };

@@ -4,7 +4,8 @@ const { ApiError, fail } = require('./errors');
 const store = require('./state');
 const idem = require('./idempotency');
 const api = require('./api');
-const { sendJson, sendNoContent, sendError, readRawBody, parseJsonObject, parseJsonValue } = require('./http');
+const { sendJson, sendHtml, sendNoContent, sendError, readRawBody, parseJsonObject, parseJsonValue } = require('./http');
+const ui = require('./ui');
 
 const ROUTES = [
   { method: 'GET', path: ['health'], handler: api.health },
@@ -23,6 +24,32 @@ const ROUTES = [
   { method: 'PATCH', path: ['reservations', ':reference'], auth: true, body: 'object', handler: api.patchReservation },
   { method: 'POST', path: ['reservation-moves'], auth: true, key: true, body: 'object', handler: api.reservationMoves },
 ];
+
+// The four screens and the one script they load. src/ui/ owns what a page says; this file only
+// decides which paths are screens, and nothing here changes what the JSON API answers.
+const SCREENS = ['/', '/signup', '/login', '/lookup'];
+for (const screen of SCREENS) {
+  ROUTES.push({
+    method: 'GET',
+    path: screen === '/' ? [] : screen.slice(1).split('/'),
+    screen: screen,
+    handler: (ctx) => {
+      const html = ui.page(screen, ctx);
+      // A screen the interface does not build is a 404, not a page whose body is the word null.
+      if (typeof html !== 'string' || html === '') fail('not_found');
+      return { status: 200, html };
+    },
+  });
+}
+ROUTES.push({
+  method: 'GET',
+  path: ['ui', 'client.js'],
+  handler: () => {
+    const asset = ui.asset('client.js');
+    if (!asset) fail('not_found');
+    return asset;
+  },
+});
 
 function normalisePath(pathname) {
   let decoded;
@@ -112,7 +139,9 @@ async function dispatch(req) {
 async function handle(req, res) {
   try {
     const result = await dispatch(req);
-    if (result.status === 204 || result.body === undefined) sendNoContent(res);
+    if (result.html !== undefined) sendHtml(res, result.status, result.html);
+    else if (result.type !== undefined) sendHtml(res, result.status, result.body, result.type);
+    else if (result.status === 204 || result.body === undefined) sendNoContent(res);
     else sendJson(res, result.status, result.body);
   } catch (err) {
     if (err instanceof ApiError) sendError(res, err);
