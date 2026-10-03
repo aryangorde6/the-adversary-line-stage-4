@@ -146,6 +146,18 @@ function tableSetChanged(before, after) {
   return before.length !== after.length || before.some((id, index) => id !== after[index]);
 }
 
+// THE CENTRAL PROPERTY, in the product's words rather than mine:
+//
+//   A closure constrains a booking only when it constrains the booking's CURRENT table. A booking that
+//   holds a table the closure does not cover is a candidate to STAY, and a plan that cannot express
+//   staying is not a planner failure -- it is a planner that has confused "must move" with "may move".
+//
+// A booking enters the search because it OVERLAPS the interval, not because it is harmed. Those are
+// different questions and conflating them is what produced a no_feasible_plan for a booking that could
+// simply keep its table. Every option that excludes the closed table is offered to every considered
+// booking, including the one that already holds a different table, and the objective below prefers
+// staying over moving. The closure is a CONSTRAINT, not an assignment.
+//
 // The search is exhaustive over the considered bookings, in reference order, because the number is capped
 // at six by the specification. Exhaustive is deliberate: a greedy pass would be cheaper and would not be
 // the specified optimum, and the whole point of the third objective is that it is the LAST tie-break --

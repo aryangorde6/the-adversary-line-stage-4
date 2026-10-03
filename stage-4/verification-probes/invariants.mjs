@@ -28,6 +28,7 @@ const RESTAURANT = {
   combinable: [['t_1', 't_2']],
 };
 const KEY = '2026-11-02';
+let revisionReads = 0;
 
 async function seed(reservations = []) {
   await call('POST', '/_test/reset', { body: { users: [{ id: 'u_ada', email: 'a@e.com', password: 'correct horse', display_name: 'Ada' }], restaurants: [RESTAURANT], reservations } });
@@ -67,6 +68,31 @@ console.log('\nINVARIANT 1: restaurant_revision moves only for real writes');
   ok('and it moves the revision exactly once', applied.body.restaurant_revision === beforePreview + 1,
     { before: beforePreview, after: applied.body.restaurant_revision });
 
+  const current = async () => (await call('POST', '/restaurants/r_1/replans', { body: { table_id: 't_1', from: `${KEY}T18:00:00+01:00`, to: `${KEY}T23:00:00+01:00` }, token, key: 'probe' + (revisionReads += 1) })).body.restaurant_revision;
+  revisionReads = 0;
+
+  // A REAL amendment and a PUBLICATION each move it; a real cancellation moves it. These three were
+  // named by the requirement and were missing from this probe, which asserted the negatives thoroughly
+  // and the positives only for a booking and an application -- an omission that reads as coverage.
+  const beforeAmend = await current();
+  await call('PATCH', `/reservations/${reference}`, { body: { party_size: 3 }, token });
+  const afterAmend = await current();
+  ok('a REAL amendment moves it', afterAmend === beforeAmend + 1, { before: beforeAmend, after: afterAmend });
+
+  const beforePublish = await current();
+  const published = await call('POST', '/restaurants/r_1/policies', { body: { effective_from: '2026-01-01', slot_minutes: 30, reservation_duration_minutes: 60, cancellation_cutoff_minutes: 120, opening_hours: OH, capacities: { t_1: 2, t_2: 4 } }, token, key: 'i8' });
+  ok('a publication succeeds', published.status === 201, published.status);
+  ok('a PUBLICATION moves it', await current() === beforePublish + 1);
+
+  const beforeCancel = await current();
+  const cancelled = await call('POST', `/reservations/${reference}/cancel`, { token });
+  ok('a cancellation succeeds', cancelled.status === 200, cancelled.status);
+  ok('a real CANCELLATION moves it', await current() === beforeCancel + 1);
+
+  const beforeRepeat = await current();
+  await call('POST', `/reservations/${reference}/cancel`, { token });
+  ok('a REPEATED cancellation does not move it', await current() === beforeRepeat, { before: beforeRepeat, after: await current() });
+
   const replay = await call('POST', `/restaurants/r_1/replans/${preview.body.plan_id}/apply`, { body: {}, token, key: 'i7' });
   ok('a replay returns the ORIGINAL response', replay.status === 200, replay.status);
   ok('and the replayed revision equals the original, so no second increment happened',
@@ -91,6 +117,15 @@ console.log('\nINVARIANT 2: stored records carry no scratch keys');
   // What a planner leaves behind when it stashes state on a record: a key pointing at other records.
   const SCRATCH = ['byReference', 'by_reference', 'seen', 'assigned', 'chosen', 'scratch', 'cache', 'index'];
   const list = (await call('GET', '/reservations', { token })).body.reservations;
+  // A first version of this probe recorded its baseline by writing `entries` ONTO each reservation --
+  // which is the exact defect this invariant exists to catch, committed by the probe meant to catch it.
+  // The allowlist caught it. That is the invariant working, and it is also the reason the baseline lives
+  // in a Map outside the objects under test rather than on them.
+  const historyCounts = new Map();
+  for (const reservation of list) {
+    const entries = (await call('GET', `/reservations/${reservation.reference}/history`, { token })).body.entries;
+    historyCounts.set(reservation.reference, entries.length);
+  }
   ok('there is a booking to inspect', list.length > 0, list.length);
   for (const reservation of list) {
     const extra = Object.keys(reservation).filter((key) => !VIEW.has(key));
@@ -115,5 +150,32 @@ console.log('\nINVARIANT 2: stored records carry no scratch keys');
   }
 }
 
-console.log(`\n${failures === 0 ? 'all invariants held' : failures + ' INVARIANT FAILURES'}`);
+console.log('\nTHE DEFECT THIS PROBE FOUND, AS ITS OWN ROW');
+console.log('  A closure constrains a booking only when it covers the booking\'s CURRENT table. A booking');
+console.log('  that does not hold the closed table is a candidate to STAY, and a plan that cannot express');
+console.log('  staying has confused "must move" with "may move".');
+{
+  const token = await seed([{ restaurant_id: 'r_1', table_id: 't_2', user_id: 'u_ada', starts_at_local: `${KEY}T19:00`, party_size: 2 }]);
+  const before = (await call('GET', '/reservations', { token })).body.reservations[0];
+  // The baseline is the ACTUAL history length, read from the service. Comparing against a number derived
+  // from another field would assert nothing: a fixture-seeded booking has no history entries at all, so
+  // "entries.length === revision" is false for reasons that have nothing to do with the plan.
+  const historyBefore = (await call('GET', `/reservations/${before.reference}/history`, { token })).body.entries.length;
+  const plan = await call('POST', '/restaurants/r_1/replans', { body: { table_id: 't_1', from: `${KEY}T18:00:00+01:00`, to: `${KEY}T23:00:00+01:00` }, token, key: 'k1' });
+  ok('a closure NOT covering the booking\'s table plans at all', plan.status === 201, { status: plan.status, code: plan.body && plan.body.error });
+  const assignment = (plan.body.assignments || [])[0];
+  ok('and the booking is considered, because it OVERLAPS the interval', Boolean(assignment), plan.body.assignments);
+  ok('and it is assigned the table it already holds', assignment && JSON.stringify(assignment.table_ids) === JSON.stringify(before.table_ids), assignment);
+  ok('and changed is FALSE -- staying is not a change', assignment && assignment.changed === false, assignment);
+  ok('and moved_count is 0', plan.body.moved_count === 0, plan.body.moved_count);
+
+  await call('POST', `/restaurants/r_1/replans/${plan.body.plan_id}/apply`, { body: {}, token, key: 'k2' });
+  const after = (await call('GET', `/reservations/${before.reference}`, { token })).body;
+  ok('and after applying, the booking is UNCHANGED', JSON.stringify(after.table_ids) === JSON.stringify(before.table_ids), { before: before.table_ids, after: after.table_ids });
+  ok('and its revision did not move -- an unmoved booking gains nothing', after.revision === before.revision, { before: before.revision, after: after.revision });
+  const entries = (await call('GET', `/reservations/${before.reference}/history`, { token })).body.entries;
+  ok('and it gained NO history entry', entries.length === historyBefore, { before: historyBefore, after: entries.length });
+}
+
+console.log(`\n${failures === 0 ? 'all invariants held' : failures + ' FAILURES'}`);
 if (failures > 0) process.exitCode = 1;
