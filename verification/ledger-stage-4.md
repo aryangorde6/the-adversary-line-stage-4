@@ -49,9 +49,11 @@ S4-012  GET  /series/ser_x (absent series)             -> 404
 
 **So the two failures are stage-4's two write families — planning/replanning and series amendment — and
 not a broken folder**, which `S4-010`/`S4-011` establish by showing the stage-3 surface and the seam
-instrument are both alive in `stage-4/`. **The check identities remain the Foreman's to supply:** a
-behaviour's absence is what I measured, and a check's name is not knowable without opening a file this
-seat does not open. **Stating that limit is the closure, not a deferral** — the discrepancy is now
+instrument are both alive in `stage-4/`. **The check identities are supplied by the Builder, under a recorded and narrow authorisation
+(clause 27): identities only, never expectations.** **The checks tree is outside this seat's sandbox
+entirely** — `tablekeeper/test` is denied at the tool level — so the attribution above could not be
+replaced by a peek even in principle, and the two must be read together rather than one replacing the
+other. **Stating that limit is the closure, not a deferral** — the discrepancy is now
 closed on the side that is measurable, with the other side named as a boundary rather than guessed at.
 
 **And the count itself is part of the record, not a detail of the run (clause 26).** My opening predicted
@@ -398,6 +400,14 @@ because they have now failed to travel into a new file twice.**
     both leave the author stuck. One said `204` and seeded nothing; the other said `422` and refused
     something correct. **A refusal that is *wrong* is worse than no refusal**, because the author cannot
     distinguish it from the state being genuinely unsupported.
+27. **Independence is a property of the record, not of the seat — so any authorisation to read supplied
+    checks must be written down, with its scope.** The supplied checks tree is outside this seat's
+    sandbox entirely: `tablekeeper/test` is denied to me at the tool level, which is the enforcement
+    behind clause 3 rather than merely my discipline. **Where a ledger's independence is deliberately and
+    narrowly surrendered — here, the two failing checks' _identities_ only, never their expectations — the
+    surrender is recorded in the ledger**, because a later reader must be able to tell which rows were
+    derived independently and which were named by the implementation's author. **Reading a name is not
+    reading an expectation, and the difference is the whole of what was authorised.**
 26. **A sample suite's size is part of its record, not a detail of the run.** The pass count and the
     check count belong in the same sentence: *six checks, four passing, two failing* is one fact, and
     **"5 checks, 4 passed / 1 failed" is a different fact, not a rounding of the first.** A number in a
