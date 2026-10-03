@@ -172,7 +172,7 @@ const MESSAGES = {
       case "password_too_short":
         return "Passwords need at least 8 characters. Make it a little longer and try again.";
       case "email_format":
-        return "That does not look like an email address. Use the form name@example.com and try again.";
+        return "That does not look like an email address. It needs exactly one @ with something on both sides, in the form name@example.com. Check it and try again.";
       case "party_size":
         return "The number of people has to be a whole number of at least 1. Check it and try again.";
       case "time_format": {
