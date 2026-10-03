@@ -43,13 +43,13 @@ some of its failures are refusals rather than absences. `S3-020` and `S3-024` ar
 **when a run shows the distinction mattering** — one run is evidence about a failure mode, not evidence
 about twenty rows.
 
-**One more measured fact, about the tree rather than the stage.** A local `docker build` of `stage-3/`
-at `0283f55` produces an image that **cannot start**: `Error: Cannot find module './series'` from
-`src/api.js`, while `src/` already contains `explain.js`, `history.js` and `policy.js`. The folder is
-mid-implementation — a service is being built in the right order and has not landed yet. It is
-recorded here because of clause 1 in its plainest form: **a build that does not start invalidates
-every measurement taken against it**, including a suite's, and a reader of this ledger who ran the
-command at the wrong moment would get numbers that mean nothing.
+**A working tree, measured once, and what it cost.** My first stage-3 run was taken from a working tree
+mid-implementation, and it reported **7 failed / 0 passed** against the pinned truth of **6 failed / 1
+passed**. The number was wrong and the reason was not a hash at all: **a measurement taken from a
+working tree is a measurement of the working tree**, and the only thing that exposes it is that every
+reported number names the commit it came from. **Stage 4 is recorded here as unmeasured rather than as a
+result** — 4 passed / 1 failed, unopened — so a reader does not mistake an unreached stage for a
+reached one.
 
 ## Standing clauses, restated here because they do not travel into a new ledger by themselves
 
