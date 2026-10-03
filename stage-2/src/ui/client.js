@@ -223,27 +223,34 @@
 
     // The date field's wrapper carries the focus ring, because the browser stops matching :focus on
     // one of the field's inner segments while the keyboard is still inside it.
+    //
+    // The ring is not stored, it is read: on every event that could mean the keyboard has arrived,
+    // gone, or arrived again, the class is recomputed from where the focus actually is. An earlier
+    // version added the class on focusin and removed it on three different exits, and that left the
+    // ring dead after the two exits which fire without any focus event -- the window losing focus,
+    // and the page being hidden -- because coming back fires no focus event either, so nothing put
+    // the class back. Recomputing means no path can leave it stale.
     var dateField = document.querySelector('[data-date-field]');
     if (dateField) {
-      dateField.addEventListener('focusin', function () {
-        dateField.classList.add('kb-focus');
-      });
-      dateField.addEventListener('focusout', function () {
+      var syncDateRing = function () {
+        var inside = dateField.contains(document.activeElement);
+        dateField.classList.toggle('kb-focus', inside);
+      };
+      var clearDateRing = function () {
         dateField.classList.remove('kb-focus');
+      };
+      ['focusin', 'focus', 'pointerdown', 'keydown', 'touchstart'].forEach(function (name) {
+        document.addEventListener(name, syncDateRing, true);
       });
-      // The ring is added by an event and taken away by an event, and an event can fail to arrive:
-      // the keyboard can leave the window, or the field can be removed while it holds the ring. So
-      // the ring is also taken away whenever the keyboard is demonstrably somewhere else, rather
-      // than waiting for a notice that might not come.
-      document.addEventListener('focusin', function (event) {
-        if (!dateField.contains(event.target)) dateField.classList.remove('kb-focus');
-      }, true);
-      window.addEventListener('blur', function () {
-        dateField.classList.remove('kb-focus');
-      });
-      window.addEventListener('pagehide', function () {
-        dateField.classList.remove('kb-focus');
-      });
+      document.addEventListener('visibilitychange', syncDateRing);
+      window.addEventListener('focus', syncDateRing);
+      window.addEventListener('blur', clearDateRing);
+      window.addEventListener('pagehide', clearDateRing);
+      // One event-free path remains: focus can return to a field the document already considers
+      // focused, and then no event of any kind is fired. A cheap recurring check is the only way to
+      // notice that, so the ring is also recomputed on a timer: one class toggle, twice a second.
+      window.setInterval(syncDateRing, 500);
+      syncDateRing();
     }
 
     var issued = 0;

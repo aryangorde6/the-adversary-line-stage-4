@@ -248,6 +248,61 @@ async function main() {
       });
       if (hasDate) ok('the ring is off when the keyboard leaves the window', !afterBlur);
 
+      if (hasDate) {
+        // The ring must come back as well as go: an exit that fires without a focus event used to
+        // leave it dead, and a row that only checks "off after leaving" passes on a dead ring.
+        const innerStop = async () => {
+          for (let i = 0; i < 12; i += 1) {
+            await p2.keyboard.press('Tab');
+            const at = await p2.evaluate(() => {
+              const a = document.activeElement;
+              const f = document.querySelector('[data-date-field]');
+              return { inner: a.id === 'date-input' && !a.matches(':focus'),
+                painted: getComputedStyle(f).outlineStyle !== 'none' };
+            });
+            if (at.inner) return at.painted;
+          }
+          return null;
+        };
+        const rearm = async (name, fire) => {
+          await p2.evaluate(fire);
+          const off = await p2.evaluate(() => {
+            const f = document.querySelector('[data-date-field]');
+            return getComputedStyle(f).outlineStyle === 'none';
+          });
+          ok(`the ring is off after ${name}`, off);
+          await p2.locator('#date-input').click();
+          const back = await p2.evaluate(() => {
+            const f = document.querySelector('[data-date-field]');
+            return getComputedStyle(f).outlineStyle !== 'none';
+          });
+          ok(`the ring is back after ${name} and a real click on the field`, back);
+          const settled = await p2.evaluate(async () => {
+            window.dispatchEvent(new Event('blur'));
+            document.querySelector('#date-input').focus();
+            await new Promise((r) => setTimeout(r, 700));
+            const f = document.querySelector('[data-date-field]');
+            return getComputedStyle(f).outlineStyle !== 'none';
+          });
+          ok(`the ring is back after ${name} and focus returning with no event at all`, settled);
+        };
+        await rearm('the window losing focus', () => window.dispatchEvent(new Event('blur')));
+        await rearm('the page being hidden', () => window.dispatchEvent(new Event('pagehide')));
+        const innerBefore = await innerStop();
+        ok('the inner segment carries a ring before any exit has fired', innerBefore === true,
+          { innerBefore });
+        const innerAfter = await p2.evaluate(async () => {
+          const input = document.querySelector('#date-input');
+          input.focus();
+          await new Promise((r) => setTimeout(r, 100));
+          return input.matches(':focus');
+        });
+        void innerAfter;
+        const stillThere = await innerStop();
+        ok('the inner segment still carries a ring after the exits have fired and returned',
+          stillThere === true, { stillThere });
+      }
+
       const dateStops = stops.filter((s) => s.id === 'date-input');
       console.log(`        (${stops.length} stops pressed, ${dateStops.length} inside the date field:`
         + ` ${dateStops.map((s) => s.on).join(',')})`);
