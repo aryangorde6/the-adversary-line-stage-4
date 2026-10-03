@@ -1,0 +1,56 @@
+'use strict';
+
+const BUILTIN_STATUS_BY_CODE = Object.freeze({
+  malformed_request: 400,
+  missing_idempotency_key: 400,
+  unauthenticated: 401,
+  forbidden: 403,
+  not_found: 404,
+  idempotency_key_reuse: 409,
+  email_taken: 409,
+  table_unavailable: 409,
+  cutoff_passed: 409,
+  reservation_cancelled: 409,
+  validation_failed: 422,
+  not_on_slot_grid: 422,
+  outside_opening_hours: 422,
+  party_exceeds_capacity: 422,
+  invalid_local_time: 422,
+});
+
+let catalogue = null;
+try {
+  const candidate = require('./messages.js');
+  if (candidate && candidate.STATUS_BY_CODE && typeof candidate.STATUS_BY_CODE === 'object') catalogue = candidate;
+} catch {
+  catalogue = null;
+}
+
+const STATUS_BY_CODE = catalogue ? catalogue.STATUS_BY_CODE : BUILTIN_STATUS_BY_CODE;
+const CODES = catalogue && Array.isArray(catalogue.ERROR_CODES) ? catalogue.ERROR_CODES : Object.keys(STATUS_BY_CODE);
+
+class ApiError extends Error {
+  constructor(code, context) {
+    super(code);
+    this.name = 'ApiError';
+    this.code = STATUS_BY_CODE[code] === undefined ? 'validation_failed' : code;
+    this.status = STATUS_BY_CODE[this.code];
+    this.context = context && typeof context === 'object' ? context : {};
+  }
+}
+
+function fail(code, context) {
+  throw new ApiError(code, context);
+}
+
+function statusForCode(code) {
+  if (catalogue && typeof catalogue.statusFor === 'function') {
+    const status = catalogue.statusFor(code);
+    if (typeof status === 'number' && status >= 400 && status < 600) return status;
+  }
+  const status = STATUS_BY_CODE[code];
+  if (status !== undefined) return status;
+  return 422;
+}
+
+module.exports = { ApiError, fail, statusForCode, CODES, STATUS_BY_CODE };
