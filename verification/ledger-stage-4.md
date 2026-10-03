@@ -411,10 +411,21 @@ because they have now failed to travel into a new file twice.**
     row about vocabulary, **and vocabulary is the part of a screen least likely to change and therefore
     least likely to be caught when the meaning underneath it moves.**
 36. **Stale rows are caught by re-deriving; under-specified rows only by asking what would have to be true
-    for the row to be right.** A stale row asserts something that was once true; an under-specified row
-    asserts something **that was never pinned down**, so **re-derivation finds nothing and reports green.**
-    So the walk's standing second question, of any row asserting wording or state: **what would have to be
-    true for this row to be right, and is that asserted?**
+    for the row to be right — and that question has _two_ halves: is the condition asserted at all, and is it
+    read from the place the implementation reads it from?** A stale row asserts something that was once
+    true; an under-specified row asserts something **that was never pinned down, so re-derivation finds nothing
+    and reports green.** **A row can satisfy the first half and fail the second, which is how a
+    correctly-shaped row is still a row about the wrong thing** — `S4-167`'s 3b asserted that the day was not
+    shut, read from `GET /restaurants/{id}`, which reports the **base** calendar while the day state follows
+    the **policy's**. **The shape was found by re-deriving; the source was found by driving.** So the walk's
+    standing question, of any row asserting wording or state: **what would have to be true for this row to be
+    right, is that asserted, and is it read from the surface the implementation reads?**
+37. **A handoff must name the surface a row reads, not only what it asserts.** Both of the Foreman's errors
+    this stage, and 3b, would have been prevented by *"read the effective hours from the policies surface"*
+    rather than *"assert the day is not shut."* **A row specified by assertion alone invites the implementer
+    to choose the surface, and the implementer choosing the surface is how a correctly-shaped row becomes a
+    row about the wrong thing.** This is the twin of clause 7: shape before value, and **source before
+    assertion.**
 34. **A guard in the shared library is five guards** — **the cheapest place for a precondition is the one
     place everything already goes through**, and a precheck a suite can forget to call is not a precheck.
     Measured: with the service stopped, all five screen suites print `FATAL: cannot reach the service` and
@@ -860,6 +871,26 @@ reason the multi-timezone fixture came before its probes. **Recorded here as owe
 is a debt with a specification rather than a gap.**
 
 ## Mutation and defect rounds for stage 4
+
+### Practice, not observation: who is required to catch what
+
+**The asymmetry that costs, stated so a rule does not depend on goodwill:**
+
+> **Re-derivation is cheap and a verifier does it to their own rows, so it catches shape faults. A _source_
+> fault needs someone to build or measure the thing, and the seat who catches it is the one being asked to
+> make it green.** So: **the seat implementing a row is required to report a mismatch rather than choose a
+> fixture**, exactly as the verifier is required to run the walk before their own verdict. **A rule that only
+> works when a seat volunteers resistance is not a rule; it is a hope.**
+
+**It has evidence behind it before it had a clause:** the Builder declined to build 3b against a source it
+believed was wrong, and declined to call a measurement it had not made — in a stage where it had already
+reported one number wrong twice. **The mechanism is a seat saying "I will report what I find rather than make
+it pass", and it cannot be required into existence by a clause; it can only be required by a rule that names
+it, which is all this section does.**
+
+**And the verifier's half is equally binding:** the walk is run before the verdict, on my own rows, **and its
+result goes in the report whether or not it is convenient** — which is how six of my own rows were found to
+have outlived their subject.
 
 ### Before any round: walk each row its probes will defend against the probes themselves
 
