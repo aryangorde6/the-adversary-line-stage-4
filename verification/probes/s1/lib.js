@@ -145,6 +145,13 @@ function book(token, key, body) {
   return req('POST', '/reservations', Object.assign(auth(token), { 'idempotency-key': key }), body);
 }
 
+// Anything that CANCELS or AMENDS needs a start far enough in the future that
+// cancellation_cutoff_minutes cannot have elapsed. The clock in this environment reads
+// 2026-10-03, so the sample date 2026-09-24 is in the past and a cancel on it is correctly
+// refused with cutoff_passed. Reading that refusal as a product defect is the single most
+// common way a stage-1 probe fails for the wrong reason, so it is named here once.
+const FUTURE = '2026-12-01'; // a Tuesday; allWeek opens every weekday
+
 // A confirmation reference, valid start, party size that fits t_2 (capacity 4).
 function booking(startsAtLocal = '2026-09-24T19:00', over = {}) {
   return Object.assign(
@@ -157,11 +164,16 @@ function booking(startsAtLocal = '2026-09-24T19:00', over = {}) {
 // concurrency probe uses this and never a loop of awaits.
 function parallel(n, makeRequest) {
   const jobs = [];
-  for (let i = 0; i < n; i += 1) jobs.push(Promise.resolve().then(makeRequest));
+  // The index must be passed through. An earlier version queued `makeRequest` itself, so the
+  // callback received `undefined` as its index and every indexed sweep built a body containing
+  // `NaN` — which the service correctly refused with 422, and which a status-count row then
+  // reported as a clean sweep of fifty bookings.
+  for (let i = 0; i < n; i += 1) jobs.push(Promise.resolve().then(() => makeRequest(i)));
   return Promise.all(jobs);
 }
 
 module.exports = {
+  FUTURE,
   req,
   json,
   code,

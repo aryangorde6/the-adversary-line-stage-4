@@ -29,12 +29,20 @@ async function run() {
     `book 20:00 overlapping 19:00-20:30 -> ${c.status} code=${code(c)} ${short(c.body)}`
   );
 
-  // And one minute before the boundary is still an overlap.
-  const d = await book(token, 'half-d', booking('2026-09-24T20:00', { table_id: 't_1' }));
+  // The same boundary on the OTHER table, so the rule is not an artefact of one table.
+  const t1a = await book(token, 'half-d1', booking('2026-09-24T19:00', { table_id: 't_1', party_size: 2 }));
+  check('R006d', t1a.status === 201, `book t_1 19:00 -> ${t1a.status} ${short(t1a.body)}`);
+  const t1b = await book(token, 'half-d2', booking('2026-09-24T20:30', { table_id: 't_1', party_size: 2 }));
   check(
-    'R006d',
-    d.status === 409 && code(d) === 'table_unavailable',
-    `book t_1 20:00, t_1 free but t_2 pattern irrelevant -> ${d.status} code=${code(d)} ${short(d.body)}`
+    'R006d2',
+    t1b.status === 201,
+    `book t_1 20:30 adjacent to a 19:00-20:30 booking on t_1 -> ${t1b.status} code=${code(t1b)} ${short(t1b.body)} (expected 201)`
+  );
+  const t1c = await book(token, 'half-d3', booking('2026-09-24T20:00', { table_id: 't_1', party_size: 2 }));
+  check(
+    'R006d3',
+    t1c.status === 409 && code(t1c) === 'table_unavailable',
+    `book t_1 20:00, 30 minutes before t_1's 20:30 end -> ${t1c.status} code=${code(t1c)} ${short(t1c.body)} (expected 409 table_unavailable)`
   );
 
   // Availability must agree with the boundary: t_2 is free at 20:30, busy at 20:00.

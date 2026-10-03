@@ -5,14 +5,14 @@
 // fixture configuration, reservations, references, statuses, created_at values, and every
 // completed idempotent receipt with its original response body. Nothing is regenerated.
 
-const { req, json, code, short, check, finish, reset, login, auth, book, booking, allWeek } = require('./lib');
+const { FUTURE, req, json, code, short, check, finish, reset, login, auth, book, booking, allWeek } = require('./lib');
 
 async function run() {
   await reset(allWeek());
   const token = await login();
 
   // A completed receipt whose original body must survive the round trip.
-  const created = await book(token, 'r60-key', booking('2026-09-24T19:00'));
+  const created = await book(token, 'r60-key', booking(FUTURE + 'T19:00'));
   check('R060a', created.status === 201, `establish a receipt -> ${created.status} ${short(created.body)}`);
   if (created.status !== 201) return finish();
   const ref = json(created).reference;
@@ -22,7 +22,7 @@ async function run() {
 
   // A key whose request FAILED, so it must still be reusable after import.
   const failedKey = 'r60-failed';
-  const failed = await book(token, failedKey, booking('2026-09-24T20:00', { table_id: 't_1', party_size: 99 }));
+  const failed = await book(token, failedKey, booking(FUTURE + 'T20:00', { table_id: 't_1', party_size: 99 }));
   check(
     'R060b',
     failed.status === 422,
@@ -40,7 +40,7 @@ async function run() {
   );
 
   // ---- mutate: a second reservation, a second user, and a cancel -------------
-  const extra = await book(token, 'r60-extra', booking('2026-09-24T21:00'));
+  const extra = await book(token, 'r60-extra', booking(FUTURE + 'T21:00'));
   check('R060e', extra.status === 201, `mutate: second booking -> ${extra.status}`);
   const cancelled = await req('POST', `/reservations/${ref}/cancel`, auth(token));
   check('R060f', cancelled.status === 200, `mutate: cancel ${ref} -> ${cancelled.status}`);
@@ -118,7 +118,7 @@ async function run() {
       `created_at=${json(byRef) && json(byRef).created_at} (want ${createdAt})`
   );
 
-  const replay = await book(token, 'r60-key', booking('2026-09-24T19:00'));
+  const replay = await book(token, 'r60-key', booking(FUTURE + 'T19:00'));
   check(
     'R060n',
     replay.status === 200 && replay.body === originalBody,
@@ -126,7 +126,7 @@ async function run() {
       `byte-identical: ${replay.body === originalBody}. ${short(replay.body)}`
   );
 
-  const reuseFailed = await book(token, failedKey, booking('2026-09-24T22:00', { party_size: 2 }));
+  const reuseFailed = await book(token, failedKey, booking(FUTURE + 'T22:00', { party_size: 2 }));
   check(
     'R060o',
     reuseFailed.status === 201,

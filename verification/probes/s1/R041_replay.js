@@ -3,13 +3,13 @@
 // after the resource changed or was cancelled, and makes no further state change.
 // A receipt that stored a null body replays an empty or missing reference.
 
-const { req, json, code, short, check, finish, reset, login, book, booking, allWeek } = require('./lib');
+const { FUTURE, req, json, code, short, check, finish, reset, login, book, booking, allWeek } = require('./lib');
 
 async function run() {
   await reset(allWeek());
   const token = await login();
 
-  const first = await book(token, 'replay-1', booking('2026-09-24T19:00'));
+  const first = await book(token, 'replay-1', booking(FUTURE + 'T19:00'));
   check('R041a', first.status === 201, `first use -> ${first.status} ${short(first.body)}`);
   if (first.status !== 201) return finish();
   const reference = json(first).reference;
@@ -23,7 +23,7 @@ async function run() {
     `cancel ${reference} -> ${cancel.status} status=${json(cancel) && json(cancel).status} ${short(cancel.body)}`
   );
 
-  const replay = await book(token, 'replay-1', booking('2026-09-24T19:00'));
+  const replay = await book(token, 'replay-1', booking(FUTURE + 'T19:00'));
   check(
     'R041c',
     replay.status === 200,
@@ -54,20 +54,32 @@ async function run() {
       `(still cancelled: the replay must not have re-confirmed the booking)`
   );
 
-  // --- 4. amend, then replay the create ---------------------------------------
+  // --- 4. amend something else, then replay the create ------------------------
+  // Amending the CANCELLED reservation would be 409 reservation_cancelled, which is correct
+  // and proves nothing about replay. So a second, confirmed booking is amended instead, and
+  // the first create is then replayed: the replay must still return the original body.
+  const second = await book(token, 'replay-2', booking(FUTURE + 'T20:00'));
+  check('R041g', second.status === 201, `second booking to amend -> ${second.status} ${short(second.body)}`);
+  if (second.status !== 201) return finish();
   const patch = await req(
     'PATCH',
-    `/reservations/${reference}`,
+    `/reservations/${json(second).reference}`,
     { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
     { party_size: 2 }
   );
   check(
-    'R041g',
-    patch.status === 200,
-    `amend the cancelled reservation -> ${patch.status} code=${code(patch)} ${short(patch.body)}`
+    'R041g2',
+    patch.status === 200 && json(patch).party_size === 2,
+    `amend the confirmed booking -> ${patch.status} party_size=${json(patch) && json(patch).party_size} ${short(patch.body)}`
+  );
+  const cancelAgain = await req('POST', `/reservations/${json(second).reference}/cancel`, { authorization: `Bearer ${token}` });
+  check(
+    'R041g3',
+    cancelAgain.status === 200 && json(cancelAgain).status === 'cancelled',
+    `cancel the amended booking -> ${cancelAgain.status} status=${json(cancelAgain) && json(cancelAgain).status} (expected 200 cancelled)`
   );
 
-  const replay2 = await book(token, 'replay-1', booking('2026-09-24T19:00'));
+  const replay2 = await book(token, 'replay-1', booking(FUTURE + 'T19:00'));
   check(
     'R041h',
     replay2.status === 200 && replay2.body === first.body,
@@ -75,8 +87,8 @@ async function run() {
   );
 
   // --- 5. the slot was freed by the cancel and the replay must not re-take it --
-  const av = await req('GET', '/availability?restaurant_id=r_anker&date=2026-09-24&party_size=4');
-  const slot = ((json(av) || {}).slots || []).find((s) => s.starts_at_local === '2026-09-24T19:00');
+  const av = await req('GET', '/availability?restaurant_id=r_anker&date=' + FUTURE + '&party_size=4');
+  const slot = ((json(av) || {}).slots || []).find((s) => s.starts_at_local === FUTURE + 'T19:00');
   check(
     'R041i',
     !!slot && slot.available_table_ids.includes('t_2'),

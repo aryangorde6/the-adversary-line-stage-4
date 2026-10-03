@@ -70,24 +70,65 @@ async function run() {
     `second trial -> 201 count=${c2}, 409 count=${x2}, statuses=${JSON.stringify(again.map((r) => r.status))}`
   );
 
-  // --- Trial 3: fifty concurrent distinct requests, zero 5xx -----------------
+  // --- Trial 2b: repeat with wider parallelism. The race window in a mutated build is
+  // real but timing-dependent, so a single trial can miss it; three trials at 10 and one at
+  // 16 make a lost receipt overwhelmingly unlikely to go unseen.
+  await reset(allWeek());
+  const token2b = await login();
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    const n = attempt === 3 ? 16 : 10;
+    // A different DAY per attempt, not just a different time. A booking lasts 90 minutes, so
+    // 19:30 and 20:00 on the same day overlap attempt 1's booking at 19:00 and are correctly
+    // refused with table_unavailable — which measures the overlap rule, not the receipt, and
+    // made every attempt after the first fail against an unmutated build.
+    const day = ['2026-09-24', '2026-09-25', '2026-09-26'][attempt - 1];
+    const round = await parallel(n, () => book(token2b, `race-2b-${attempt}`, booking(`${day}T19:00`)));
+    const c = round.filter((r) => r.status === 201).length;
+    const p200 = round.filter((r) => r.status === 200).length;
+    const x = round.filter((r) => r.status === 409).length;
+    check(
+      `R005g2-${attempt}`,
+      c === 1 && x === 0 && p200 === n - 1,
+      `trial 2b attempt ${attempt}: ${n} parallel identical POSTs -> 201=${c} 200=${p200} 409=${x} ` +
+        `statuses=${JSON.stringify(round.map((r) => r.status))} (expected exactly one 201 and no 409)`
+    );
+  }
+
+  // --- Trial 3: fifty concurrent distinct requests, every one a real booking --------
   await reset(allWeek());
   const token3 = await login();
-  // 50 distinct keys against 50 distinct slots on two tables. Overlaps are expected
-  // and fine; what must not happen is a 5xx or a lost response.
+  // 50 distinct keys on 50 disjoint (day, table) pairs: 25 consecutive days, both tables,
+  // all at 19:00. Disjointness is a property of the request set, not a hope, so any 4xx
+  // means the sweep is not testing what it claims and must fail loudly. An earlier version
+  // walked 30-minute slots across two tables while bookings last 90 minutes, so consecutive
+  // slots overlapped and could only ever answer 409.
   const many = await parallel(50, (i) => {
-    const minutes = 18 * 60 + (i % 10) * 30;
-    const hh = String(Math.floor(minutes / 60)).padStart(2, '0');
-    const mm = String(minutes % 60).padStart(2, '0');
+    const day = new Date(Date.UTC(2026, 8, 24 + Math.floor(i / 2))).toISOString().slice(0, 10);
     const table = i % 2 === 0 ? 't_1' : 't_2';
-    const day = i < 25 ? '2026-09-24' : '2026-09-25';
-    return book(token3, `many-${i}`, booking(`${day}T${hh}:${mm}`, { table_id: table, party_size: 2 }));
+    return book(token3, `many-${i}`, booking(`${day}T19:00`, { table_id: table, party_size: 2 }));
   });
+  const refused = many.filter((r) => r.status !== 201);
+  check(
+    'R005h2',
+    refused.length === 0,
+    `the 50 sweep bookings are disjoint by construction, so every one must be 201; ` +
+      `non-201=${refused.length} ${JSON.stringify(refused.slice(0, 2).map((r) => r.status + ' ' + short(r.body, 90)))} ` +
+      `(a 422 or 409 here means the sweep is not exercising real bookings)`
+  );
   const fivexx = many.filter((r) => r.status >= 500);
   check(
     'R005h',
     fivexx.length === 0,
     `50 parallel distinct POSTs -> statuses=${JSON.stringify(many.reduce((a, r) => ((a[r.status] = (a[r.status] || 0) + 1), a), {}))}, 5xx=${fivexx.length}`
+  );
+  // Every booking must be visible afterwards: concurrency may not lose a commit.
+  const sweepList = await req('GET', '/reservations', { authorization: `Bearer ${token3}` });
+  const sweepRes = (json(sweepList) || {}).reservations || [];
+  check(
+    'R005h3',
+    sweepRes.length === 50,
+    `GET /reservations after the 50 parallel bookings -> ${sweepRes.length} reservations ` +
+      `(expected 50; a lower count means a commit was lost under concurrency)`
   );
 
   // --- Trial 4: fifty concurrent mixed reads and writes, zero 5xx ------------

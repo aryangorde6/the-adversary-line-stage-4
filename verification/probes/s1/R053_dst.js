@@ -99,8 +99,10 @@ async function run() {
     );
   }
 
-  // Booking the repeated hour resolves to the first occurrence.
-  const rep = await book(token, 'dst-fb-2', booking('2026-10-25T02:30', { party_size: 2 }));
+  // Booking the repeated hour resolves to the first occurrence. It must go on t_1: the
+  // 01:30 booking above is on t_2 and occupies it in absolute time across 02:30, so t_2
+  // would correctly answer 409 table_unavailable and tell us nothing about the DST rule.
+  const rep = await book(token, 'dst-fb-2', booking('2026-10-25T02:30', { table_id: 't_1', party_size: 2 }));
   check(
     'R054c',
     rep.status === 201 && /2026-10-25T02:30:00\+02:00$/.test(json(rep).starts_at || ''),

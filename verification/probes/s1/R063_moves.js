@@ -3,7 +3,7 @@
 // reservation records and retry keys. A batch whose later item conflicts must leave every
 // earlier item untouched, and must not store a receipt for its key.
 
-const { req, json, code, short, check, finish, reset, login, auth, book, booking, allWeek } = require('./lib');
+const { FUTURE, req, json, code, short, check, finish, reset, login, auth, book, booking, allWeek } = require('./lib');
 
 async function occupancy(token, startsAtLocal) {
   const av = await req('GET', `/availability?restaurant_id=r_anker&date=${startsAtLocal.slice(0, 10)}&party_size=2`);
@@ -16,16 +16,16 @@ async function run() {
   const token = await login();
 
   // A on t_1 at 19:00, B on t_2 at 19:00, C on t_1 at 21:00.
-  const a = await book(token, 'mv-a', booking('2026-09-24T19:00', { table_id: 't_1', party_size: 2 }));
-  const b = await book(token, 'mv-b', booking('2026-09-24T19:00', { table_id: 't_2', party_size: 2 }));
-  const c = await book(token, 'mv-c', booking('2026-09-24T21:00', { table_id: 't_1', party_size: 2 }));
+  const a = await book(token, 'mv-a', booking(FUTURE + 'T19:00', { table_id: 't_1', party_size: 2 }));
+  const b = await book(token, 'mv-b', booking(FUTURE + 'T19:00', { table_id: 't_2', party_size: 2 }));
+  const c = await book(token, 'mv-c', booking(FUTURE + 'T21:00', { table_id: 't_1', party_size: 2 }));
   check('R063a', a.status === 201 && b.status === 201 && c.status === 201,
     `seed A(t_1 19:00)=${a.status} B(t_2 19:00)=${b.status} C(t_1 21:00)=${c.status}`);
   if (a.status !== 201 || b.status !== 201 || c.status !== 201) return finish();
   const refA = json(a).reference;
   const refC = json(c).reference;
 
-  const before1900 = await occupancy(token, '2026-09-24T19:00');
+  const before1900 = await occupancy(token, FUTURE + 'T19:00');
   check('R063b', before1900 && before1900.length === 0,
     `occupancy at 19:00 before the batch -> available_table_ids=${JSON.stringify(before1900)} (expected [] — both tables taken)`);
 
@@ -33,7 +33,7 @@ async function run() {
   const failBody = {
     moves: [
       { reference: refA, table_id: 't_2' },
-      { reference: refC, starts_at_local: '2026-09-24T19:00', table_id: 't_1' },
+      { reference: refC, starts_at_local: FUTURE + 'T19:00', table_id: 't_1' },
     ],
   };
   const failRes = await req(
@@ -62,12 +62,12 @@ async function run() {
   const cAfter = await req('GET', `/reservations/${refC}`, auth(token));
   check(
     'R063e',
-    cAfter.status === 200 && json(cAfter).table_id === 't_1' && json(cAfter).starts_at_local === '2026-09-24T21:00',
+    cAfter.status === 200 && json(cAfter).table_id === 't_1' && json(cAfter).starts_at_local === FUTURE + 'T21:00',
     `C after the refused batch -> table_id=${json(cAfter) && json(cAfter).table_id} ` +
       `at ${json(cAfter) && json(cAfter).starts_at_local} (expected t_1 at 21:00, unchanged)`
   );
 
-  const after1900 = await occupancy(token, '2026-09-24T19:00');
+  const after1900 = await occupancy(token, FUTURE + 'T19:00');
   check(
     'R063f',
     !!after1900 && after1900.length === 0,
@@ -92,8 +92,8 @@ async function run() {
   // ---- a succeeding batch commits every item ---------------------------------
   await reset(allWeek());
   const t2 = await login();
-  const a2 = await book(t2, 'mv2-a', booking('2026-09-24T19:00', { table_id: 't_1', party_size: 2 }));
-  const c2 = await book(t2, 'mv2-c', booking('2026-09-24T21:00', { table_id: 't_2', party_size: 2 }));
+  const a2 = await book(t2, 'mv2-a', booking(FUTURE + 'T19:00', { table_id: 't_1', party_size: 2 }));
+  const c2 = await book(t2, 'mv2-c', booking(FUTURE + 'T21:00', { table_id: 't_2', party_size: 2 }));
   check('R063h', a2.status === 201 && c2.status === 201, `re-seed -> A=${a2.status} C=${c2.status}`);
   if (a2.status !== 201 || c2.status !== 201) return finish();
   const rA2 = json(a2).reference;
@@ -140,8 +140,8 @@ async function run() {
   // ---- a single-item conflict in a longer batch, with the good item FIRST ----
   await reset(allWeek());
   const t3 = await login();
-  const x = await book(t3, 'mv3-x', booking('2026-09-24T19:00', { table_id: 't_1', party_size: 2 }));
-  const y = await book(t3, 'mv3-y', booking('2026-09-24T19:00', { table_id: 't_2', party_size: 2 }));
+  const x = await book(t3, 'mv3-x', booking(FUTURE + 'T19:00', { table_id: 't_1', party_size: 2 }));
+  const y = await book(t3, 'mv3-y', booking(FUTURE + 'T19:00', { table_id: 't_2', party_size: 2 }));
   check('R063m', x.status === 201 && y.status === 201, `re-seed for the ordering case -> X=${x.status} Y=${y.status}`);
   if (x.status === 201 && y.status === 201) {
     const rX = json(x).reference;
@@ -153,8 +153,8 @@ async function run() {
       Object.assign(auth(t3), { 'idempotency-key': 'mv3-bad', 'content-type': 'application/json' }),
       {
         moves: [
-          { reference: rX, starts_at_local: '2026-09-24T21:00', table_id: 't_1' },
-          { reference: rY, starts_at_local: '2026-09-24T21:00', table_id: 't_1' },
+          { reference: rX, starts_at_local: FUTURE + 'T21:00', table_id: 't_1' },
+          { reference: rY, starts_at_local: FUTURE + 'T21:00', table_id: 't_1' },
         ],
       }
     );
@@ -166,9 +166,9 @@ async function run() {
     const xAfter = await req('GET', `/reservations/${rX}`, auth(t3));
     check(
       'R063o',
-      xAfter.status === 200 && json(xAfter).starts_at_local === '2026-09-24T19:00',
+      xAfter.status === 200 && json(xAfter).starts_at_local === FUTURE + 'T19:00',
       `X after the refused batch -> starts_at_local=${json(xAfter) && json(xAfter).starts_at_local} ` +
-        `(expected 2026-09-24T19:00 — a partially-applied batch would show 21:00 here, which is the mutant)`
+        `(expected 2026-12-01T19:00 — a partially-applied batch would show 21:00 here, which is the mutant)`
     );
   }
 

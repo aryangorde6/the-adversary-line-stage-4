@@ -70,3 +70,39 @@ Specification: /home/aryan/band_hack/dark-factory-wearedevs/tablekeeper/spec/sta
 | R063 | §11 | "Either every move commits or nothing changes (occupancy, records, retry keys). 201 with reservations in input order including unchanged. Replays return original 200 even after changes; no-ops retain values. Export/import preserves batch receipts and resulting bookings." | Atomicity/replay/preservation correct. | hidden | high |
 
 Total rows: 63
+
+## Stage-1 probe evidence (my own probes, added after the sabotage report)
+
+Nine probe files, 119 asserted rows, all passing against the unmutated stage-1 build and each
+file's target caught when the corresponding mutation is applied. Run them with:
+
+    docker build -t tablekeeper stage-1 && docker run -d --name adv-s1 -p 8099:8080 tablekeeper
+    TK_BASE=http://127.0.0.1:8099 verification/probes/s1/run-all.sh
+    bash verification/probes/s1/mutants/apply.sh      # 11 mutations, mutated FAIL / baseline PASS
+
+| Probe file | Rows | Ledger rows it decides | Mutation caught |
+| --- | --- | --- | --- |
+| `R005_concurrency.js` | 14 | R005, R046, R047 | m02 (yield between receipt lookup and handler -> 409 storm) |
+| `R006_halfopen.js` | 8 | R006, R048 | m01 (`<` -> `<=`; 20:30 adjacent booking refused) |
+| `R007_no_partial.js` | 10 | R007, R048 | m03 (persist before validation; refused booking leaves a record) |
+| `R029_query_integer.js` | 11 | R029 | m12 (integer regex dropped; `1e9`, `4.0`, `+4` accepted) |
+| `R038_idem_order.js` | 8 | R038 | m04 (body comparison dropped; reused key replays) |
+| `R041_replay.js` | 11 | R041 | m05 (receipt stores `null`; replay returns no body) |
+| `R053_dst.js` | 17 | R053, R054, R055, R056 | m06 (fabricated instant for a skipped time), m08 (wall-clock duration across fall-back) |
+| `R060_export_import.js` | 25 | R057, R058, R059, R060 | m09 (import merges), m10 (import regenerates identities) |
+| `R063_moves.js` | 15 | R061, R062, R063 | m11 (each move applied as planned; a partial batch survives) |
+
+Three reading errors of mine were found by running the probes against the real product rather
+than against a mutant, and are recorded because each had produced a green row that measured
+nothing:
+
+1. `lib.parallel(n, makeRequest)` queued `makeRequest` itself, so an indexed callback received
+   `undefined`. The 50-request sweep therefore sent `NaN` in every start time, the service
+   correctly answered 422 fifty times, and a status-count row reported it as fifty clean
+   bookings. The helper now passes the index and the row requires all fifty to be 201.
+2. Trial 2b reused 19:00/19:30/20:00 on one day while a booking lasts 90 minutes, so attempts
+   two and three overlapped attempt one and were correctly refused with 409. Each attempt now
+   uses its own day.
+3. `R005h2` counted only 409s, so a sweep that produced no bookings at all passed. It now
+   requires all fifty to be 201 and adds a row that the fifty reservations are readable
+   afterwards, since concurrency may not lose a commit.

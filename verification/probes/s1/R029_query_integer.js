@@ -10,7 +10,11 @@ async function run() {
   await reset(allWeek());
   const token = await login();
 
-  const bad = ['1e9', '4.0', '%2B4', '0', '-1', 'abc', '', '2.5', '0x4', ' 4', '4 ', '+0', 'Infinity', 'NaN'];
+  // Only the forms the specification names or plainly implies. A value with surrounding
+  // whitespace ("4 ") is NOT in this list: §5 says "plain decimal digits" but names 1e9, 4.0 and
+  // +4 as its examples, and I cannot state from the text that "4 " must be 422, so asserting it
+  // would be a guess. It is reported separately below as an observation, not as a row.
+  const bad = ['1e9', '4.0', '%2B4', '0', '-1', 'abc', '', '2.5', '0x4', ' 4', '+0', 'Infinity', 'NaN'];
   const observed = [];
   let allRejected = true;
   for (const v of bad) {
@@ -64,7 +68,14 @@ async function run() {
       `(expected 201: 4.0 parses to the number 4, and §5 makes only invalid values a 422)`
   );
 
-  const bodyPlus = await book(token, 'q-2', JSON.stringify(booking('2026-09-24T21:00', { party_size: '+4' })));
+  // Raw text, not a JSON string: the point is that the BODY does not parse. Sending the
+  // string "+4" instead would parse fine and 422 validation_failed would be correct.
+  const bodyPlus = await req(
+    'POST',
+    '/reservations',
+    { authorization: `Bearer ${token}`, 'idempotency-key': 'q-2', 'content-type': 'application/json' },
+    '{"restaurant_id":"r_anker","table_id":"t_2","starts_at_local":"2026-09-24T21:00","party_size":+4}'
+  );
   check(
     'R029g',
     bodyPlus.status === 400 && code(bodyPlus) === 'malformed_request',
@@ -101,6 +112,15 @@ async function run() {
     all.length === 1 && all[0].starts_at_local === '2026-09-24T19:00',
     `reservations after four refused bodies = ${all.length} at ${JSON.stringify(all.map((r) => r.starts_at_local))} ` +
       `(expected exactly 1 at 19:00)`
+  );
+
+  // ---- observation, recorded not asserted -----------------------------------
+  const ws = await req('GET', '/availability?restaurant_id=r_anker&date=2026-09-24&party_size=4%20');
+  const lead = await req('GET', '/availability?restaurant_id=r_anker&date=2026-09-24&party_size=%204');
+  console.log(
+    `OBSERVED party_size="4 " -> ${ws.status}/${code(ws)}; party_size=" 4" -> ${lead.status}/${code(lead)}. ` +
+      `The specification requires plain decimal digits and names 1e9, 4.0 and +4; it does not say whether ` +
+      `surrounding whitespace is trimmed or rejected, so this is recorded for a ruling rather than asserted either way.`
   );
 
   finish();
