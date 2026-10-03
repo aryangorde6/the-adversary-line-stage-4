@@ -69,6 +69,49 @@ Specification: /home/aryan/band_hack/dark-factory-wearedevs/tablekeeper/spec/sta
 | R062 | §11 | "Each item accepts table_id/starts_at_local/party_size (subset); omitted retained; unknown ignored. Identity/owner/created_time never change. Cancelled -> 409 reservation_cancelled. Each booking's cutoff applies; cutoff errors precede other changes; non-occupancy errors in input order. Overlap among resulting or with unlisted -> 409. Unchanged retain occupancy." | Moves semantics correct. | hidden | high |
 | R063 | §11 | "Either every move commits or nothing changes (occupancy, records, retry keys). 201 with reservations in input order including unchanged. Replays return original 200 even after changes; no-ops retain values. Export/import preserves batch receipts and resulting bookings." | Atomicity/replay/preservation correct. | hidden | high |
 
+## Stage-1 probe evidence, extended: mutants 2, 14 and 3
+
+Eleven probe files, 163 asserted rows, all green against the unmutated stage-1 build; each file's
+target caught when the corresponding mutation is applied, on its own port, with the marker asserted in
+the same run as the probe and an unmutated baseline required to pass.
+
+| Probe file | Rows | Ledger rows it decides | Mutation caught |
+| --- | --- | --- | --- |
+| `R006_occupancy_multizone.js` | 9 | R006, R048 | m13: occupancy decided on wall-clock values, the date dropped |
+| `R049_list_order_multizone.js` | 14 | R049 | m14: the list sorted on the local time **string** |
+| `R054_fallback_first.js` | 21 | R053, R054, R055, R056 | m15: an ambiguous fall-back hour resolved to the **second** occurrence |
+
+**The fixture came first, and that is why these three exist.** All earlier probes ran against one
+restaurant in one timezone, which masks three whole classes of defect: with one zone the local date
+and the UTC date agree, so a resolver that gets the date wrong still answers correctly; local order
+and absolute order are the same order; and no probe ever booked an **ambiguous local hour**, so the
+first-occurrence rule had nothing to act on. `multiZone()` in `lib.js` fixes all three at once —
+Berlin and New York with daylight saving, Tokyo without — and `instantOf()` computes expected instants
+from the IANA database **inside the probe**, never read back out of the service.
+
+**Three faults of my own while writing these, each recorded because each produced a confident number.**
+
+1. **A row asserting a rule the specification does not have.** I asserted that a *second table* at an
+   ambiguous local time must be refused. Occupancy is per table, so that booking is legal; my row
+   reported a red against correct code. Split into two rows: the same table again must be 409, a
+   different table must be 201.
+2. **A comparison that could not distinguish the two cases.** The first sort row compared local time
+   *strings*, and two of the four bookings share the string `2026-06-02T09:00` — so expected and
+   actual were equal for the wrong reason and the row would have passed a service sorting on exactly
+   the defect it exists to catch. Fixed by labelling every booking with restaurant **and** local time,
+   and by printing what a local-string sort would have produced so the two orders can be seen to
+   differ.
+3. **The wrong quantity.** A row asserted that two dates six months apart in Tokyo are the same
+   instant, which is false; the quantity that shows Tokyo has no daylight saving is the UTC **offset**,
+   +540 minutes in both months. Asserting instants where offsets were meant is the ordinary
+   wrong-quantity error, and it produced a red against a correct service.
+
+**The general form, which is the same one stage 2 arrived at from the other end:** a probe that does
+not stage the condition it claims to test cannot fail, and the tell is always the marker and the
+result disagreeing. Every one of these three probes now asserts its staged condition **first** — that
+the local time really denotes two instants, that the two orders really differ, that the delay really
+happened — and only then asserts what the service did about it.
+
 Total rows: 63
 
 ## Stage-1 probe evidence (my own probes, added after the sabotage report)

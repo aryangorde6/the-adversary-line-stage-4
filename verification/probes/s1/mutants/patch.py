@@ -144,9 +144,17 @@ MUTANTS = {
          '  mine.sort((a, b) => String(b.starts_at_local).localeCompare(String(a.starts_at_local)));'),
     ]),
 
+    # m15: an ambiguous fall-back local time resolves to the SECOND occurrence instead of the
+    # first. Every stage-1 probe missed this because no fixture ever booked a repeated local hour;
+    # the multi-timezone fixture produces one, and the probe asserts the staged condition first.
+    'm15': ('R054_fallback_first.js', [
+        ('src/time.js',
+         '  found.sort((a, b) => a - b);\n  return found;',
+         '  found.sort((a, b) => b - a);\n  return found;'),
+    ]),
 }
 
-ORDER = ['m01', 'm02', 'm03', 'm04', 'm05', 'm06', 'm08', 'm09', 'm10', 'm11', 'm12', 'm13', 'm14']
+ORDER = ['m01', 'm02', 'm03', 'm04', 'm05', 'm06', 'm08', 'm09', 'm10', 'm11', 'm12', 'm13', 'm14', 'm15']
 
 
 def probe_for(mid):
