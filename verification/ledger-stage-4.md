@@ -1,6 +1,13 @@
 # Tablekeeper stage-4 verification ledger
 
-> **The stages' specifications live OUTSIDE the result repository.** `tablekeeper/spec/stage-1.md` …
+**Accompanies the specification: `tablekeeper/spec/stage-4.md`.** A stage number is not authority — this is a
+ledger of rows and clauses, and the specification is the document that defines the product.
+
+> **For this track, the specifications live outside the result repository — `tablekeeper/`'s own. That is a
+> fact about this track's layout and _not_ about the room's: `kickoff-manifest.json` lists a second track,
+> `pocketful/`, with its own specifications and its own supplied tests, and the six-source index below is the
+> _tablekeeper_ list, not the room's inventory.** Stated per track because a fact true of one track and false
+> of the room is exactly the kind of sentence that gets applied where it is false. `tablekeeper/spec/stage-1.md` …
 > `stage-4.md`, `docs/participant-guide.md` and `kickoff-manifest.json` are **not tracked files**, so they
 > never surface when a seat reads a folder or lists a tree — **which is precisely why this ledger read as
 > though it were the specification.** It is not: **a ledger records what a seat must not miss; it does not
@@ -331,6 +338,26 @@ states, that is a service requirement and the screen's obligation is to say less
 
 ---
 
+## Stage 4 closed at `75bb37e`
+
+**PASS at `75bb37e`, graded by me from `git archive`: supplied 120/120 · 25/25 · 7/7 · stage 4 6/6, highest
+contiguous 4**; `write_family` 9/9 · `discriminator` 16/16 · `negative_control` 4/4 · `planner_property` 11/11;
+`api_core` 48/48 · `terms_history_series` 34/34 · `fixture_arrival` 36/36; stage-2 screens green at 1280 and 375
+with **0 residual**. **`345bbe6` is PASS-superseded**: a commit where every suite and the supplied run were
+green and the planner refused a feasible plan — **a full green surface is not weak evidence about the planner,
+it is no evidence at all.**
+
+**Three things open, recorded rather than absorbed, and all three are debts with a named owner:**
+
+1. **The optimiser fixtures for levels 2 and 3 are owed as rows.** `S4-170` asserts level 1 genuinely and
+   levels 2 and 3 only for presence and internal consistency, so **a build ignoring the seat total and the rank
+   vector would pass every row I wrote.** A thinness, and a thinness looks like coverage.
+2. **`S4-152`'s path debt is owed to the next defect round** — a refusal must not mutate, asserting is not
+   mutating — **and stage 3's fixture-refusal half-application debt travels with it**, still unpaid.
+3. **The browser half is self-verified and is recorded under limits, not results.** The Builder's suites are
+   the only browser evidence in the room and the Builder runs them: **verified by the seat whose code they
+   exercise. 358 rows must not be read as independence**, and this seat cannot drive a browser at all.
+
 ## The pattern behind four of this stage's rows, which is a row-authoring rule
 
 **`S4-154`, `S4-137`, and the terms-driven substitution in `S4-123` are the same species, and so is
@@ -485,6 +512,14 @@ because they have now failed to travel into a new file twice.**
     Every question in it is asked of a probe, so **no amount of walking my own rows would ever have found
     that two recorded ambiguities were answered by a document nobody opened.** That is the fifth question's
     whole reason for existing.
+50. **The absence of a specification is a stop condition, and it stops at the ledger's edge — the ledger is
+    evidence about a specification, not a substitute for one.** There is no `stage-5.md` and the manifest
+    lists four stages, so **stage 5 does not open**: not blocked, not pending, **complete.** The clause is
+    permanent rather than a stage note, because **a seat with no written requirement and a thorough ledger in
+    reach will build from the ledger — it is the only document offered** — and that is precisely how thirteen
+    deviations shipped in stage 4. **"Read the specification for the stage you are working in, then the
+    ledger" has an unsatisfiable first half when no specification exists, and the unsatisfiable half is the
+    one that must stop the work.**
 47. **Every artefact must state what kind of authority it carries, because nothing in a folder listing says
     which kind you are reading.** A specification defines the product; a ledger records what to check; a
     check file asserts behaviour; a participant guide says how the room runs. **I introduced a ledger as "the
