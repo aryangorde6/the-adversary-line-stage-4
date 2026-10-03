@@ -400,6 +400,14 @@ because they have now failed to travel into a new file twice.**
     both leave the author stuck. One said `204` and seeded nothing; the other said `422` and refused
     something correct. **A refusal that is *wrong* is worse than no refusal**, because the author cannot
     distinguish it from the state being genuinely unsupported.
+28. **A probe narrower than its row is a check of a smaller requirement, and it reports green about it.**
+    So **before any defect round, walk each row its probes will defend against the probes themselves** —
+    every key, every branch, every population — and record the walk in the report. This has happened four
+    times in this project, and the third instance was in **my own** file after I wrote the clause from
+    someone else's instance of it.
+29. **Distinguish coverage debt from path debt.** A probe narrower than its row is fixed by **writing the
+    missing coverage**; a defect no probe mutates is fixed by **mutating the path**. **Asserting a
+    requirement is not mutating it**, and only the first is paid by adding rows.
 27. **Independence is a property of the record, not of the seat — so any authorisation to read supplied
     checks must be written down, with its scope.** The supplied checks tree is outside this seat's
     sandbox entirely: `tablekeeper/test` is denied to me at the tool level, which is the enforcement
@@ -571,6 +579,29 @@ reason the multi-timezone fixture came before its probes. **Recorded here as owe
 is a debt with a specification rather than a gap.**
 
 ## Mutation and defect rounds for stage 4
+
+### Before any round: walk each row its probes will defend against the probes themselves
+
+> **Confirm the probe drives every element the row names** — every key, every branch, every population.
+> **A probe narrower than its row is not a partial check; it is a check of a smaller requirement, and it
+> reports green about it.**
+
+**This is a pre-round check, not a discovery made during a round.** It costs nothing: it is reading my own
+row text against my own probe list. **It would have caught `S3-340` before the round rather than after it**
+— that row says "for each key alone" and the probe drove two of the four — **and it is the same walk that
+catches a row whose population was sampled rather than asserted.** **If the walk finds a gap, that finding
+is worth more than a catch**, and it goes in the report whether or not it is convenient.
+
+**Two classes of miss, and they need different remedies:**
+
+| class | what it looks like | the fix |
+|---|---|---|
+| **coverage debt** | the probe is narrower than its row — a key, a branch or a population the row names and the probe does not drive | **write the missing coverage** |
+| **path debt** | no probe mutates the path, so the defect is invisible however much input is varied — e.g. clean-refusal rows cannot see a refusal that claims to have refused and then writes anyway | **mutate the path** |
+
+**Only the first is paid by adding rows.** A stage-4 round that plants only input mutations leaves every
+path debt unpaid, and the fixture-refusal half-application is the standing example: **`S4-152` asserts it,
+and asserting is not mutating.**
 
 - **Mutants are named by the defect or requirement they attack, with a number in parentheses**, and each
   is recorded as caught, escaped, or **measured unobservable over HTTP** — the stage-1 outcome that
