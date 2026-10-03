@@ -121,3 +121,59 @@ clause 29 stands. **The browser half remains reported rather than verified by me
 Builder's own report identifies **three suites (`ui-messages`, `ui-a11y`, `ui-states-a11y`) last measured at
 `345bbe6`**, one commit earlier, which is a stale green by clause 48's own definition and should be re-run
 before the stage is closed.
+
+
+---
+
+# Stage-4 acceptance at `75bb37e` — PASS
+
+**`345bbe6` is recorded PASS-superseded:** it is a commit where every suite and the supplied run were green
+and the planner refused a feasible plan. **A full green surface is not weak evidence about the planner; it is
+no evidence at all.** The walk, the measurements and the two findings from that pass all stand — the acceptance
+of that hash is what is void.
+
+## Measured by me, from `git archive 75bb37e`
+
+| | result |
+|---|---|
+| supplied | stage 1 **120/120** · stage 2 **25/25** · stage 3 **7/7** · **stage 4 6/6** · **highest contiguous 4** |
+| `s4/write_family.py` | **9 / 9** |
+| `s4/discriminator.py` | **16 / 16** |
+| `s4/negative_control.py` | **4 / 4** — four rows proven capable of failing |
+| **`s4/planner_property.py`** | **11 / 11** — new; the properties the supplied run could not see |
+| `s3/api_core.py` · `terms_history_series.py` · `fixture_arrival.py` | **48/48** · **34/34** · **36/36** |
+| stage-2 screen suites at **1280 and 375** | `closed_day` **26/26** · `out_of_order_lost` **14/14** · `focus_lifecycle` **48/48, 0 residual** · `focus_reentry` **17/17, 0 residual** · `states_set` **11/11** |
+
+## `S4-170`, the row the supplied run could not see, written from the specification
+
+1. **A closure is a constraint, not an assignment.** A booking that does **not** hold the closed table is
+   still considered, keeps its table, is reported `changed: false`, `moved_count: 0`, **gains no history
+   entry**, and its revision does not move. **This is the case that answered `409 no_feasible_plan` at
+   `345bbe6`, and it now answers 201 with the booking left alone.**
+2. **Considered means _overlapping_, not _constrained_.** With two overlapping bookings and one outside the
+   interval, `assignments` carries **exactly the two overlapping references, in reference order** — asserted by
+   reference and not sampled, because the two sets are different sets.
+3. **The objective is lexicographic**, and a party of 3 on a closed 2-seat table **must** move.
+4. **Nothing may disappear**: the whole population survives the plan, by reference, with none cancelled.
+
+## The thinness in my own row, named rather than absorbed
+
+**Levels 2 and 3 of the objective are asserted only for presence and self-consistency.** `S4-170-3b` checks
+that `unused_seats` and `moved_count` are reported, and `S4-170-3c` checks that `moved_count` agrees with the
+assignment list the plan ships — **but I have not built the fixture where a seat-greedy plan that changes fewer
+table sets must lose, or the one where two plans tie on both and the rank vector decides.** So:
+
+> **my optimiser row is a thinness, not a hole, and a thinness looks like coverage.** The level-1 property is
+> genuinely asserted (a party that cannot stay must move). **Levels 2 and 3 are asserted for presence and
+> internal consistency only**, and a build that ignored the seat total and the rank vector would pass every row
+> I wrote. The fixtures that would separate them are owed, and they are owed as rows rather than as a note.
+
+## Verdict
+
+**PASS at `75bb37e`.** Supplied **6/6**, highest contiguous **4**, every stage-4 row of mine green, the whole
+stage-1/2/3 regression surface green with **0 residual** at both widths, and four rows proven capable of
+failing by the negative control. **Two items remain open and recorded rather than absorbed:** the optimiser
+fixtures for levels 2 and 3, and **`S4-152`'s path debt**, which is owed to the next defect round — asserting
+the refusal is not mutating it. **The browser half remains reported rather than verified by me**, and the
+Builder's own statement of that limit is the honest form: **its suites are the only browser evidence in the
+room and it runs them, so they are verified by the seat whose code they exercise.**
