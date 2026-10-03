@@ -70,9 +70,8 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+$/;
 
 function normaliseEmail(value, name) {
   if (typeof value !== 'string') fail('malformed_request', { field: name });
-  const trimmed = value.trim();
-  if (!EMAIL_PATTERN.test(trimmed)) fail('validation_failed', { field: name, reason: 'email_format' });
-  return trimmed.toLowerCase();
+  if (!EMAIL_PATTERN.test(value)) fail('validation_failed', { field: name, reason: 'email_format' });
+  return value.toLowerCase();
 }
 
 function queryValue(url, name) {
