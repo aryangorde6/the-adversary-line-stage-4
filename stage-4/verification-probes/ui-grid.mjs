@@ -107,9 +107,19 @@ async function main() {
     ok('no-slots explains the next step',
       /another date|smaller party/i.test(await text(page, '[data-testid="no-slots"]') || ''),
       await text(page, '[data-testid="no-slots"]'));
+    // Read what the service says about this day before asserting what the screen says about it.
+    // The wording is only right because the day is shut; if the fixture stopped making it shut, the
+    // row would go red on the day's own answer rather than pass on a word.
+    const said = await page.evaluate(async () => {
+      const r = await fetch('/availability?restaurant_id=r_anker&date=2026-12-06'
+        + '&party_size=2&explain=true');
+      const body = await r.json();
+      return Object.prototype.hasOwnProperty.call(body, 'day_state') ? body.day_state : null;
+    });
+    ok('the service reports this day as shut', said === 'shut', { said });
     ok('no-slots says the restaurant is closed, not that no tables are free',
-      /closed/i.test(await text(page, '[data-testid="no-slots"]') || ''),
-      await text(page, '[data-testid="no-slots"]'));
+      said === 'shut' && /closed/i.test(await text(page, '[data-testid="no-slots"]') || ''),
+      { said, text: await text(page, '[data-testid="no-slots"]') });
     ok('the closed day is named as a person reads it',
       /Sunday/.test(await text(page, '[data-testid="no-slots"]') || ''),
       await text(page, '[data-testid="no-slots"]'));
