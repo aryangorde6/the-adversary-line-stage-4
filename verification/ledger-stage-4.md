@@ -16,16 +16,33 @@ regression goes to the Foreman before it is characterised.**
 
 | Fact | Value | Status |
 |---|---|---|
-| Stage-4 supplied checks | **5** | **4 passed / 1 failed** |
+| Stage-4 supplied checks | **6**, all in one file (`stage-4/verification-probes/stage_4/test_sample.py`) | **4 passed / 2 failed** |
+| Which two fail | **not answerable from the harness report** — it gives per-file counts only, and the file must not be opened | **unmeasured by me; observed by the Builder** |
 | Whether those 4 passes are stage-4 behaviour | unknown | **unmeasured** |
-| Stage-4 checks opened by me | 0 | the file has not been read |
-| Stage-4 product source | none | no `stage-4/` directory exists |
-| Highest contiguous supplied stage | 3 | stage 1 120/0, stage 2 25/25, stage 3 7/7 at `9121b38` |
+| Stage-4 checks opened by me | 0 | **no check file has been read** |
+| Highest contiguous supplied stage | 3 | stage 1 120/0, stage 2 25/25, stage 3 7/7 |
+
+**Correction to this opening, which predicted 5 checks and 4 passed / 1 failed. The harness collects
+six, four passing and two failing, and the harness is authoritative.** Measured by me at `e9b9f4d`
+through the sanctioned command at stage 4, no check file opened: **stage 1 120/120, stage 2 25/25,
+stage 3 7/7, stage 4 4/6**, highest contiguous **3**. My predicted figure came from a room statement
+rather than from a run, and **that is the failure this table exists to prevent: a number in a ledger that
+was never measured.** It is corrected here against my own measurement.
+
+**What the run does settle, from the file rather than from the count: stages 1–3 are green, so the
+second failure is not a regression carried forward from the accepted build** — which is the Builder's
+useful half and which I confirm independently. **What it does not settle: which two fail.** The report
+carries per-file counts (`4/6` in one file) and no test identities, and naming them would mean opening a
+check file, which this seat does not do. **So the two failures are recorded as observed-and-unidentified
+rather than guessed, and the honest next step is a driving test of stage-4 behaviour rather than a peek.**
+
+**Stage-4 base: `549a104`.** The round and this ledger name the same build. `e9b9f4d` creates the
+stage-4 folder from it and rewrites three comments across the stage boundary (clause 25).
 
 **The four passes are not assumed to be stage-4 behaviour.** A stage's first sample suite usually partly
 measures the stage before it — stage 3's supplied suite was the first thing that touched policies and
 series, and the four rows that passed there were satisfied by a build with *no* policy support at all.
-**So each of the five checks is, until measured, a statement about `9121b38`'s behaviour wearing a stage-4
+**So each of the six checks is, until measured, a statement about `549a104`'s behaviour wearing a stage-4
 label.** The ledger's first job is to find which, and the honest way to do that is not to read the
 checks.
 
@@ -118,9 +135,22 @@ seeded stage-3 state is unmeasurable until that fixture exists.** That is `S4-12
 substitution (which needs a published policy per booking), `S4-130`'s half-open boundary against
 applied closures, `S4-137`'s series-moved-by-a-plan, and `S4-161`'s imported series. **They are written
 against a door that does not yet exist, and the honest state of each is "unmeasurable", not "pending".**
-The alternative — expressing the state through `/_test/import` in every row — is available today and is
-what this file's own absent-reservation row did, so the choice is deliberate and recorded rather than
-defaulted into.
+
+**The route is named per row, because the two routes have different properties and a reader needs to know
+which one a row depends on:**
+
+| row | route it depends on | property of that route |
+|---|---|---|
+| `S4-123` terms-driven substitution | `/_test/import` (today) or a policy-seeding `/_test/reset` (`0.6`) | import **carries state verbatim** and re-derives nothing, so it cannot itself express "derived from a policy that was published in this room" — the row needs a real publication, so **import alone is insufficient** |
+| `S4-130` half-open boundary vs applied closures | import for the closures, **driving for the plan** | closures are stage-3 state, but the plan is stage-4 behaviour and must be driven |
+| `S4-137` series moved by a plan | import for the series, **driving for the plan** | as above: an imported series occurrence must survive a driven plan, which is also `S4-161`'s subject |
+| `S4-161` imported series with moved and cancelled occurrences | `/_test/import` only — that is the whole requirement | no reset can express it, because the document *is* the subject |
+
+**So the choice is recorded rather than defaulted into: state is expressed through `/_test/import`, and
+stage-4 behaviour is always driven.** The cost is named too — **every import-based row carries a second
+derivation in the room (the document I write) beside the one in the code**, and this stage has produced
+three defects from a second derivation, so those rows cross-check the imported state against what the
+service derives rather than trusting the document.
 
 ## 0.2 The second arrival path — measured **open at `77c69f8`**, closed at `a69e6ba`
 
@@ -346,6 +376,17 @@ because they have now failed to travel into a new file twice.**
     both leave the author stuck. One said `204` and seeded nothing; the other said `422` and refused
     something correct. **A refusal that is *wrong* is worse than no refusal**, because the author cannot
     distinguish it from the state being genuinely unsupported.
+25. **A comment explaining a decision is not neutral — across a stage boundary it becomes the design's
+    apparent intent, and a reader implements what the comment says rather than what the code refuses.**
+    Rewriting a comment across a stage boundary is not tidying; **it is correcting an instruction.** At
+    `e9b9f4d` `fixture.js` said "the stage-3 stores" and explained why a 204 that seeds nothing is worse
+    than a missing capability — **in stage 4 that reads as the intended design.** This is the third
+    instance of the family in three stages: the occurrence shape documented and not emitted; a design
+    whose justification nothing tested; and **a refusal documented as if it were the design**, which is
+    the worst of the three **because it is indistinguishable from a deliberate limitation.** The sharp
+    corollary for `S4-151`: a reader who implements from the comment instead of from this ledger builds
+    the **refusal** instead of the **capability**, and `S4-151`'s stage-4 half will look unimplementable
+    for a reason that is only documentary.
 ---
 
 ## A. Arrival paths (highest risk: two paths, one fact, and a 204 that lies)
@@ -353,8 +394,8 @@ because they have now failed to travel into a new file twice.**
 | Row | Requirement | What must be asserted | Risk if missed |
 |---|---|---|---|
 | `S4-150` (**both halves true only at `a69e6ba`+**) | Seed and import must not be able to express the same inconsistent booking. Both halves: the import path derives policy-0 terms (true since `387ed26`), **and** the seed path cannot produce `revision: 5` with `accepted_terms: null` (true only at `a69e6ba`; **open at `77c69f8`**). | Fixture-seed that state → **422**; and a differential row: seed a booking, export, import the export, compare the two bookings' `revision`/`accepted_terms`/terms-derived quantities field by field. | The `S3-121` defect returns through the other door. Fixing one arrival path and leaving the other able to express the state is the defect, not the fix. |
-| `S4-151` (refusal satisfied in stage 3 at `a69e6ba`; **capability still missing**) | `/_test/reset` must refuse the four keys it cannot seed, naming the key and the door that works — **and, in stage 4, be able to seed them.** | At `a69e6ba` this is 422 `fixture_unsupported`, key named, import door named, import verified to really seed (`S3-303`/`S3-304`). **The stage-4 half is the positive control:** a fixture that declares a 15-minute policy, one series, one history entry and `batch_counters` must reset **204** and the grid must then read **15-minute slots** — so a row cannot assert policy 0 while believing it asserts a policy. And a store that holds something must appear in the export: **absent while empty cannot be told from silence** (`S3-302a`). | A probe author writing a stage-4 fixture gets 204 and believes it seeded a policy, and every downstream assertion is *about* policy 0 with nothing red. **That is the defect this row's second half exists to make impossible rather than merely unlikely.** |
-| `S4-152` | A refused fixture changes nothing at all: **no store may be half-seeded**. | Byte-equal full-state export around a refused reset — for each key alone, for all four together, and for a fixture carrying a refusal alongside legal seeds. Then the split-refusal half: **a build that refuses one key and silently drops another is caught**, which is the mutant this row now has a job for. | A refusal that half-applies is worse than no refusal. **The refusal is now load-bearing behaviour at `a69e6ba`** — it is a new code on a new path — so a mutant returning 422 while writing some declared stores passes every other row in this section. |
+| `S4-151` (**re-measured at `549a104` or later**; refusal satisfied there; **capability still missing**) | `/_test/reset` must refuse the four keys it cannot seed, naming the key and the door that works — **and, in stage 4, be able to seed them.** | At `a69e6ba` this is 422 `fixture_unsupported`, key named, import door named, import verified to really seed (`S3-303`/`S3-304`). **The stage-4 half is the positive control:** a fixture that declares a 15-minute policy, one series, one history entry and `batch_counters` must reset **204** and the grid must then read **15-minute slots** — so a row cannot assert policy 0 while believing it asserts a policy. And a store that holds something must appear in the export: **absent while empty cannot be told from silence** (`S3-302a`). | A probe author writing a stage-4 fixture gets 204 and believes it seeded a policy, and every downstream assertion is *about* policy 0 with nothing red. **That is the defect this row's second half exists to make impossible rather than merely unlikely.** |
+| `S4-152` (**re-measured at `549a104` or later**) | A refused fixture changes nothing at all: **no store may be half-seeded**. | Byte-equal full-state export around a refused reset — for each key alone, for all four together, and for a fixture carrying a refusal alongside legal seeds. Then the split-refusal half: **a build that refuses one key and silently drops another is caught**, which is the mutant this row now has a job for. | A refusal that half-applies is worse than no refusal. **The refusal is now load-bearing behaviour at `a69e6ba`** — it is a new code on a new path — so a mutant returning 422 while writing some declared stores passes every other row in this section. |
 
 ## B. Preview and apply: revisions, atomicity, idempotency
 
@@ -427,6 +468,14 @@ because they have now failed to travel into a new file twice.**
 
 **None of these is resolved by me. Each is recorded so that a later verdict cannot quietly pick one
 side after seeing the answer.**
+
+**Status, restated as the Builder's observation rather than as a ruling: `A1`, `A2` and `A4` are expected
+to be decidable only by driving, and `A1`'s status is a single request away from an answer.** **If an
+ambiguity dissolves under a driving test it was never an ambiguity — it was an unmeasured fact**, and the
+record moves it from this list into the measurements **naming the observation that settled it.** A ledger
+whose ambiguities quietly become measurements got stronger; one resolved by whichever implementation
+happened to be written got weaker. `A3`, `A5` and `A6` remain genuinely open and are **not** to be
+settled by reading code.
 
 - **A1 — missing idempotency key on `POST /replans` and `/apply`.** The specification says both
   *require* a key but names no status for its absence, while every other validation failure in the
