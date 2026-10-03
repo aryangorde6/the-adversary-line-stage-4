@@ -248,6 +248,21 @@ function planFor(state, restaurant, closure, considered, byReference) {
 // Strictly the specification's order: fewest changed table sets, then fewest unused seats, then the vector
 // of option ranks compared element by element in ascending reference order. A plan that ties on all three
 // is a plan we did not need to distinguish, and returning false for it keeps the search from thrashing.
+//
+// THE THIRD TERM IS REDUNDANT TODAY, AND THAT IS WHY IT MUST NOT BE DELETED AS UNREACHABLE.
+//
+// The search enumerates options in rank order -- singles in fixture order, then declared pairs -- so the
+// first complete plan it finds is already the rank-vector minimum. Deleting the loop below therefore
+// changes no reachable behaviour: measured, M2 (the rank vector removed) is an EQUIVALENT mutant, not a
+// survivor, and no black-box probe can distinguish it from this build. Two rows failing to detect it was
+// not a weakness of the rows.
+//
+// So the enumeration order performs the tie-break, and this loop states the specification's third term
+// explicitly. That redundancy is INSURANCE, not waste: mutant M2' reverses the enumeration order while
+// keeping this loop, and S4-171d catches it (14/15). Delete the loop and M2' becomes reachable -- a build
+// where enumeration and rank order diverge, which is exactly the future change this line is here to
+// survive. **A tie-break that is currently unreachable is the only kind that is worth keeping, because
+// the day it becomes reachable is the day it is needed.**
 function betterThan(candidate, best) {
   if (candidate.moved !== best.moved) return candidate.moved < best.moved;
   if (candidate.unused !== best.unused) return candidate.unused < best.unused;
