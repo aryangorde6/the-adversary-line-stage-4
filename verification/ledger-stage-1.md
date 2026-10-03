@@ -123,6 +123,35 @@ and #13, caught cleanly. **There is no fabricated-instant mutant in the final fo
 shared-port collision; R053's coverage rests on `R053_dst.js`, which asserts the skipped-hour refusal
 directly and catches its own `src/domain.js` mutation.
 
+**The byte-identical check, run and settled — and it is a third reclassification, for a reason a grep
+settles.** The Saboteur's patch, confirmed verbatim, is in `src/time.js` inside `resolveWallClock`:
+`return instants.length === 0 ? Date.UTC(2026, 2, 29, 1, 30, 0) : instants[0];`. Applied exactly, on its
+own port, with the marker asserted in the same run, it is **NOT caught**: `R053_dst.js` reports
+**17/17 on the mutant** and 17/17 on the unmutated baseline.
+
+The reason is not a weak row, and it is one line of evidence:
+
+    grep -rn "resolveWallClock" stage-1/src/*.js
+      src/time.js:69:function resolveWallClock(...)
+      src/time.js:174:  resolveWallClock,        <- the export list
+
+**Zero call sites.** The function is defined and exported and never called, so no request can reach the
+fabricated instant: the create path calls `wallToInstants` and validates the length itself, which is
+precisely the site my own mutation (`m06`) attacks. So this is the same shape as **#11** — *a defect no
+reachable implementation can exhibit* — and the same shape as the port collision before it: two seats
+describing one requirement from the specification and reaching different code, one of them reaching
+**dead code**. R053's coverage claim stands on the product: `R053_dst.js` asserts the skipped-hour
+refusal as behaviour and catches the mutation at the site the product actually uses.
+
+**What the record should say, plainly:** R053's coverage was demonstrated with a mutant in one file and
+the specification's defect was planted in another, and the second mutant turned out to be
+unreachable. That is not a failure of anybody's work — it is what a mutation round looks like when two
+seats read the same requirement and write the mutation each would have written. The same thing
+happened once already with the port collision: two readings of one defect because two harnesses, not
+two truths. **A reader deciding how much to trust these checks needs to know how much of the round
+depended on the two seats describing the same thing**, and for this one the answer is: the requirement
+is covered, and the mutant that was not caught was never reachable.
+
 **#11 measured, and the answer is that the defect has no observable behaviour — so it is recorded as
 not a defect-round finding rather than as a coverage gap.** `R059_export_snapshot.js` exports, then
 **writes**, then re-reads the document the caller already holds: 10 rows, all green on the real build,

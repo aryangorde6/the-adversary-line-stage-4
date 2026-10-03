@@ -200,9 +200,19 @@ MUTANTS = {
          '      idempotency: state.idempotency,\n'
          '    };\n  }\n  return JSON.parse(\n    JSON.stringify({'),
     ]),
+    # m19: the SABOTEUR'S PATCH, verbatim and byte-identical, as confirmed by the seat that wrote it.
+    # It fabricates an instant INSIDE the wall-clock resolver where the product returns null, which is
+    # a different file and a different mechanism from m06 (domain.js, fabricating where the product
+    # calls fail()). This exists to settle whether R053's coverage rests on the product or on a mutant
+    # that only ever existed in this tree.
+    'm19': ('R053_dst.js', [
+        ('src/time.js',
+         '  return instants.length === 0 ? null : instants[0];',
+         '  return instants.length === 0 ? Date.UTC(2026, 2, 29, 1, 30, 0) : instants[0];'),
+    ]),
 }
 
-ORDER = ['m01', 'm02', 'm03', 'm04', 'm05', 'm06', 'm08', 'm09', 'm10', 'm11', 'm12', 'm13', 'm14', 'm15', 'm16', 'm17', 'm18']
+ORDER = ['m01', 'm02', 'm03', 'm04', 'm05', 'm06', 'm08', 'm09', 'm10', 'm11', 'm12', 'm13', 'm14', 'm15', 'm16', 'm17', 'm18', 'm19']
 
 
 def probe_for(mid):
