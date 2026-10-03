@@ -109,6 +109,20 @@ from the IANA database **inside the probe**, never read back out of the service.
    +540 minutes in both months. Asserting instants where offsets were meant is the ordinary
    wrong-quantity error, and it produced a red against a correct service.
 
+**The count, stated so a reader comparing tables does not have to reconcile them.** Against the
+Saboteur's final list of fourteen at `c1e5735`: **seven of the fourteen are now decided by my probes**
+— #1 (half-open, `R006_halfopen.js`), #2 (wall-clock occupancy, `R006_occupancy_multizone.js`), #3
+(fall-back second occurrence, `R054_fallback_first.js`), #5 (idempotency without path, `R037_idempotency_scope.js`),
+#7 (receipt on 4xx, `R041_reuse_after_4xx.js`), #8 (idempotency body compare, `R038_idem_order.js`) and
+#14 (sort by local time, `R049_list_order_multizone.js`). **#11** is decided as *unobservable over
+HTTP*. **#6** (idempotency global rather than per-user) is covered by the same probe as #5, in row
+`R037h`, because both are the same scoping rule read on two axes. The remaining items are #4 and #10,
+which were caught by the harness through breakage rather than by a row naming the defect, and #9, #12
+and #13, caught cleanly. **There is no fabricated-instant mutant in the final fourteen**, so the
+`src/time.js` byte-identical check concerns an *earlier* numbering whose reading was explained by the
+shared-port collision; R053's coverage rests on `R053_dst.js`, which asserts the skipped-hour refusal
+directly and catches its own `src/domain.js` mutation.
+
 **#11 measured, and the answer is that the defect has no observable behaviour — so it is recorded as
 not a defect-round finding rather than as a coverage gap.** `R059_export_snapshot.js` exports, then
 **writes**, then re-reads the document the caller already holds: 10 rows, all green on the real build,
