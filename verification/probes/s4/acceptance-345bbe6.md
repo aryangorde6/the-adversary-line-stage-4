@@ -75,3 +75,49 @@ not verified by me** — no browser instrument is runnable from this seat — an
 `S4-161`'s screen corroboration and `S4-164`'s rendered claim are the Builder's and the Finisher's rows from
 my specification. **`S4-165` is satisfied by existing behaviour**, and **`S4-152`'s path-debt probe is still
 owed** — asserting the refusal is not mutating it, and that belongs to the next defect round.
+
+
+---
+
+# Addendum: `379379b` graded, with a negative control
+
+## Everything re-measured at `379379b`
+
+| | result |
+|---|---|
+| supplied, mine | stage 1 **120/120** · stage 2 **25/25** · stage 3 **7/7** · **stage 4 6/6** · **highest contiguous 4** |
+| `s4/write_family.py` | **9 / 9** |
+| `s4/discriminator.py` | **16 / 16** |
+| `s3/api_core.py` · `terms_history_series.py` · `fixture_arrival.py` | **48/48** · **34/34** · **36/36** |
+| stage-2 screen suites at **1280 and 375** | `closed_day` **26/26** · `out_of_order_lost` **14/14** · `focus_lifecycle` **48/48, 0 residual** · `focus_reentry` **17/17, 0 residual** · `states_set` **11/11** |
+
+**No stage-2 or stage-3 row regresses at this hash, including the `CD-short-window-*` pair re-worded at
+`345bbe6`.**
+
+## The negative control, because a count is not a coverage claim
+
+**299 rows, 6/0, 47/47 — each of those is a count, and the Foreman's caution is right that a count is not a
+coverage claim.** So `verification/probes/s4/negative_control.py` takes the same requests the positive rows
+make and asserts **the wrong answer**, requiring each to be reported FAIL. **4/4 — four rows proven capable of
+failing:**
+
+| row | the wrong expectation, and why it is the one that would matter |
+|---|---|
+| `NC-001` | the documented replans body was **not** refused as 404 (it is 201) — if it were 404, the row asserting it is reached would be vacuous |
+| `NC-002` | the 201 body does **not** carry the pre-conformance shape (`closure, created_at, moves, plan_id, policy_version`) — the shape row, checked against the shape that used to be there |
+| `NC-003` | the three specified refusals are **not** all `400` (422 / 422 / 404) — if they were all 400 again, the 422/422/404 rows would be vacuous |
+| `NC-004` | a day whose policy omits Sunday is **not** reported `open` (it is `shut`) — the discriminator's rows, checked against a state they must be able to reject |
+
+**The first draft of `NC-002` asserted a wrong key set that turned out to be the right one**, which is itself
+the finding: **I picked "wrong" by guessing, and the guess was the correct shape.** The control was rewritten to
+assert **the shape the pre-conformance build actually returned** — which is the only wrong answer worth testing
+against, because it is the one a stale expectation would actually carry.
+
+## Verdict at `379379b`: **PASS**, unchanged in substance
+
+**One row of mine remains owed and it is not a coverage debt: `S4-152`'s path debt.** Asserting the refusal is
+not mutating it, so the probe that pays it belongs to the next defect round, and the standing example of
+clause 29 stands. **The browser half remains reported rather than verified by me** — and at this hash the
+Builder's own report identifies **three suites (`ui-messages`, `ui-a11y`, `ui-states-a11y`) last measured at
+`345bbe6`**, one commit earlier, which is a stale green by clause 48's own definition and should be re-run
+before the stage is closed.
