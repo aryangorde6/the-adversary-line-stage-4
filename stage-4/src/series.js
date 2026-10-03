@@ -275,9 +275,18 @@ function amendClockTime(state, seriesRecord, body, nowMs) {
     moved.push(reservation.reference);
   }
 
-  // Once for the amendment, whatever the count. A no-op amendment moves nothing and moves the revision
-  // zero times: the caller asked for no change and got none, which is the only honest reading of a
-  // revision. This is the "+0" half of S4-154 and it is only reachable with a second, no-op call.
+  // Once for the amendment, whatever the count.
+  //
+  // A no-op amendment -- amending to the clock time already in force -- is ACCEPTED and moves nothing,
+  // including the revision. The reason is worth stating because the opposite looks stricter: a reader
+  // assuming refusal is the safer choice would refuse this, and refusing it would be refusing a TRUE
+  // STATEMENT. The caller said the series starts at the time it already starts at, and that is correct.
+  // It is the same rule a no-op patch follows on a single booking (S3-058, S3-076), and consistency
+  // across the two amendment paths is the point: a series is one booking intent, so it answers the same
+  // way a booking does.
+  //
+  // This is the "+0" half of S4-154, and it is reachable ONLY with a second, no-op call -- which is why
+  // it needs a written reason. A branch no test would ever have taken otherwise reads as an oversight.
   if (moved.length > 0) seriesRecord.revision += 1;
   return seriesView(state, seriesRecord);
 }
