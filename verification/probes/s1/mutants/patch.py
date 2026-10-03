@@ -184,9 +184,25 @@ MUTANTS = {
          '    (entry) => entry.user_id === userId && entry.key === key && entry.method === method && entry.path === path,',
          '    (entry) => entry.user_id === userId && entry.key === key,'),
     ]),
+    # m18: the exported document shares structure with the live state instead of being a copy, so a
+    # write that lands afterwards is visible in a document the caller already received. Every earlier
+    # export row asserted properties OF a document and passed against a live view, because a live view
+    # is correct until something writes to it.
+    'm18': ('R059_export_snapshot.js', [
+        ('src/snapshot.js',
+         'function snapshotState(state) {\n  return JSON.parse(\n    JSON.stringify({',
+         'function snapshotState(state) {\n  if (true) {\n'
+         '    return {\n'
+         '      users: state.users,\n'
+         '      tokens: state.tokens,\n'
+         '      restaurants: state.restaurants,\n'
+         '      reservations: state.reservations,\n'
+         '      idempotency: state.idempotency,\n'
+         '    };\n  }\n  return JSON.parse(\n    JSON.stringify({'),
+    ]),
 }
 
-ORDER = ['m01', 'm02', 'm03', 'm04', 'm05', 'm06', 'm08', 'm09', 'm10', 'm11', 'm12', 'm13', 'm14', 'm15', 'm16', 'm17']
+ORDER = ['m01', 'm02', 'm03', 'm04', 'm05', 'm06', 'm08', 'm09', 'm10', 'm11', 'm12', 'm13', 'm14', 'm15', 'm16', 'm17', 'm18']
 
 
 def probe_for(mid):

@@ -71,7 +71,7 @@ Specification: /home/aryan/band_hack/dark-factory-wearedevs/tablekeeper/spec/sta
 
 ## Stage-1 probe evidence, extended: mutants 2, 14 and 3
 
-Thirteen probe files, 179 asserted rows, all green against the unmutated stage-1 build; each file's
+Fourteen probe files, 189 asserted rows, all green against the unmutated stage-1 build; each file's
 target caught when the corresponding mutation is applied, on its own port, with the marker asserted in
 the same run as the probe and an unmutated baseline required to pass.
 
@@ -82,6 +82,7 @@ the same run as the probe and an unmutated baseline required to pass.
 | `R054_fallback_first.js` | 21 | R053, R054, R055, R056 | m15: an ambiguous fall-back hour resolved to the **second** occurrence |
 | `R041_reuse_after_4xx.js` | 8 | R041 (second half) | m16: the receipt is stored on a **failure**, so a key spent on a 4xx is spent |
 | `R037_idempotency_scope.js` | 8 | R037 | m17: the receipt store ignores **method and path**, so one key satisfies two keyed writes |
+| `R059_export_snapshot.js` | 10 | R059 | m18: the export returns **live references** rather than a copy — **and see the note below: over HTTP this is unobservable** |
 
 **The fixture came first, and that is why these three exist.** All earlier probes ran against one
 restaurant in one timezone, which masks three whole classes of defect: with one zone the local date
@@ -107,6 +108,18 @@ from the IANA database **inside the probe**, never read back out of the service.
    instant, which is false; the quantity that shows Tokyo has no daylight saving is the UTC **offset**,
    +540 minutes in both months. Asserting instants where offsets were meant is the ordinary
    wrong-quantity error, and it produced a red against a correct service.
+
+**#11 measured, and the answer is that the defect has no observable behaviour — so it is recorded as
+not a defect-round finding rather than as a coverage gap.** `R059_export_snapshot.js` exports, then
+**writes**, then re-reads the document the caller already holds: 10 rows, all green on the real build,
+and **10/10 on a build where `snapshotState` returns the live arrays unconditionally**. The mechanism
+is the transport: the response is serialised when it is sent, so a caller can never see a later write
+through the document it holds. The snapshot property is a property of the response, not of the export
+function, and no HTTP-observable probe can distinguish the two builds. The mutant is also a **no-op in
+the product**, not merely in the probe: `exportDocument` builds a fresh wrapper per call and nothing
+retains it, so there is no consumer for a live reference to mislead. The probe is kept because it
+would catch the day a route serves state without serialising — a UI route rendering the document
+directly, say — and because "this defect is unobservable" is only credible with a probe that tried.
 
 **One more gap closed by staging, not by assertion strength.** m17 (idempotency scoped globally) was
 missed at 14/14 while the harness caught it, and the reason was the same as m15's: **no probe ever
