@@ -172,6 +172,9 @@ function parallel(n, makeRequest) {
   return Promise.all(jobs);
 }
 
+  multiZone,
+  zonedBooking,
+  instantOf,
 module.exports = {
   FUTURE,
   req,
@@ -190,4 +193,92 @@ module.exports = {
   parallel,
   ANKER,
   allWeek,
+  multiZone,
+  zonedBooking,
+  instantOf,
 };
+// ---- multi-timezone fixture ------------------------------------------------
+//
+// Every earlier stage-1 probe ran against ONE restaurant in ONE timezone, and that
+// single timezone masks two whole classes of defect:
+//
+//   * a comparison made on wall-clock values rather than on absolute instants, because
+//     with one zone the local date and the UTC date agree for every booking the probes
+//     make, so a resolver that gets the date wrong still returns the right answer;
+//   * an ordering made on local time strings, because with one zone local order and
+//     absolute order are the same order.
+//
+// Three zones so that both are exposed: Berlin (UTC+1/+2, DST), New York (UTC-5/-4,
+// DST) and Tokyo (UTC+9, **no DST**, so a resolver that assumes every zone observes
+// daylight saving is wrong here in a way no single-zone fixture can show).
+// `localDateDiffersFromUTC` is true for the Tokyo bookings below: 09:00 in Tokyo on
+// 2026-06-02 is 00:00 UTC on the same date, while 08:00 in Tokyo is 23:00 UTC on
+// 2026-06-01 — the previous UTC date.
+function multiZone() {
+  const days = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+  // Open to 23:59, not 23:30: a 90-minute booking starting at 23:00 would otherwise be refused for
+  // closing time, and a refusal for the wrong reason reads like an occupancy defect. The first
+  // version of the occupancy probe lost three rows to exactly that.
+  const openAllDay = days.map((w) => ({ weekday: w, opens: '00:00', closes: '23:59' }));
+  const tables = [
+    { id: 't_1', label: '1', capacity: 4 },
+    { id: 't_2', label: '2', capacity: 4 },
+  ];
+  return {
+    users: [{ id: 'u_ada', email: 'ada@example.com', password: 'correct horse', display_name: 'Ada' }],
+    restaurants: [
+      { id: 'r_berlin', name: 'Zum Anker', timezone: 'Europe/Berlin', slot_minutes: 30,
+        reservation_duration_minutes: 90, cancellation_cutoff_minutes: 120,
+        opening_hours: openAllDay, tables },
+      { id: 'r_newyork', name: 'The Anchor', timezone: 'America/New_York', slot_minutes: 30,
+        reservation_duration_minutes: 90, cancellation_cutoff_minutes: 120,
+        opening_hours: openAllDay, tables },
+      { id: 'r_tokyo', name: 'Anker Tokyo', timezone: 'Asia/Tokyo', slot_minutes: 30,
+        reservation_duration_minutes: 90, cancellation_cutoff_minutes: 120,
+        opening_hours: openAllDay, tables },
+    ],
+    reservations: [],
+  };
+}
+
+// A booking body for one of the three zones. `starts_at_local` is always a LOCAL wall
+// clock, which is the only kind the API accepts.
+function zonedBooking(restaurantId, tableId, startsAtLocal, partySize = 2) {
+  return { restaurant_id: restaurantId, table_id: tableId, starts_at_local: startsAtLocal, party_size: partySize };
+}
+
+// The absolute instant a local wall clock denotes, computed here from the IANA database
+// rather than from the service, so a probe never reads the answer out of the thing it is
+// testing. Returns null for a local time the zone skips.
+function instantOf(timeZone, isoLocal) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(isoLocal);
+  if (!m) return null;
+  const [, y, mo, d, h, mi] = m.map(Number);
+  const naive = Date.UTC(y, mo - 1, d, h, mi);
+  const offsetAt = (ms) => {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+    }).formatToParts(new Date(ms));
+    const out = {};
+    for (const part of parts) if (part.type !== 'literal') out[part.type] = Number(part.value);
+    return Date.UTC(out.year, out.month - 1, out.day, out.hour, out.minute, out.second) - ms;
+  };
+  const first = naive - offsetAt(naive);
+  const second = naive - offsetAt(naive - 24 * 3600000);
+  const third = naive - offsetAt(naive + 24 * 3600000);
+  const cands = [...new Set([first, second, third])].filter((ms) => {
+    const back = new Date(ms);
+    const p = new Intl.DateTimeFormat('en-US', {
+      timeZone, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit',
+    }).formatToParts(back);
+    const o = {};
+    for (const part of p) if (part.type !== 'literal') o[part.type] = Number(part.value);
+    return o.year === y && o.month === mo && o.day === d && o.hour === h && o.minute === mi;
+  });
+  // Two candidates means an ambiguous fall-back local time; the first occurrence is the one
+  // the specification requires.
+  cands.sort((a, b) => a - b);
+  return cands.length ? cands[0] : null;
+}

@@ -114,9 +114,39 @@ MUTANTS = {
          "  if (!/^-?[0-9]+$/.test(raw)) fail('validation_failed', { field: name });",
          '  if (Number.isNaN(Number(raw))) fail(\'validation_failed\', { field: name });'),
     ]),
+    # --- multi-timezone mutants ---
+    # m13: occupancy decided on WALL-CLOCK values instead of absolute instants. The date
+    # is dropped from the comparison, so the same clock time on a later day reads as an
+    # overlap. A single-timezone fixture cannot catch this: it never books the same clock
+    # time twice, and never crosses a zone whose local date differs from the UTC date.
+    'm13': ('R006_occupancy_multizone.js', [
+        ('src/domain.js',
+         'function isOccupied(state, restaurantId, tableId, startMs, endMs, ignoredReference) {\n'
+         '  return state.reservations.some(',
+         'function wallClockOnly(ms, timezone) {\n'
+         '  const p = time.partsInZone(timezone, ms);\n'
+         '  return p.h * 3600000 + p.mi * 60000;\n'
+         '}\n'
+         '\n'
+         'function isOccupied(state, restaurantId, tableId, startMs, endMs, ignoredReference) {\n'
+         '  const zone = store.getState().restaurants.find((r) => r.id === restaurantId);\n'
+         '  const tz = zone ? zone.timezone : \'UTC\';\n'
+         '  return state.reservations.some('),
+        ('src/domain.js',
+         '      reservation.starts_at_ms < endMs &&\n      startMs < reservation.ends_at_ms,',
+         '      wallClockOnly(reservation.starts_at_ms, tz) < wallClockOnly(endMs, tz) &&\n'
+         '      wallClockOnly(startMs, tz) < wallClockOnly(reservation.ends_at_ms, tz),'),
+    ]),
+    # m14: the reservation list sorted on the local time STRING rather than on absolute time.
+    'm14': ('R049_list_order_multizone.js', [
+        ('src/api.js',
+         '  mine.sort((a, b) => b.starts_at_ms - a.starts_at_ms);',
+         '  mine.sort((a, b) => String(b.starts_at_local).localeCompare(String(a.starts_at_local)));'),
+    ]),
+
 }
 
-ORDER = ['m01', 'm02', 'm03', 'm04', 'm05', 'm06', 'm08', 'm09', 'm10', 'm11', 'm12']
+ORDER = ['m01', 'm02', 'm03', 'm04', 'm05', 'm06', 'm08', 'm09', 'm10', 'm11', 'm12', 'm13', 'm14']
 
 
 def probe_for(mid):
