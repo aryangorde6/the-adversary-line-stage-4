@@ -110,18 +110,31 @@ from the IANA database **inside the probe**, never read back out of the service.
    wrong-quantity error, and it produced a red against a correct service.
 
 **The count, stated so a reader comparing tables does not have to reconcile them.** Against the
-Saboteur's final list of fourteen at `c1e5735`: **seven of the fourteen are now decided by my probes**
-— #1 (half-open, `R006_halfopen.js`), #2 (wall-clock occupancy, `R006_occupancy_multizone.js`), #3
-(fall-back second occurrence, `R054_fallback_first.js`), #5 (idempotency without path, `R037_idempotency_scope.js`),
-#7 (receipt on 4xx, `R041_reuse_after_4xx.js`), #8 (idempotency body compare, `R038_idem_order.js`) and
-#14 (sort by local time, `R049_list_order_multizone.js`). **#11** is decided as *unobservable over
-HTTP*. **#6** (idempotency global rather than per-user) is covered by the same probe as #5, in row
-`R037h`, because both are the same scoping rule read on two axes. The remaining items are #4 and #10,
-which were caught by the harness through breakage rather than by a row naming the defect, and #9, #12
-and #13, caught cleanly. **There is no fabricated-instant mutant in the final fourteen**, so the
-`src/time.js` byte-identical check concerns an *earlier* numbering whose reading was explained by the
-shared-port collision; R053's coverage rests on `R053_dst.js`, which asserts the skipped-hour refusal
-directly and catches its own `src/domain.js` mutation.
+Saboteur's final list of fourteen at `c1e5735`: **seven of the fourteen are now decided by my probes.**
+**Named by defect and requirement, with the numbering in parentheses, because a number has meant two
+things in this project** — `#3` is *fall-back second occurrence* in the final list and *fabricated
+instant* in the earlier draft that still circulates:
+
+| defect | requirement | numbering | probe |
+|---|---|---|---|
+| occupancy as a closed interval | R006 | (1) | `R006_halfopen.js` |
+| occupancy decided on wall-clock values | R006 | (2) | `R006_occupancy_multizone.js` |
+| an ambiguous hour resolved to the second occurrence | R054 | (3) | `R054_fallback_first.js` |
+| idempotency ignoring the path | R037 | (5) | `R037_idempotency_scope.js` |
+| idempotency scoped globally rather than per user | R036 | (6) | `R037_idempotency_scope.js`, row `R037h` — **counted once with (5), not twice**, because both are one scoping rule read on two axes |
+| the receipt stored on a failure | R041 / R007 | (7) | `R041_reuse_after_4xx.js` |
+| key reuse without comparing bodies | R038 | (8) | `R038_idem_order.js` |
+| the list sorted on the local time string | R049 | (14) | `R049_list_order_multizone.js` |
+
+**Export handing back live references instead of a snapshot** (R059, numbering 11) is decided as
+*unobservable over HTTP* — the response is serialised when it is sent and nothing retains the wrapper.
+**Duration as wall-clock** (R055, 4) and **cancel freeing the table lazily** (R051, 10) were caught by
+the harness through breakage rather than by a row naming the defect. **Moves applied per item** (R063, 9),
+**import merging instead of replacing** (R058, 12) and **a query parameter read as a JS number** (R029,
+13) are caught cleanly. **There is no fabricated-instant mutant in the final fourteen**: it was replaced
+during the Saboteur's rounds, and the earlier patch text belongs to the numbering whose reading the
+shared-port collision explained. R053's coverage rests on `R053_dst.js`, which asserts the skipped-hour
+refusal directly and catches its own `src/domain.js` mutation.
 
 **The byte-identical check, run and settled — and it is a third reclassification, for a reason a grep
 settles.** The Saboteur's patch, confirmed verbatim, is in `src/time.js` inside `resolveWallClock`:
