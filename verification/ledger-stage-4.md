@@ -94,7 +94,13 @@ at `77c69f8` the seed half is open, so a round planted there would report a defe
 ruled on as a live finding — worse than not planting it, because it teaches the reader the checks found
 it. My §0.2 decided the hash question by being written first, which is the right way round.
 
-**`S4-151` and `S4-152` are satisfied in stage 3 at `a69e6ba`, graded directly**, with two findings that
+**`S4-151` and `S4-152` are satisfied in stage 3 at `549a104` or later, graded directly, and never
+banked.** `a69e6ba` refused the four keys; `549a104` **removed the terms comparison entirely** and so
+changed what the reset door accepts — which changes what these two rows mean. They are re-measured at
+`549a104`+: `fixture_arrival.py` **36/36** there, including `S3-321`/`S3-322` (a declared `accepted_terms`
+is refused outright), `S3-324` (with nothing declared, the stored terms follow the rules in force),
+`S3-327` (an unrecognised field in a declared terms object is refused rather than stripped), and
+`S3-340`/`S3-341` (a refused fixture leaves the state byte-equal)., with two findings that
 change how stage-4 rows must be written. First, **the refusal names the door that
 works, and I checked that it does**: all four keys → 422 `fixture_unsupported` naming the key and the
 import door; a document carrying the three stores **under `state`** imports 204 and **really seeds them**
@@ -178,6 +184,80 @@ applied, which is the state where the two answers can drift.
    candidates, to be asserted rather than assumed: `changed` on an assignment, `moved_count` when
    nothing moved, `restaurant_revision` on a preview, a plan with no assignments, `plan_id` after a
    409, and the whole 201 body on a replay.
+
+## 0.6 The stage-4 fixture contract, written before the rows that depend on it
+
+Several stage-4 rows are **unmeasurable until a fixture can express stage-4 state**, so the door's
+contract is written here rather than discovered while a row fails to be drivable.
+
+> **`/_test/reset` should accept exactly what stage 4 adds as _state_, and nothing that stage 4 adds as
+> _derived_. The dividing line is which of them can be recomputed from the others.**
+
+| key | shape the rows need | derivable? |
+|---|---|---|
+| `policies` | `{ policy_version, effective_from, slot_minutes, reservation_duration_minutes, cancellation_cutoff_minutes, opening_hours, capacities }` per entry, **in publication order — not sorted**, because order is what `S3-029`/`S3-038` assert | no |
+| `series` | `{ series_id, user_id, restaurant_id, anchor_reference, count, interval_weeks, revision, occurrences: [{ index, reference, exception }] }` | no |
+| `history` | per reservation `[{ reference, seq, at, event, changes, revision, accepted_terms }]`, `seq` per reference from 1 | partly — `revision` and `accepted_terms` are |
+| `batch_counters` | `{ restaurant_id: integer }` | no |
+
+**Three constraints, each a way a row becomes silently unmeasurable:**
+
+1. **`policy_version` numbers must be preserved verbatim, not renumbered** — and the same for `seq`. A
+   row asserting *"the tie went to the greater version"* needs two policies sharing an `effective_from`
+   with distinct versions. **If the door assigns versions by position, that row cannot be written at
+   all**, and it would be found as an unmeasurable row rather than as a missing capability.
+2. **The validation must be the _import_ validation, not a second one.** A policy that `/policies` would
+   refuse — duplicate weekday, `capacities` not naming exactly the tables — must be refused by a fixture
+   too, **or the fixture becomes a door for states the product cannot reach.** That is
+   *"state without a surface"* **inverted**: not state with no way in, but a way in to state that should
+   not exist. **The surface rule cuts both ways: a surface must not be wider than the product it seeds.**
+3. **`history` and `batch_counters` are only worth seeding if a row needs a state that cannot be reached
+   by driving.** `idempotency` hid the whole four-key defect because it *is* reachable by booking. If
+   history can be driven to any state a row needs, seeding it **adds a second derivation to keep in step,
+   and this stage has now produced three defects from a second derivation.**
+
+**And the rule for what the door must never accept, which is a rule and not a preference:** the ability
+to declare a reservation's `accepted_terms`, `series_id` or a non-1 `revision`. Those are derived or
+allocated, and **a fixture that asserts them is the two-arrival-paths defect with a different door** —
+which is why `549a104` refuses a declared `accepted_terms` outright rather than comparing it, leaving one
+rule and no equality surface at all. **`series.occurrences[].reference` _is_ accepted**, because after
+`S3-105` it is the occurrence's own field and not a lookup — the same distinction, in the other
+direction.
+
+## 0.7 What the screens' side cannot say, measured — and why it is a service requirement
+
+**The screen has three inputs — the availability response, the reservation detail, the reservation list —
+and nothing anywhere says a day is closed.** A day with no `opening_hours` entry and a fully-booked day
+return the **same keys**; they differ only in `slots: []` versus `slots` present with every
+`available_table_ids` empty. Both are 200, tiled and unbooked alike.
+
+> **the service must distinguish _shut_ from _open with nothing free_ from _terms that exclude every
+> slot_ — a screen may state a day as closed only when the service has said so.**
+
+**This is urgent in stage 4 rather than merely tidy.** The Finisher's closed-day sentence is currently
+justified by `slots.length === 0` **and by nothing else.** Stage 4 derives availability from *terms*, so
+**a day whose terms exclude every slot returns `slots: []` and the screen calls it closed** — a guess
+dressed as a fact, and the failure stage 2 committed twice: the hidden grid, and the sentence telling a
+diner on a shut day to try a smaller party. **If the terms-driven service cannot distinguish those
+states, that is a service requirement and the screen's obligation is to say less, not more.** Rows
+`S4-163` and `S4-164` below.
+
+**Two further limits, measured:**
+
+- **`available_options` carries `capacity` alongside `table_ids`** — `[{"table_ids":["t_2"],"capacity":4}]`
+  — and it is the field paired rows are built from. **Under the terms-driven substitution a pair's summed
+  capacity may stop being the thing that decides it**, so the pair-cell half of the per-cell agreement
+  instrument becomes load-bearing. **`S4-160` therefore asserts its population explicitly instead of
+  sampling singles**, because the pair half is the half that has been silently skipped before.
+- **A reservation's detail carries `revision` and `accepted_terms` and nothing about whether those terms
+  are still valid.** A screen can show a booking was accepted under terms; **it cannot show whether those
+  terms still apply.** If terms drift from a booking, **no screen row anyone can write catches it** — the
+  same shape as `explain` before stage 3: **a field that exists is not a field whose meaning a client can
+  check.** **My decision: this is a service row and nothing on the screen side can hold it** (`S4-165`).
+  Putting it in a seam row would assert the screen can verify something it cannot, which is the mistake
+  clause 7 exists to prevent.
+
+---
 
 ## The pattern behind four of this stage's rows, which is a row-authoring rule
 
@@ -289,7 +369,7 @@ because they have now failed to travel into a new file twice.**
 | `S4-157` | Unknown plan, or a plan from another restaurant → 404. | Both, plus a plan id that is well-formed but absent. | 404 conflated with refusal. |
 | `S4-158` | Any intervening restaurant revision invalidates the plan → 409 `stale_plan`, changing nothing. | Preview, then make any revision-moving write, then apply → 409 and **byte-equal export before/after**. **A closure at another restaurant must NOT invalidate it** — the positive control, same fixture. | One half of this row is the trap: a build that invalidates on any write passes the negative half and fails the control. |
 | `S4-159` | A plan already applied under a **different** key → 409 `plan_already_applied`; replay of the **successful** key → the original response with 200, even after later changes and cancellations. | Both keys, then a later write, then replay again → still 200 and the identical body. Assert the body equals the first response field by field, not merely that it is 200. | Replay returning a fresh body is the defect that only appears after a later write. |
-| `S4-160` | Application is atomic: concurrent applications must not leave partially moved bookings. | Two concurrent applies of the same plan → one 201, one 409; and after both, **every** considered booking is wholly moved or wholly unmoved — never a mixture — with matching `revision` and history counts. | Sequential replays test nothing here (clause 14). |
+| `S4-160a` | Application is atomic: concurrent applications must not leave partially moved bookings. | Two concurrent applies of the same plan → one 201, one 409; and after both, **every** considered booking is wholly moved or wholly unmoved — never a mixture — with matching `revision` and history counts. | Sequential replays test nothing here (clause 14). |
 
 ## C. The planner's optimisation order
 
@@ -333,8 +413,12 @@ because they have now failed to travel into a new file twice.**
 
 | Row | Requirement | What must be asserted | Risk if missed |
 |---|---|---|---|
-| `S4-160` | **After** a plan is applied, the grid and `explain` still agree — the seam of `0.4`, re-driven in the state where availability has actually changed. | Real browser, every rendered cell against the `explain` entry for that table and slot, **singles and pairs**, under a closure that removes capacity; unavailable cells `disabled`; no page errors. And the population is asserted, not sampled (clause 18). | Stage 4 changes availability underneath a screen that no stage-4 requirement mentions. This is the row that catches it. |
+| `S4-160` | **After** a plan is applied, the grid and `explain` still agree — the seam of `0.4`, re-driven in the state where availability has actually changed. | Real browser, **every** rendered cell against the `explain` entry for that table and slot — and the population is asserted, not sampled (clauses 18, 23): the row counts the cells it rendered, counts the `explain` entries it compared against, and **fails unless the two populations are equal and every pair cell is among them**, since a map indexed on singles alone once reported agreement while skipping every pair. Under a closure that removes capacity, and under a policy that flips the answer; unavailable cells `disabled`; no page errors. | Stage 4 changes availability underneath a screen that no stage-4 requirement mentions. This is the row that catches it. |
 | `S4-161` | A stage-4 service must accept exports produced by the same team's stages 1–3, including **imported series with moved and cancelled occurrences**; earlier receipts, histories and retries remain valid. | A stage-2 export and a stage-3 export, each imported 204; a series with a moved and a cancelled occurrence amended and replanned; an old idempotency key replayed → 200 with the original body. | Stage 4 is where the accumulated surface is largest; the import path is the one arrival path nobody re-tests after a new stage. |
+| `S4-163` | The service must distinguish **shut** from **open with nothing free** from **terms that exclude every slot** — the first as stated, the second and third at least as distinguishable from each other as they are from `slots: []`. | Three fixtures, one per state, same day shape: (a) a day with no `opening_hours` entry; (b) a day whose slots are all taken; (c) a day on which a published policy's terms exclude every slot — a party size the terms forbid, or terms whose hours do not cover the requested time. **Each asserted by the distinguishing field, not by the sentence a screen would print**; and the screen row asserts a day is described as closed **only** where the service said shut. | Stage 4's terms-driven availability makes (c) return `slots: []`, and every screen then calls it closed. **A guess dressed as a fact, and stage 2's failure twice over** — the hidden grid, and the sentence telling a diner on a shut day to try a smaller party. |
+| `S4-164` | A screen's obligation is to **say less, not more**: where the service has not said a day is shut, no screen may state it. | The grid and the lookup screen for state (c) from `S4-163`: assert the **absence** of any closed/shut claim, and assert the slot list is what the service returned rather than a filtered version of it. | A screen that infers closure from `slots.length === 0` is making the service's silence its own statement. **The Finisher has refused to make the screen smarter to cover this, and that refusal is the requirement, not a limitation** — it is `S3-A3`'s second half. |
+| `S4-165` | **Terms validity is a service property, and nothing on the screen side can hold it.** A booking's `accepted_terms` must remain the terms of the policy actually applicable to it, and the service must be able to *answer* that question even though no screen can. | Publish a policy that changes terms, then read an **existing** booking accepted under the previous policy: its `accepted_terms` must be **unchanged** (`S4-146` seen from the read side), and a derived current-terms answer must exist **somewhere a client can reach** — `explain` is the candidate. Assert **where**; if no such surface exists, record it as a known gap rather than asserting absence. | **A field that exists is not a field whose meaning a client can check** — `explain` before stage 3. Terms drift from a booking and no screen row anyone can write catches it, because a screen can only echo what the detail response carries. |
+
 | `S4-162` | The full stage-1/2/3 regression surface at the stage-4 hash. | 120/0, 25/25, 7/7, `api_core` 48/48, `terms_history_series` 34/34, and the stage-2 screen suites at both widths with 0 residual. **Any failure goes to the Foreman before it is characterised.** | A stage that satisfies its own rows and breaks an accepted one. |
 
 ---

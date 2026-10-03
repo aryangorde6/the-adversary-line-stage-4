@@ -263,19 +263,22 @@ def main():
     check("S3-320", st == 204,
           f"a fixture declaring revision 1 explicitly is still accepted -> {st} (expected 204)")
 
+    # Re-worded at 549a104. These two rows were written to test that the gate was canonical; the
+    # gate no longer exists, so asserting canonicality would be asserting a shape nothing produces
+    # (clause 16). They now assert the thing that IS true: a declared terms object is refused, and
+    # refused for its own sake rather than for how it happens to be spelled.
     st, body = call("POST", "/_test/reset", seeded_fixture({"accepted_terms": derived}))
-    accepted_identical = st == 204
-    check("S3-321", accepted_identical,
-          f"a fixture declaring accepted_terms identical to the derived ones -> {st} (expected 204)")
+    check("S3-321", st == 422 and code_of(body) == "fixture_unsupported",
+          f"a fixture declaring accepted_terms identical to the derived ones -> {st} "
+          f"code={code_of(body)} (expected 422 fixture_unsupported; there is no equality surface "
+          f"left to be canonical, so this row asserts the refusal rather than a comparison)")
 
-    # Same terms, different key order. The build compares with JSON.stringify, so this is the row
-    # that tells us whether acceptance is on equality of the object or on equality of the terms.
     reordered = {k: derived[k] for k in sorted(derived.keys(), reverse=True)}
     st, body = call("POST", "/_test/reset", seeded_fixture({"accepted_terms": reordered}))
-    check("S3-322", st == 204,
-          f"a fixture declaring the identical terms with the keys in another order -> {st} "
-          f"(expected 204; the same terms are the same terms, and a probe author writing them in a "
-          f"different order must not be refused for it)")
+    check("S3-322", st == 422 and code_of(body) == "fixture_unsupported",
+          f"the same terms with the keys in another order -> {st} code={code_of(body)} (expected 422; "
+          f"the outcome no longer depends on spelling in either direction, which is the property "
+          f"worth asserting -- NOT the canonicality of a comparison that no longer exists)")
 
     # The gate decides only whether to refuse; the derivation is unconditional. The decisive test is
     # to change the rules the terms would be derived from and confirm the stored terms follow the new
@@ -305,22 +308,24 @@ def main():
     st, body = call("POST", "/_test/reset",
                     seeded_fixture_with_rules(other_rules,
                                               {"accepted_terms": other_rules_derived}))
-    accepted_new_rules = st == 204
-    check("S3-323", accepted_new_rules,
+    check("S3-323", st == 422 and code_of(body) == "fixture_unsupported",
           f"a fixture declaring terms derived from DIFFERENT restaurant rules -> {st} "
-          f"(expected 204; the gate refuses only what disagrees with the derivation it just "
-          f"computed, so the declared object must be measured against the current rules)")
+          f"code={code_of(body)} (expected 422; terms are derived, so declaring them is asserting a "
+          f"second claim about the same booking and is refused whether or not it happens to match)")
 
-    call("POST", "/_test/reset",
-         seeded_fixture_with_rules(other_rules, {"accepted_terms": other_rules_derived}))
+    # No declared terms at all: the assertion is that the rules in force decide the stored terms.
+    # Declaring them is refused (S3-323), so this row cannot pass by echoing a declared object.
+    call("POST", "/_test/reset", seeded_fixture_with_rules(other_rules))
     st, seeded_other = call("GET", "/reservations/SEED0001", token=login())
     check("S3-324", st == 200 and seeded_other.get("accepted_terms") == other_rules_derived,
-          f"the stored terms equal this file's derivation for the rules that were actually in force -> "
+          f"with NO declared terms, the stored terms equal this file's derivation for the rules "
+          f"actually in force -> "
           f"equal={st == 200 and seeded_other.get('accepted_terms') == other_rules_derived} "
           f"stored={json.dumps(seeded_other.get('accepted_terms'), sort_keys=True) if st == 200 else None} "
           f"derived={json.dumps(other_rules_derived, sort_keys=True)} (expected the 15-minute / 45 "
-          f"derivation; if the declared object were the source, the stored terms would be the old ones "
-          f"and this row would be red while every other row stayed green)")
+          f"derivation; the declared object is refused, so the stored terms can only have come from "
+          f"the rules in force -- this row is what makes the refusal mean derivation rather than "
+          f"absence, and it is why S3-323 alone would not have been enough)")
 
     # Canonical comparison must reach inside the terms, not just the top level.
     nested = copy.deepcopy(other_rules_derived)
@@ -328,17 +333,34 @@ def main():
     nested["capacities"] = {k: nested["capacities"][k] for k in reversed(list(nested["capacities"]))}
     st, body = call("POST", "/_test/reset",
                     seeded_fixture_with_rules(other_rules, {"accepted_terms": nested}))
-    check("S3-325", st == 204,
-          f"the same terms with the keys of every nested object also reordered -> {st} (expected 204; "
-          f"a canonical comparison that only sorted the top level would refuse a correct fixture, "
-          f"which is the false refusal this file recorded at a69e6ba)")
+    check("S3-325", st == 422 and code_of(body) == "fixture_unsupported",
+          f"the same terms with the keys of every nested object also reordered -> {st} "
+          f"code={code_of(body)} (expected 422; this row was the false-refusal probe at 3538cda and "
+          f"is kept because a nested-only spelling difference must be refused for the same reason, "
+          f"not by a top-level key comparison that happens to notice)")
 
     st, body = call("POST", "/_test/reset",
                     seeded_fixture_with_rules(other_rules, {"accepted_terms": nested,
                                                              "revision": 3}))
     check("S3-326", st == 422 and code_of(body) == "fixture_unsupported",
-          f"canonicalisation did not weaken the refusal -> {st} code={code_of(body)} (expected 422; "
-          f"the fix must make the comparison key-order independent WITHOUT making it permissive)")
+          f"declared terms alongside a refused revision are still refused -> {st} "
+          f"code={code_of(body)} (expected 422; the removal of the comparison must not have made the "
+          f"door permissive, and this is the row that would catch a removal that over-reached)")
+
+    extra_field = copy.deepcopy(derived)
+    extra_field["seasonal_surcharge"] = 5
+    st, body = call("POST", "/_test/reset", seeded_fixture({"accepted_terms": extra_field}))
+    check("S3-327", st == 422 and code_of(body) == "fixture_unsupported",
+          f"terms carrying a field the code does not derive at all -> {st} code={code_of(body)} "
+          f"(expected 422; an unrecognised field in a declared terms object must be refused rather "
+          f"than stripped, because stripping is how a second claim gets half-honoured)")
+
+    st, body = call("POST", "/_test/reset", seeded_fixture({"series_id": None,
+                                                             "series_index": None}))
+    check("S3-328", st in (204, 422),
+          f"an explicit null series_id/series_index -> {st} (recorded, not asserted: whether an "
+          f"explicit null is the same as saying nothing is not a question this row has an opinion "
+          f"about, and it is written down so a reader can see the build's reading rather than mine)")
 
     # =====================================================================
     # Group 4 -- an ordinary seeded booking carries the DERIVED terms, and the
