@@ -204,6 +204,37 @@ def main():
                           "is the answer 75bb37e gave, and S4-171c exists because of it"
                           % (rank_greedy, by_ref), by_ref == rank_greedy)
 
+    # NC-008: the pair plan, which is the FIRST plan a search that tries pairs before singles meets.
+    # The row S4-171d exists so that the vector REJECTS this one, so this control must be FAIL -- and
+    # if it is not, the row is asserting the search's enumeration order rather than the objective.
+    pair_fixture = {"users": [{"id": "u_ada", "email": "ada@example.com",
+                               "password": "correct horse", "display_name": "Ada"}],
+                    "restaurants": [{"id": "r_anker", "name": "Zum Anker", "timezone": "Europe/Berlin",
+                                     "manager_user_ids": ["u_ada"], "slot_minutes": 30,
+                                     "reservation_duration_minutes": 90,
+                                     "cancellation_cutoff_minutes": 120, "opening_hours": HOURS,
+                                     "tables": [{"id": "t_1", "label": "1", "capacity": 2},
+                                                {"id": "t_2", "label": "2", "capacity": 2},
+                                                {"id": "t_3", "label": "3", "capacity": 2},
+                                                {"id": "t_4", "label": "4", "capacity": 4}],
+                                     "declared_pairs": [{"table_ids": ["t_2", "t_3"]}]}],
+                    "reservations": [{"id": "res_aaaaaa", "reference": "AAAAAA", "user_id": "u_ada",
+                                      "restaurant_id": "r_anker", "table_ids": ["t_1"],
+                                      "party_size": 4, "starts_at_local": "2026-09-28T19:00"}]}
+    call("POST", "/_test/reset", pair_fixture)
+    st, lg = call("POST", "/auth/login", {"email": "ada@example.com", "password": "correct horse"})
+    tok = lg.get("token")
+    st, body = call("POST", "/restaurants/r_anker/replans",
+                    {"table_id": "t_1", "from": "2026-09-28T18:00:00+02:00",
+                     "to": "2026-09-28T23:00:00+02:00"}, token=tok, key="nco-8")
+    by_ref = {a.get("reference"): a.get("table_ids") for a in body.get("assignments", [])} \
+        if st == 201 else {}
+    pair_first = {"AAAAAA": ["t_2", "t_3"]}
+    expect_fail("NC-008", "the pair plan %s -- the first plan a pairs-first enumeration meets -- is NOT "
+                          "returned (got %s). If this control passes while a rank-blind mutant survives, "
+                          "the control is not measuring the row it is meant to"
+                          % (pair_first, by_ref), by_ref == pair_first)
+
     good = [r for r, ok in RESULTS if ok]
     bad = [r for r, ok in RESULTS if not ok]
     print("SUMMARY %d/%d passed" % (len(good), len(RESULTS)))

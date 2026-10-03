@@ -339,6 +339,51 @@ def main():
               "booking, so only the seat term separates them -- and at 75bb37e this build chose t_4)"
               % (by_ref, expected))
 
+    # ---- S4-171d: objective 3, rebuilt so the vector has to REJECT the first plan found.
+    #
+    # Why the previous version could not do this: singles are ranked in declaration order, so a search
+    # that walks options in rank order finds the rank-correct plan FIRST, and the tie-break is never
+    # consulted. M2 confirmed it -- deleting the rank vector left every suite green.
+    #
+    # This fixture uses the one asymmetry available: singles rank before pairs, so a booking that can be
+    # seated either by a single table or by a declared pair has a LOWER-ranked single option and a
+    # higher-ranked pair option, and a search that tries pairs before singles meets the pair plan first.
+    # Both candidates change one booking and waste nothing, so levels 1 and 2 tie exactly and the vector
+    # alone decides -- and the vector's job is to REJECT what the search found first.
+    #
+    #   t_1 cap 2 (closed)   t_2 cap 2   t_3 cap 2   t_4 cap 4   declared pair [t_2, t_3]
+    #   AAAAAAA party 4 on t_1 at 19:00
+    #   single t_4      -> waste 0,  rank 0   (singles rank first)
+    #   pair  t_2+t_3   -> waste 0,  rank 1   (pairs after singles)
+    pair_fixture = {"users": [{"id": "u_ada", "email": "ada@example.com",
+                               "password": "correct horse", "display_name": "Ada"}],
+                    "restaurants": [{"id": "r_anker", "name": "Zum Anker",
+                                     "timezone": "Europe/Berlin", "manager_user_ids": ["u_ada"],
+                                     "slot_minutes": 30, "reservation_duration_minutes": 90,
+                                     "cancellation_cutoff_minutes": 120, "opening_hours": HOURS,
+                                     "tables": [{"id": "t_1", "label": "1", "capacity": 2},
+                                                {"id": "t_2", "label": "2", "capacity": 2},
+                                                {"id": "t_3", "label": "3", "capacity": 2},
+                                                {"id": "t_4", "label": "4", "capacity": 4}],
+                                     "declared_pairs": [{"table_ids": ["t_2", "t_3"]}]}],
+                    "reservations": [booking("AAAAAA", ["t_1"], 4, 19)]}
+    st, _ = call("POST", "/_test/reset", pair_fixture)
+    st2, lg = call("POST", "/auth/login", {"email": "ada@example.com", "password": "correct horse"})
+    tok = lg.get("token") if st2 == 200 else None
+    if tok:
+        st3, body = plan(tok, "p3g")
+        by_ref = {a.get("reference"): a.get("table_ids") for a in body.get("assignments", [])} \
+            if st3 == 201 else {}
+        expected = {"AAAAAA": ["t_4"]}
+        check("S4-171d", st3 == 201 and by_ref == expected,
+              "objective 3 where the vector must reject the first plan found -> the plan is %s "
+              "(expected %s: t_4 is a single and singles rank before pairs, so the single is the "
+              "lower-ranked option even though the pair is the one an enumeration that tries pairs "
+              "first meets first. Both candidates change one booking and waste nothing, so levels 1 "
+              "and 2 tie and only the vector decides. DECLARATION ORDER: t_1, t_2, t_3, t_4, with "
+              "[t_2,t_3] declared as a pair -- asserted here so a reader can see the row does not "
+              "rely on it silently)" % (by_ref, expected))
+
     return rows()
 
 

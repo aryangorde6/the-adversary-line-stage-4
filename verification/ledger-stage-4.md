@@ -391,6 +391,32 @@ only a mutant establishes that it is aimed.**
     "I built the net and the butterfly in the same commit and watched the butterfly hit it" is what it looks
     like when the author means well. **A probe's coverage is unknown until something is removed.**
 
+## M2 survived against my own rows, and `S4-171d` is the rebuild
+
+**M2 — the rank vector deleted from `betterThan` — left every measurable row green, including mine.** So the
+prediction I made ("deleting the rank vector is caught by `S4-171b`") is **withdrawn rather than repaired**,
+and the cause is structural rather than a missing assertion: **singles are ranked in declaration order, so a
+search that walks options in rank order finds the rank-correct plan _first_ and never consults the tie-break.**
+
+> **A fixture is not a tie until the property decides it — and enumeration order is a property, the one a
+> search is most likely to satisfy for you.** So every row whose cases can tie must be checked against a
+> variant in which the tie is broken the **wrong way first**; **if the row survives that, it is asserting the
+> search's order rather than the specification's objective.**
+
+**`S4-171d` is built on the one asymmetry available: singles rank before pairs.** A party of 4 that can be
+seated either by a 4-seat single or by a declared pair of two 2-seat tables has a **lower-ranked single** and a
+**higher-ranked pair**, both wasting nothing — so levels 1 and 2 tie exactly, and **the vector's job is to
+reject the pair plan, which is the one a pairs-first enumeration meets first.** The row **asserts its own
+declaration order in its output**, because a fixture whose correctness depends on declaration order has to say
+so. **`NC-008` asserts the pair plan must be reported FAIL** — and it is, at the correct build.
+
+**What I cannot settle from here, stated rather than assumed:** whether `S4-171d` kills M2 depends on the
+search enumerating pairs before singles. **If the search enumerates in rank order instead, this row is another
+fixture a rank-blind search passes** — and the only way to tell the two apart is to re-run M2 against it,
+**which is not mine to do.** So the honest position is the same one I took for `S4-171c`: **this row is not
+proof of the property; it is the strongest row I can build without mutating the product**, and the re-run is
+the measurement.
+
 ## Stage 4 closed at `75bb37e`
 
 **PASS at `75bb37e`, graded by me from `git archive`: supplied 120/120 · 25/25 · 7/7 · stage 4 6/6, highest
