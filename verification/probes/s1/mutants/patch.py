@@ -176,9 +176,17 @@ MUTANTS = {
          '  if (result.status >= 200 && result.status < 300) {',
          '  if (result.status >= 200 && result.status < 600) {'),
     ]),
+    # m17: the receipt store ignores the METHOD and the PATH, so a key used on one keyed write
+    # satisfies the other. The harness caught this mutant and every stage-1 probe missed it at 14/14,
+    # because no probe ever presented one key to two paths: the condition was never staged.
+    'm17': ('R037_idempotency_scope.js', [
+        ('src/idempotency.js',
+         '    (entry) => entry.user_id === userId && entry.key === key && entry.method === method && entry.path === path,',
+         '    (entry) => entry.user_id === userId && entry.key === key,'),
+    ]),
 }
 
-ORDER = ['m01', 'm02', 'm03', 'm04', 'm05', 'm06', 'm08', 'm09', 'm10', 'm11', 'm12', 'm13', 'm14', 'm15', 'm16']
+ORDER = ['m01', 'm02', 'm03', 'm04', 'm05', 'm06', 'm08', 'm09', 'm10', 'm11', 'm12', 'm13', 'm14', 'm15', 'm16', 'm17']
 
 
 def probe_for(mid):
