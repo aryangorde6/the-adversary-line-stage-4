@@ -48,3 +48,11 @@ function shutdown() {
 
 process.on('SIGTERM', shutdown);
 process.on('SIGINT', shutdown);
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[tablekeeper] unhandled rejection: ' + (reason && reason.stack ? reason.stack : reason));
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('[tablekeeper] uncaught exception: ' + (err && err.stack ? err.stack : err));
+});
