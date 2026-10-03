@@ -661,6 +661,12 @@ settled by reading code.
   bookings; **larger** inputs may return 422 `planning_limit`" reads as 6 allowed and 7 refused. The word
   *may* also permits a build to refuse at 6. Recorded: whichever the build does, the boundary is
   asserted on both sides so the choice is visible rather than assumed.
+- **A7 — the write family's request shape, where two room-held sources disagree.** The stage-4 specification
+  prints `{table_id, from, to}` and `{local_time}`; the Foreman ruled `{closure: {date, table_ids[]}}` and
+  `{clock_time}` from the check's identity, which clause 27 puts in the room's hands. **Ruled: both spellings
+  are accepted as aliases of one field, and the conflict is recorded rather than resolved by preference** —
+  because a build that satisfies one room-held source is red against the other, and because **an alias is not
+  a second claim.** See the specification table above for what each alias may and may not express.
 - **A3 — the meaning of `changed` on an assignment.** Most likely "this booking's table set differs from
   the one it held before the plan" — but "differs from the table set the closure would force" is not
   excluded by the text. Asserted via `moved_count` agreement (`S4-121`) and recorded if they disagree.
