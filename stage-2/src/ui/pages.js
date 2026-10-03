@@ -18,7 +18,7 @@ with a tick are free for your whole visit.</p>
       <label for="restaurant-select">Restaurant</label>
       <select id="restaurant-select" data-testid="restaurant-select" name="restaurant_id">${options}</select>
     </div>
-    <div>
+    <div data-date-field>
       <label for="date-input">Date</label>
       <input id="date-input" data-testid="date-input" name="date" type="date" value="${escapeHtml(defaults.date)}" required>
       <span class="hint">Your local date at the restaurant.</span>

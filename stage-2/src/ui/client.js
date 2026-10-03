@@ -221,6 +221,18 @@
     var bookingParty = null;
     var bookingSubmit = null;
 
+    // The date field's wrapper carries the focus ring, because the browser stops matching :focus on
+    // one of the field's inner segments while the keyboard is still inside it.
+    var dateField = document.querySelector('[data-date-field]');
+    if (dateField) {
+      dateField.addEventListener('focusin', function () {
+        dateField.classList.add('kb-focus');
+      });
+      dateField.addEventListener('focusout', function () {
+        dateField.classList.remove('kb-focus');
+      });
+    }
+
     var issued = 0;
     var applied = 0;
     var selection = null;

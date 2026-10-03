@@ -152,7 +152,9 @@ async function main() {
       p2.setDefaultTimeout(6000);
       await p2.goto(BASE + route, { waitUntil: 'networkidle' });
       const stops = [];
-      for (let i = 0; i < 60; i += 1) {
+      // Presses continue past a repeated control on purpose: the stops inside a date field all
+      // report the same element, and stopping at the first repeat would never reach them.
+      for (let i = 0; i < 40; i += 1) {
         await p2.keyboard.press('Tab');
         const stop = await p2.evaluate(() => {
           const el = document.activeElement;
@@ -179,14 +181,24 @@ async function main() {
             });
             return 0.2126 * r + 0.7152 * g + 0.0722 * b;
           };
-          const ring = parse(style.outlineColor);
-          const width = parseFloat(style.outlineWidth);
-          const offset = parseFloat(style.outlineOffset) || 0;
-          // A ring drawn outside the border box is painted on the surface behind the control, so
-          // that is the colour it has to be seen against.
-          const bg = offset > 0 ? behind(el.parentElement || el) : behind(el);
+          // A control may carry its own ring, or sit inside a wrapper that carries one: a native
+          // date field stops matching :focus on one of its inner segments, and the ring is then
+          // drawn around the field as a whole. Either counts, and each is judged against the
+          // surface it is painted on.
+          const wrapper = el.closest('[data-date-field].kb-focus');
+          const painted = style.outlineStyle !== 'none' && parseFloat(style.outlineWidth) > 0
+            ? { node: el, style } : null;
+          const wrapped = wrapper && getComputedStyle(wrapper).outlineStyle !== 'none'
+            && parseFloat(getComputedStyle(wrapper).outlineWidth) > 0
+            ? { node: wrapper, style: getComputedStyle(wrapper) } : null;
+          const mark = painted || wrapped;
           let ratio = 0;
-          if (ring && width > 0) {
+          if (mark) {
+            const ring = parse(mark.style.outlineColor);
+            const offset = parseFloat(mark.style.outlineOffset) || 0;
+            // A ring drawn outside the border box is painted on the surface behind the control, so
+            // that is the colour it has to be seen against.
+            const bg = offset > 0 ? behind(mark.node.parentElement || mark.node) : behind(mark.node);
             const l1 = lum(ring);
             const l2 = lum(bg);
             ratio = (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
@@ -194,28 +206,105 @@ async function main() {
           return {
             tag: el.tagName.toLowerCase(),
             id: el.id || el.getAttribute('data-testid') || '',
-            outline: style.outlineStyle,
-            width,
+            outline: mark ? mark.style.outlineStyle : 'none',
+            width: mark ? parseFloat(mark.style.outlineWidth) : 0,
+            on: mark ? (painted ? 'control' : 'wrapper') : 'none',
             ratio: Math.round(ratio * 100) / 100,
           };
         });
-        if (!stop) break;
-        if (stops.length && stops[stops.length - 1].id === stop.id && stop.id !== '') {
-          // The same control reached again means the focus cycle has come round.
-          if (stops.filter((s) => s.id === stop.id).length > 1) break;
-        }
+        if (!stop) continue;
         stops.push(stop);
       }
       const missing = stops.filter((s) => s.outline === 'none' || s.width === 0);
+      console.log(`        (${stops.map((s) => s.on).join(',')})`);
       ok('every tab stop has a focus indicator', missing.length === 0,
         missing.map((s) => `${s.tag}#${s.id}`).slice(0, 4));
       const faint = stops.filter((s) => s.ratio < 3);
       ok('every focus ring is visible against what is behind it', faint.length === 0,
         faint.map((s) => `${s.tag}#${s.id} ${s.ratio}`).slice(0, 4));
-      console.log(`        (${stops.length} tab stops)`);
+      const dateStops = stops.filter((s) => s.id === 'date-input');
+      console.log(`        (${stops.length} stops pressed, ${dateStops.length} inside the date field:`
+        + ` ${dateStops.map((s) => s.on).join(',')})`);
       if (SHOTS && route === '/') await p2.screenshot({ path: `${SHOTS}/focus-home-${width}.png`, fullPage: false });
       await p2.close();
     }
+  }
+
+  // The booking path, driven with nothing but the keyboard: how many stops it costs to walk to a
+  // free table, whether any taken cell is in the tab order, and whether Enter completes the booking.
+  for (const width of [375, 1280]) {
+    section(`keyboard-only booking at ${width}`);
+    const kp = await browser.newPage({ viewport: { width, height: 900 } });
+    kp.setDefaultTimeout(6000);
+    await kp.goto(BASE + '/', { waitUntil: 'networkidle' });
+    await kp.evaluate((t) => {
+      document.cookie = 'tk_token=' + encodeURIComponent(t) + '; path=/; SameSite=Lax';
+    }, tok);
+    await kp.reload({ waitUntil: 'networkidle' });
+
+    const step = async () => {
+      await kp.keyboard.press('Tab');
+      return kp.evaluate(() => {
+        const a = document.activeElement;
+        return { id: a.id || '', testid: a.getAttribute('data-testid') || '',
+          tag: a.tagName.toLowerCase(), disabled: Boolean(a.disabled) };
+      });
+    };
+
+    // Counted from the top of the page. The values are set without touching the keyboard, so the
+    // number reported is the cost of walking the page rather than an artefact of how the probe
+    // entered them.
+    let stops = 0;
+    let onSearch = false;
+    let disabledAhead = 0;
+    while (stops < 40 && !onSearch) {
+      const at = await step();
+      stops += 1;
+      if (at.disabled) disabledAhead += 1;
+      onSearch = at.testid === 'search-button';
+    }
+    ok('the search button is reachable by Tab', onSearch, { stops });
+    ok('no disabled control on the way to the search button', disabledAhead === 0, { disabledAhead });
+    await kp.evaluate(() => {
+      const set = (sel, value) => {
+        const el = document.querySelector(sel);
+        el.value = value;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+      };
+      set('#date-input', '2026-12-01');
+      set('#party-size-input', '2');
+    });
+    await kp.keyboard.press('Enter');
+    await kp.waitForTimeout(900);
+
+    let toFree = 0;
+    let onFree = false;
+    let sawDisabled = false;
+    while (toFree < 60 && !onFree) {
+      const at = await step();
+      toFree += 1;
+      if (at.disabled) sawDisabled = true;
+      if ((at.testid || '').startsWith('slot-') && !at.disabled) onFree = true;
+    }
+    ok('a free table is reachable by Tab', onFree, { toFree });
+    ok('no taken table is in the tab order', !sawDisabled);
+    console.log(`        (${stops} stops from the top of the page to the search button,`
+      + ` ${toFree} more to the first free table)`);
+    await kp.keyboard.press('Enter');
+    await kp.waitForTimeout(500);
+    ok('Enter on a free table opens the booking form',
+      await kp.locator('[data-testid="booking-form"]').count() === 1);
+    const onSubmit = await kp.evaluate(() => document.activeElement.getAttribute('data-testid'));
+    ok('the booking button holds the keyboard after choosing a table', onSubmit === 'booking-submit',
+      { onSubmit });
+    await kp.keyboard.press('Enter');
+    await kp.waitForTimeout(1000);
+    ok('the booking completes from the keyboard alone',
+      await kp.locator('[data-testid="confirmation"]').count() === 1,
+      await kp.locator('[data-msg]').first().textContent().catch(() => null));
+    if (SHOTS) await kp.screenshot({ path: `${SHOTS}/keyboard-booking-${width}.png`, fullPage: true });
+    await kp.close();
   }
 
   await browser.close();

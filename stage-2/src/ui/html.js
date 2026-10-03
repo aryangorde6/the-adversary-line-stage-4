@@ -50,6 +50,11 @@ function styles() {
     outline-offset: 1px;
   }
   input[type="date"]:focus { border-color: ${COLOURS.warm}; }
+  /* A native date field holds several places the keyboard can be, and at one of them the browser
+     will not even match :focus. The field's wrapper is told when the keyboard is inside it, so the
+     ring can be drawn around the whole field and be seen at every one of those places. */
+  [data-date-field].kb-focus { outline: 3px solid ${COLOURS.warm}; outline-offset: 2px; border-radius: 8px; }
+  [data-date-field].kb-focus input { border-color: ${COLOURS.warm}; }
   .skip {
     position: absolute; left: -9999px; top: 0;
     background: ${COLOURS.card}; padding: 0.6rem 1rem; z-index: 10;

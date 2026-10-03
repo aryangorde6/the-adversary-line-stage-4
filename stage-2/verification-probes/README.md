@@ -12,7 +12,7 @@ cd stage-2/verification-probes
 node ui-grid.mjs        # the search results region: empty, loading, results, no slots
 node ui-messages.mjs    # the lookup screen, and message integrity
 node ui-a11y.mjs        # labels, sideways scrolling, clipped text, contrast
-node ui-states-a11y.mjs # the seven states are seven looks; focus at every tab stop
+node ui-states-a11y.mjs # seven looks, focus at every stop, booking by keyboard alone
 
 docker rm -f tk-fin
 ```
@@ -33,7 +33,9 @@ booking that can be seen shows its status, its table by name and its time as a p
 the cancel action disappears once the booking is cancelled. Every inserted message appears at most
 once, and its host exists in the document at the moment of insertion.
 
-`ui-states-a11y.mjs` — the seven states named by the specification are seven distinct
+`ui-states-a11y.mjs` — the booking path driven with nothing but the keyboard: how many stops it
+costs to reach a free table, that no taken table is in the tab order, and that Enter completes the
+booking; the seven states named by the specification are seven distinct
 (background, text, border) triples, asserted as a set so two of them collapsing into one look
 cannot pass; and at every tab stop on all four routes, at both widths, a real `Tab` press yields a
 focus indicator that is visible against the surface behind it.
