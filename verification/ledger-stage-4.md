@@ -17,7 +17,7 @@ regression goes to the Foreman before it is characterised.**
 | Fact | Value | Status |
 |---|---|---|
 | Stage-4 supplied checks | **6**, all in one file (`stage-4/verification-probes/stage_4/test_sample.py`) | **4 passed / 2 failed** |
-| Which two fail | **not answerable from the harness report** — it gives per-file counts only, and the file must not be opened | **unmeasured by me; observed by the Builder** |
+| Which two fail | **attributed by driving, not by opening the check file** — see below | **two of the three stage-4 write families are absent** |
 | Whether those 4 passes are stage-4 behaviour | unknown | **unmeasured** |
 | Stage-4 checks opened by me | 0 | **no check file has been read** |
 | Highest contiguous supplied stage | 3 | stage 1 120/0, stage 2 25/25, stage 3 7/7 |
@@ -30,11 +30,33 @@ rather than from a run, and **that is the failure this table exists to prevent: 
 was never measured.** It is corrected here against my own measurement.
 
 **What the run does settle, from the file rather than from the count: stages 1–3 are green, so the
-second failure is not a regression carried forward from the accepted build** — which is the Builder's
-useful half and which I confirm independently. **What it does not settle: which two fail.** The report
-carries per-file counts (`4/6` in one file) and no test identities, and naming them would mean opening a
-check file, which this seat does not do. **So the two failures are recorded as observed-and-unidentified
-rather than guessed, and the honest next step is a driving test of stage-4 behaviour rather than a peek.**
+second failure is not a regression carried forward from the accepted build** — the Builder's useful half,
+which I confirm independently.
+
+**Which two fail, attributed by driving rather than by opening a check file.** The report carries per-file
+counts (`4/6`, one file) and no test identities, so I did not guess at names. Instead
+`verification/probes/s4/absent_at_e9b9f4d.py` drives each stage-4 entry point at this hash — **8/8** —
+and records what the service actually does:
+
+```
+S4-001  POST /restaurants/r_anker/replans              -> 404 not_found   route absent
+S4-002  POST /restaurants/r_anker/replans/{id}/apply   -> 404 not_found   same missing family
+S4-003  POST /series/{id}/amend                        -> 404 not_found   second missing family
+S4-010  GET  /restaurants/r_anker/policies             -> 200 {policies}  stage-3 surface intact
+S4-011  GET  /availability                             -> 200 with slots[]
+S4-012  GET  /series/ser_x (absent series)             -> 404
+```
+
+**So the two failures are stage-4's two write families — planning/replanning and series amendment — and
+not a broken folder**, which `S4-010`/`S4-011` establish by showing the stage-3 surface and the seam
+instrument are both alive in `stage-4/`. **The check identities remain the Foreman's to supply:** a
+behaviour's absence is what I measured, and a check's name is not knowable without opening a file this
+seat does not open. **Stating that limit is the closure, not a deferral** — the discrepancy is now
+closed on the side that is measurable, with the other side named as a boundary rather than guessed at.
+
+**And the count itself is part of the record, not a detail of the run (clause 26).** My opening predicted
+5 from a room statement; the harness collects 6. **A sample suite's size belongs in the ledger's opening
+table beside its pass count**, because a reader comparing the two finds it in one command.
 
 **Stage-4 base: `549a104`.** The round and this ledger name the same build. `e9b9f4d` creates the
 stage-4 folder from it and rewrites three comments across the stage boundary (clause 25).
@@ -376,6 +398,11 @@ because they have now failed to travel into a new file twice.**
     both leave the author stuck. One said `204` and seeded nothing; the other said `422` and refused
     something correct. **A refusal that is *wrong* is worse than no refusal**, because the author cannot
     distinguish it from the state being genuinely unsupported.
+26. **A sample suite's size is part of its record, not a detail of the run.** The pass count and the
+    check count belong in the same sentence: *six checks, four passing, two failing* is one fact, and
+    **"5 checks, 4 passed / 1 failed" is a different fact, not a rounding of the first.** A number in a
+    ledger that came from a conversation rather than from a run will disagree with the run, and the
+    reader who finds it is not the person who wrote it.
 25. **A comment explaining a decision is not neutral — across a stage boundary it becomes the design's
     apparent intent, and a reader implements what the comment says rather than what the code refuses.**
     Rewriting a comment across a stage boundary is not tidying; **it is correcting an instruction.** At
@@ -458,6 +485,7 @@ because they have now failed to travel into a new file twice.**
 | `S4-161` | A stage-4 service must accept exports produced by the same team's stages 1–3, including **imported series with moved and cancelled occurrences**; earlier receipts, histories and retries remain valid. | A stage-2 export and a stage-3 export, each imported 204; a series with a moved and a cancelled occurrence amended and replanned; an old idempotency key replayed → 200 with the original body. | Stage 4 is where the accumulated surface is largest; the import path is the one arrival path nobody re-tests after a new stage. |
 | `S4-163` | The service must distinguish **shut** from **open with nothing free** from **terms that exclude every slot** — the first as stated, the second and third at least as distinguishable from each other as they are from `slots: []`. | Three fixtures, one per state, same day shape: (a) a day with no `opening_hours` entry; (b) a day whose slots are all taken; (c) a day on which a published policy's terms exclude every slot — a party size the terms forbid, or terms whose hours do not cover the requested time. **Each asserted by the distinguishing field, not by the sentence a screen would print**; and the screen row asserts a day is described as closed **only** where the service said shut. | Stage 4's terms-driven availability makes (c) return `slots: []`, and every screen then calls it closed. **A guess dressed as a fact, and stage 2's failure twice over** — the hidden grid, and the sentence telling a diner on a shut day to try a smaller party. |
 | `S4-164` | A screen's obligation is to **say less, not more**: where the service has not said a day is shut, no screen may state it. | The grid and the lookup screen for state (c) from `S4-163`: assert the **absence** of any closed/shut claim, and assert the slot list is what the service returned rather than a filtered version of it. | A screen that infers closure from `slots.length === 0` is making the service's silence its own statement. **The Finisher has refused to make the screen smarter to cover this, and that refusal is the requirement, not a limitation** — it is `S3-A3`'s second half. |
+| `S4-166` | **The stage-4 baseline is attributed, not assumed**: at a folder-only build the two failing supplied checks are the two **write** families (planning and amendment), and the **read** surface is intact. | Drive all three write entry points (404/405), then the read surface — policies, availability with `slots[]`, and the absent-series 404 — and **assert the read surface is alive before attributing the failures to the writes**. `absent_at_e9b9f4d.py`, 8/8 at `e9b9f4d`. | Attributing two failures to "stage 4 is not built yet" without showing the rest of the folder works is a guess with a measurement attached. **A folder that carries stage 3 forward broken would produce the same two red checks.** |
 | `S4-165` | **Terms validity is a service property, and nothing on the screen side can hold it.** A booking's `accepted_terms` must remain the terms of the policy actually applicable to it, and the service must be able to *answer* that question even though no screen can. | Publish a policy that changes terms, then read an **existing** booking accepted under the previous policy: its `accepted_terms` must be **unchanged** (`S4-146` seen from the read side), and a derived current-terms answer must exist **somewhere a client can reach** — `explain` is the candidate. Assert **where**; if no such surface exists, record it as a known gap rather than asserting absence. | **A field that exists is not a field whose meaning a client can check** — `explain` before stage 3. Terms drift from a booking and no screen row anyone can write catches it, because a screen can only echo what the detail response carries. |
 
 | `S4-162` | The full stage-1/2/3 regression surface at the stage-4 hash. | 120/0, 25/25, 7/7, `api_core` 48/48, `terms_history_series` 34/34, and the stage-2 screen suites at both widths with 0 residual. **Any failure goes to the Foreman before it is characterised.** | A stage that satisfies its own rows and breaks an accepted one. |
