@@ -603,6 +603,34 @@ therefore be changing blind.** **A discriminator that grows every existing row's
 change to rows this ledger's author did not write, and it is not mine to make quietly** — so the ruling is
 conditional, and the cost is on the record for whoever revisits it.
 
+### Which suite drives the grid, and does anything report the population? (`1e56016`, read not run)
+
+**Answered by reading the suites, because I cannot run them — and reading is enough for this question.**
+
+- **`ui-grid.mjs`** is the per-cell driver. It builds paired rows from `available_options` (`pairs:
+  slot.available_options.map(o => o.table_ids.join('+'))`), compares **each painted cell** against the
+  service's answer for its own time and party, and asserts at two parties — **one where some cells are free
+  and one where only the six-seater is offered** — with a guard that a comparison is worthless if it can pass
+  with nothing to compare. That is the Finisher's `561b60d` row, carried into the stage-4 folder.
+- **`seam-check.mjs`** is the explain-agreement driver, and it **indexes both key shapes** — `'table_id' in e`
+  for singles and `Array.isArray(e.table_ids)` for pairs — with the reason in a comment, because a map that
+  drops one of them skips half the grid silently. It throws if a rendered cell has **no** explain entry, and
+  the policy row asserts **the flip actually happened** (`flipped.length === 0` throws).
+
+**So the driver exists and the row is not driven nowhere: the Foreman's path-debt worry does not apply here.
+`561b60d` is a stage-3 commit of the Finisher's, carried forward.**
+
+**But `S4-160` is not yet drivable, and the reason is stage 4's, not the environment's:** the row's subject
+is **the grid after a plan is applied under a closure that removes capacity**, and `/replans` does not exist
+yet. **The instrument is ready; the state is not.**
+
+**And one population gap I can name from reading, which my row text already requires and no suite currently
+does:** the suites assert **every rendered cell has an explain entry** (one direction) and that **the cell
+count does not change under a policy** — **but nothing asserts that every explain entry has a rendered cell.**
+`S4-160` requires the populations to be **equal in both directions**, so **my row adds a requirement the
+existing instrument does not yet meet**, and that is a coverage thinness in the seam instrument itself, of the
+thinness-not-a-hole kind: **the suites can be green with an unexplained slot nobody rendered.**
+
 ### Re-read of `S4-167`: is assertion 3 sufficient as the sole discriminator?
 
 **No — and the fix is a second producing configuration plus assertion 3b, not a clearer sentence about the
