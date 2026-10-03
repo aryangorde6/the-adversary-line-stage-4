@@ -78,12 +78,20 @@ class Proxy(BaseHTTPRequestHandler):
         if self.path.startswith("/reservations"):
             RECORDED.append({"key": self.headers.get("idempotency-key"), "body": body.decode()})
         if self.path.split("?")[0] in RULES["drop_paths"]:
-            # The request HAS reached the service; only the response is discarded.
-            self._relay("POST", body)
-            try:
-                self.wfile.close()
-            except Exception:
-                pass
+            # The request HAS reached the service; only the RESPONSE is discarded. The first
+            # version relayed through and then closed the socket, which still delivered the
+            # response -- so the "lost" booking completed normally and the probe measured a
+            # confirmation instead of an uncertainty. Nothing is written back to the client here.
+            import http.client
+            conn = http.client.HTTPConnection(self._target(), timeout=20)
+            headers = {k: v for k, v in self.headers.items()
+                       if k.lower() not in ("host", "content-length", "connection")}
+            conn.request("POST", self.path, body=body, headers=headers)
+            resp = conn.getresponse()
+            RULES.setdefault("dropped_status", {})[self.path] = resp.status
+            resp.read()
+            conn.close()
+            self.close_connection = True
             return
         self._relay("POST", body)
 
@@ -123,7 +131,12 @@ def main():
     if status != 204:
         print("ROW OL-setup FAIL reset status %s" % status)
         return 1
-    good.append(("OL-setup", True, "reset status 204"))
+    # Ada's own bearer token, so the server-side check counts HER reservations and not a stranger's.
+    _, ada = api("/auth/login", {"email": "ada@example.com", "password": "correct horse"})
+    if "token" not in ada:
+        print("ROW OL-token FAIL login returned keys %s" % sorted(ada.keys()))
+        return 1
+    good.append(("OL-setup", True, "reset status 204; Ada's token acquired for the server-side counts"))
 
     proxy = ThreadingHTTPServer(("127.0.0.1", 0), Proxy)
     threading.Thread(target=proxy.serve_forever, daemon=True).start()
@@ -136,16 +149,21 @@ def main():
         page.fill('[data-testid="login-email"]', "ada@example.com")
         page.fill('[data-testid="login-password"]', "correct horse")
         page.click('[data-testid="login-submit"]')
-        page.wait_for_load_state("domcontentloaded")
+        # Sign-in is a fetch followed by a client-side navigation, so waiting on the load state
+        # returns before it has happened. Reading the cookie too early made the page look signed
+        # out and produced an `auth-error` on a diner who had in fact signed in -- an instrument
+        # failure that would have been reported as a product defect.
+        page.wait_for_selector('[data-testid="current-user"]', timeout=10000)
+        page.wait_for_function("() => document.cookie.indexOf('tk_token=') !== -1", timeout=10000)
 
         # --- 1. out-of-order searches ---------------------------------------
         RULES["delay_paths"] = {"/availability?restaurant_id=r_anker&date=2026-12-08&party_size=2"}
         page.goto(P + "/", wait_until="domcontentloaded")
-        page.fill('[data-testid="restaurant-input"]', "r_anker")
+        page.select_option('[data-testid="restaurant-select"]', "r_anker")
         page.fill('[data-testid="date-input"]', "2026-12-08")
         page.click('[data-testid="search-button"]')          # A: delayed by the proxy
         page.wait_for_timeout(150)
-        page.fill('[data-testid="restaurant-input"]', "r_dock")
+        page.select_option('[data-testid="restaurant-select"]', "r_dock")
         page.fill('[data-testid="date-input"]', "2026-12-09")
         page.click('[data-testid="search-button"]')          # B: wins
         page.wait_for_timeout(4000)
@@ -158,7 +176,7 @@ def main():
 
         # --- 2. lost booking response ---------------------------------------
         page.goto(P + "/", wait_until="domcontentloaded")
-        page.fill('[data-testid="restaurant-input"]', "r_dock")
+        page.select_option('[data-testid="restaurant-select"]', "r_dock")
         page.fill('[data-testid="date-input"]', "2026-12-10")
         page.click('[data-testid="search-button"]')
         page.wait_for_selector('[data-testid="availability-grid"] table', timeout=10000)
@@ -187,18 +205,28 @@ def main():
                  be is not None and be.is_visible(), cf is not None and cf.is_visible())))
         # the booking did commit server-side
         RULES["drop_paths"] = set()
-        tok = page.evaluate("() => document.cookie") or ""
-        code, listing = api("/reservations", token=None, method="GET")
-        (good if "reservations" in listing else bad).append(
-            ("OL-shape", "reservations" in listing,
-             "GET /reservations returned keys %s" % sorted(listing.keys())))
+        code, listing = api("/reservations", token=ada["token"], method="GET")
+        # Standing clause 3: assert the shape before concluding from a count.
+        if "reservations" not in listing:
+            bad.append(("OL-shape", False,
+                        "GET /reservations returned keys %s, so no count below is trustworthy"
+                        % sorted(listing.keys())))
+        else:
+            good.append(("OL-shape", True, "GET /reservations carries a reservations array"))
+            after_drop = [r for r in listing["reservations"]
+                          if r.get("starts_at_local") == "2026-12-10T19:00"]
+            (good if len(after_drop) == 1 else bad).append(
+                ("OL-committed", len(after_drop) == 1,
+                 "after the dropped response the booking DID commit: %d reservations at "
+                 "2026-12-10T19:00 (expected 1)" % len(after_drop)))
 
         # --- 3. unchanged retry ---------------------------------------------
         before = len(RECORDED)
-        RULES["drop_paths"] = {"/reservations"}
+        # The retry must SUCCEED, so the proxy stops dropping before the click. Leaving the drop
+        # on for the retry measures the same uncertainty twice and can never show the recovery.
+        RULES["drop_paths"] = set()
         page.click('[data-testid="booking-submit"]')         # retry, nothing touched
         page.wait_for_timeout(2500)
-        RULES["drop_paths"] = set()
         sent = RECORDED[before:]
         same_key = len(sent) >= 1 and all(r["key"] == RECORDED[before - 1]["key"] for r in sent)
         same_body = len(sent) >= 1 and all(r["body"] == RECORDED[before - 1]["body"] for r in sent)
@@ -209,6 +237,13 @@ def main():
             ("OL-retry-request", same_key and same_body,
              "%d booking requests on retry; same key=%s same body=%s (keys %s)" % (
                  len(sent), same_key, same_body, [r["key"] for r in sent])))
+        _, listing2 = api("/reservations", token=ada["token"], method="GET")
+        after_retry = [r for r in listing2.get("reservations", [])
+                       if r.get("starts_at_local") == "2026-12-10T19:00"]
+        (good if len(after_retry) == 1 else bad).append(
+            ("OL-retry-once", len(after_retry) == 1,
+             "after the retry the server holds %d reservations at that slot (expected exactly 1: "
+             "a retry must not book twice)" % len(after_retry)))
         (good if (un is None and be is None and ref is not None and ref.inner_text().strip()) else bad).append(
             ("OL-retry-state", un is None and be is None and ref is not None and bool(ref.inner_text().strip()),
              "after the retry: booking-uncertain in document=%s ; booking-error in document=%s ; "
@@ -217,7 +252,7 @@ def main():
 
         # --- 4. confirmed rejection -----------------------------------------
         page.goto(P + "/", wait_until="domcontentloaded")
-        page.fill('[data-testid="restaurant-input"]', "r_anker")
+        page.select_option('[data-testid="restaurant-select"]', "r_anker")
         page.fill('[data-testid="date-input"]', "2026-12-11")
         page.click('[data-testid="search-button"]')
         page.wait_for_selector('[data-testid="availability-grid"] table', timeout=10000)

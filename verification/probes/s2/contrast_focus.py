@@ -114,9 +114,15 @@ FOCUS = """
   }
   const width = parseFloat(cs.outlineWidth) || 0;
   const hasShadow = shadow !== '';
-  const bg = bgOf(el);
+  // An outline and a box-shadow are drawn OUTSIDE the element's own box, so the ring must be
+  // compared against the nearest non-transparent ANCESTOR background, never the element's own.
+  // Reading bgOf(el) compares the ring with the button it surrounds and reports 1.00:1 for a
+  // perfectly visible focus ring -- which is how this probe first reported eight false failures.
+  const bg = bgOf(el.parentElement || el);
   const label = el.getAttribute('data-testid') || el.getAttribute('name') || el.id || el.tagName.toLowerCase();
-  if (!ring && !hasShadow) return { label, indicator: false };
+  if (!ring && !hasShadow) return { label, indicator: false,
+                                    outline: cs.outlineStyle + ' ' + cs.outlineWidth,
+                                    shadow: cs.boxShadow };
   return { label, indicator: true, ring: ring ? [ring.r, ring.g, ring.b] : null,
            width, hasShadow, bg: [bg.r, bg.g, bg.b] };
 }
@@ -183,7 +189,8 @@ def main():
                     if info:
                         stops += 1
                         if not info.get("indicator"):
-                            failures.append("%s: no visible indicator" % info["label"])
+                            failures.append("%s: no visible indicator (outline %s, shadow %s)" % (
+                                info["label"], info.get("outline"), info.get("shadow")))
                         elif info.get("ring"):
                             r = ratio(info["ring"], info["bg"])
                             if r < 3.0:
