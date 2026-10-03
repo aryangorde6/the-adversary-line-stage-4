@@ -277,6 +277,69 @@ def main():
           f"(expected 204; the same terms are the same terms, and a probe author writing them in a "
           f"different order must not be refused for it)")
 
+    # The gate decides only whether to refuse; the derivation is unconditional. The decisive test is
+    # to change the rules the terms would be derived from and confirm the stored terms follow the new
+    # rules rather than the object the fixture declared -- because a declared object that merely
+    # equals yesterday's derivation is the only way this could diverge.
+    other_rules = base_fixture()
+    other_rules["restaurants"][0]["slot_minutes"] = 15
+    other_rules["restaurants"][0]["cancellation_cutoff_minutes"] = 45
+    other_rules_derived = derived_policy_zero_terms(other_rules["restaurants"][0])
+
+    def seeded_fixture_with_rules(rules_fixture, reservation_overrides=None):
+        """A seeded fixture whose RESTAURANT carries the given rules.
+
+        Deriving terms for one restaurant's rules and offering them against another is the Builder's
+        cross-restaurant case; this is the same comparison inside one restaurant, which is the only
+        way to change what the derivation IS rather than which restaurant it came from.
+        """
+        fx = copy.deepcopy(rules_fixture)
+        fx["reservations"] = [{
+            "id": "res_seed", "reference": "SEED0001", "user_id": "u_ada",
+            "restaurant_id": "r_anker", "table_ids": ["t_1"], "party_size": 2,
+            "starts_at_local": "2026-09-28T18:00",
+        }]
+        if reservation_overrides:
+            fx["reservations"][0].update(reservation_overrides)
+        return fx
+    st, body = call("POST", "/_test/reset",
+                    seeded_fixture_with_rules(other_rules,
+                                              {"accepted_terms": other_rules_derived}))
+    accepted_new_rules = st == 204
+    check("S3-323", accepted_new_rules,
+          f"a fixture declaring terms derived from DIFFERENT restaurant rules -> {st} "
+          f"(expected 204; the gate refuses only what disagrees with the derivation it just "
+          f"computed, so the declared object must be measured against the current rules)")
+
+    call("POST", "/_test/reset",
+         seeded_fixture_with_rules(other_rules, {"accepted_terms": other_rules_derived}))
+    st, seeded_other = call("GET", "/reservations/SEED0001", token=login())
+    check("S3-324", st == 200 and seeded_other.get("accepted_terms") == other_rules_derived,
+          f"the stored terms equal this file's derivation for the rules that were actually in force -> "
+          f"equal={st == 200 and seeded_other.get('accepted_terms') == other_rules_derived} "
+          f"stored={json.dumps(seeded_other.get('accepted_terms'), sort_keys=True) if st == 200 else None} "
+          f"derived={json.dumps(other_rules_derived, sort_keys=True)} (expected the 15-minute / 45 "
+          f"derivation; if the declared object were the source, the stored terms would be the old ones "
+          f"and this row would be red while every other row stayed green)")
+
+    # Canonical comparison must reach inside the terms, not just the top level.
+    nested = copy.deepcopy(other_rules_derived)
+    nested["opening_hours"] = [dict(reversed(list(d.items()))) for d in nested["opening_hours"]]
+    nested["capacities"] = {k: nested["capacities"][k] for k in reversed(list(nested["capacities"]))}
+    st, body = call("POST", "/_test/reset",
+                    seeded_fixture_with_rules(other_rules, {"accepted_terms": nested}))
+    check("S3-325", st == 204,
+          f"the same terms with the keys of every nested object also reordered -> {st} (expected 204; "
+          f"a canonical comparison that only sorted the top level would refuse a correct fixture, "
+          f"which is the false refusal this file recorded at a69e6ba)")
+
+    st, body = call("POST", "/_test/reset",
+                    seeded_fixture_with_rules(other_rules, {"accepted_terms": nested,
+                                                             "revision": 3}))
+    check("S3-326", st == 422 and code_of(body) == "fixture_unsupported",
+          f"canonicalisation did not weaken the refusal -> {st} code={code_of(body)} (expected 422; "
+          f"the fix must make the comparison key-order independent WITHOUT making it permissive)")
+
     # =====================================================================
     # Group 4 -- an ordinary seeded booking carries the DERIVED terms, and the
     # seed door and the import door agree about it. This is the differential row:

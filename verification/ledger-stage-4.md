@@ -107,6 +107,15 @@ that is a stage-4 version of the mistake this section exists because of.
 missing, and it is stage-4 work.** `S4-151` and `S4-152` are re-measured on a stage-4 build rather than
 banked; what stage 3 supplies is the refusal, not the capability.
 
+**Consequence, stated against the rows rather than left to be discovered: every stage-4 row that needs
+seeded stage-3 state is unmeasurable until that fixture exists.** That is `S4-123`'s terms-driven
+substitution (which needs a published policy per booking), `S4-130`'s half-open boundary against
+applied closures, `S4-137`'s series-moved-by-a-plan, and `S4-161`'s imported series. **They are written
+against a door that does not yet exist, and the honest state of each is "unmeasurable", not "pending".**
+The alternative — expressing the state through `/_test/import` in every row — is available today and is
+what this file's own absent-reservation row did, so the choice is deliberate and recorded rather than
+defaulted into.
+
 ## 0.2 The second arrival path — measured **open at `77c69f8`**, closed at `a69e6ba`
 
 At `77c69f8` and earlier a reservation could be **seeded** with `revision: 5` and `accepted_terms: null`,
@@ -249,6 +258,14 @@ because they have now failed to travel into a new file twice.**
 22. **Assert that the two sides could differ.** A differential row whose two sides are trivially equal
     passes for free and means nothing. The row must contain a case where a naive implementation *would*
     diverge, and **fail if it does not** — otherwise it is a thing compared with itself (clause 19).
+23. **A row that asserts presence must first establish there is something to be present.** The four
+    stage-3 stores are absent from an export while empty, so *absence against an empty state cannot be
+    told from silence*: my own first draft asserted the export carried all four, against a state holding
+    none, and **passed for the wrong reason.** Assert against a population that contains the thing.
+24. **A refusal the author cannot account for is barely better than the success that lied to them** —
+    both leave the author stuck. One said `204` and seeded nothing; the other said `422` and refused
+    something correct. **A refusal that is *wrong* is worse than no refusal**, because the author cannot
+    distinguish it from the state being genuinely unsupported.
 ---
 
 ## A. Arrival paths (highest risk: two paths, one fact, and a 204 that lies)

@@ -1,6 +1,13 @@
 # Stage-3 acceptance at `a69e6ba` — graded directly, after the accepted hash
 
-## The hash chain, so the record names one thing
+## The hash chain, settled in one paragraph
+
+**`77c69f8` is the stage-3 acceptance. `a69e6ba` is a graded PASS fix applied after it. `a69e6ba` is the
+hash the stage-3 defect round plants against. `3538cda` is a later graded fix (the canonical terms
+gate).** `9121b38`, `77c69f8`, `df4387d` and `e6a0830` are the PASS and the row-only additions graded
+directly against it, each holding. Nothing further needs to be inferred from a conversation.
+
+## The table
 
 | Hash | What it is | My grade |
 |---|---|---|
