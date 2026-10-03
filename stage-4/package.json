@@ -1,0 +1,17 @@
+{
+  "name": "tablekeeper",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Tablekeeper stage 1: restaurant availability, reservations and atomic moves",
+  "license": "UNLICENSED",
+  "main": "src/main.js",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node src/main.js"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

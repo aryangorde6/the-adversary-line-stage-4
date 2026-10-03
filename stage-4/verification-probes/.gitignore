@@ -1,0 +1,2 @@
+# Playwright lives outside this repository and is linked in for the suites only.
+node_modules
