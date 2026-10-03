@@ -482,7 +482,7 @@ function availabilityFor(state, restaurant, date, partySize, options) {
       const endMs = startMs + duration * MILLIS_PER_MINUTE;
       // A table out of service by an applied closure is skipped here, in the booking path and in the
       // grid alike, so the two cannot disagree about whether a closed table can be taken.
-      const outOfService = (tableId) => store.isTableClosed(state, restaurant.id, tableId, dateString);
+      const outOfService = (tableId) => store.isTableClosed(state, restaurant.id, tableId, startMs, endMs);
       const available = [];
       for (const table of restaurant.tables) {
         const capacity = policyRules.policyCapacity(selected, table.id);

@@ -124,8 +124,17 @@ function availability(ctx) {
   };
 }
 
+// The restaurant revision moves HERE, on the request that creates a booking, and not inside
+// createReservation. The domain primitive is also called by series adoption with a DRAFT shadow of the
+// state, which carries no counters -- so a bump inside it writes to the wrong object. That is invisible
+// until a counter is added, and then it surfaces as a 422 in a completely unrelated feature.
+// The restaurant revision moves HERE, on the request that creates a booking, and not inside
+// createReservation. The domain primitive is also called by series adoption with a DRAFT shadow of the
+// state, which carries no counters -- so a bump inside it writes to the wrong object. That is invisible
+// until a counter is added, and then it surfaces as a 422 in a completely unrelated feature.
 function createReservation(ctx) {
   const reservation = domain.createReservation(ctx.state, ctx.user, ctx.body, ctx.nowMs);
+  store.bumpRestaurantRevision(ctx.state, reservation.restaurant_id);
   return { status: 201, body: store.reservationView(ctx.state, reservation) };
 }
 
@@ -153,6 +162,10 @@ function cancelReservation(ctx) {
   const reservation = ownReservationOrFail(ctx.state, ctx.user, ctx.params.reference);
   const wasConfirmed = reservation.status === 'confirmed';
   domain.cancelReservation(ctx.state, reservation, ctx.nowMs);
+  // A cancellation counts only if it was a real one. A repeated cancel changes nothing, and the
+  // specification says a no-op does not move the revision -- so the test is whether the status moved, not
+  // whether the request succeeded.
+  if (wasConfirmed) store.bumpRestaurantRevision(ctx.state, reservation.restaurant_id);
   if (wasConfirmed && reservation.series_id) {
     require('./series').bumpSeriesRevision(ctx.state, reservation.series_id);
   }
@@ -162,7 +175,14 @@ function cancelReservation(ctx) {
 function patchReservation(ctx) {
   const reservation = ownReservationOrFail(ctx.state, ctx.user, ctx.params.reference);
   if (reservation.status === 'cancelled') fail('reservation_cancelled', { reference: reservation.reference });
+  const revisionBefore = reservation.revision;
   domain.amendReservation(ctx.state, reservation, ctx.body, ctx.nowMs);
+  // Same rule as the cancellation: the revision moves for a REAL amendment, and a patch naming a field
+  // with the value it already holds is not one. amendReservation returns without writing for a no-op, so
+  // the revision not moving is the test.
+  if (reservation.revision !== revisionBefore) {
+    store.bumpRestaurantRevision(ctx.state, reservation.restaurant_id);
+  }
   return { status: 200, body: store.reservationView(ctx.state, reservation) };
 }
 
@@ -184,13 +204,17 @@ function publishPolicy(ctx) {
 function previewReplan(ctx) {
   const restaurant = domain.requireRestaurant(ctx.state, ctx.params.id);
   policyRules.requireManager(ctx.state, restaurant, ctx.user);
-  return { status: 201, body: replans.previewReplan(ctx.state, ctx.user, restaurant, ctx.body, ctx.nowMs) };
+  const plan = replans.previewReplan(ctx.state, ctx.user, restaurant, ctx.body, ctx.nowMs);
+  // The 201 body is the specification's shape and not the plan's internal one: the revision the plan was
+  // computed against is reported as `restaurant_revision`, and the closure's internal millisecond fields
+  // are not part of the response. A client reading `from` and `to` gets instants with offsets back.
+  return { status: 201, body: replans.planResponse(plan) };
 }
 
 function applyReplan(ctx) {
   const restaurant = domain.requireRestaurant(ctx.state, ctx.params.id);
   policyRules.requireManager(ctx.state, restaurant, ctx.user);
-  return { status: 200, body: replans.applyReplan(ctx.state, ctx.user, restaurant, ctx.params.planId, ctx.nowMs) };
+  return { status: 201, body: replans.applyReplan(ctx.state, ctx.user, restaurant, ctx.params.planId, ctx.nowMs) };
 }
 
 function listPolicies(ctx) {

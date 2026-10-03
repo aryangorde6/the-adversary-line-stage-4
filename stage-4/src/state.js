@@ -41,18 +41,36 @@ function emptyState() {
     // closure is a fact about a date and outlives the request that created it, so it is the thing
     // availability reads and the thing that can move a date's day_state.
     closures: [],
+    restaurant_revisions: {},
   };
 }
 
 // Whether a table is out of service on a date, by an applied closure. A closed table is treated as
 // occupied rather than as a fourth rule, so `explain` keeps its two rules and a diner is told the table
 // is not available rather than that some new reason exists.
-function isTableClosed(state, restaurantId, tableId, date) {
+// A closure is a table over a half-open INSTANT interval, so "is this table out" is a question about a
+// moment rather than about a calendar day. startMs/endMs are the booking's own span, and the overlap test
+// is the same one the replanner uses, so the grid and the repair cannot disagree about what a closure means.
+function isTableClosed(state, restaurantId, tableId, startMs, endMs) {
   return state.closures.some((closure) => (
     closure.restaurant_id === restaurantId
-    && closure.date === date
-    && closure.table_ids.indexOf(tableId) !== -1
+    && closure.table_id === tableId
+    && startMs < closure.to_ms
+    && closure.from_ms < endMs
   ));
+}
+
+// The restaurant revision is the concurrency token for replans. It starts at 0 and moves once for each
+// successful new booking, real amendment, cancellation, policy publication and plan application -- and not
+// for a no-op, a failure, a preview or a replay, which is what makes "has the restaurant moved on since this
+// plan was computed" a question with an answer.
+function restaurantRevision(state, restaurantId) {
+  return state.restaurant_revisions[restaurantId] || 0;
+}
+
+function bumpRestaurantRevision(state, restaurantId) {
+  state.restaurant_revisions[restaurantId] = restaurantRevision(state, restaurantId) + 1;
+  return state.restaurant_revisions[restaurantId];
 }
 
 let current = emptyState();
@@ -164,5 +182,7 @@ module.exports = {
   allocatePlanId,
   rememberPlan,
   isTableClosed,
+  restaurantRevision,
+  bumpRestaurantRevision,
   reservationView,
 };

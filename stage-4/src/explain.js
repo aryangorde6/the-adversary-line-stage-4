@@ -29,13 +29,13 @@ function confirmedOverlaps(state, restaurantId, tableId, startMs, endMs) {
 
 // Both halves are computed here and neither is derived from the other, so S3-005's assertion that
 // available equals (capacity && no_overlap) is a real comparison rather than a tautology.
-function explainTable(state, restaurant, selectedPolicy, table, partySize, startMs, endMs, date) {
+function explainTable(state, restaurant, selectedPolicy, table, partySize, startMs, endMs) {
   const capacity = policy.policyCapacity(selectedPolicy, table.id);
   const capacityHolds = partySize <= capacity;
   // An applied closure is reported through no_overlap rather than as a third rule, so the rule list is
   // still the two S3-003 fixes and the availability the grid renders is the same conjunction.
   const noOverlapHolds = !confirmedOverlaps(state, restaurant.id, table.id, startMs, endMs)
-    && !store.isTableClosed(state, restaurant.id, table.id, date);
+    && !store.isTableClosed(state, restaurant.id, table.id, startMs, endMs);
   const rules = RULE_ORDER.map((rule) => ({
     rule,
     holds: rule === 'capacity' ? capacityHolds : noOverlapHolds,
@@ -50,19 +50,19 @@ function explainTable(state, restaurant, selectedPolicy, table, partySize, start
   };
 }
 
-function explainForSlot(state, restaurant, selectedPolicy, partySize, startMs, endMs, date) {
-  // The searched date travels with the call, so a closure on THAT date is the one consulted. Reading it
-  // off the restaurant would consult a field no caller sets, which is the shut-day silence in a new
-  // place: the answer would be silently "not closed" for every date.
+function explainForSlot(state, restaurant, selectedPolicy, partySize, startMs, endMs) {
+  // A closure is judged against the SLOT's own span, so the explanation and the grid consult the same
+  // interval the closure is. The slot is the thing being explained, so it is the thing the closure is
+  // tested against -- anything else would be a second answer to a question about this instant.
   return restaurant.tables.map((table) => (
-    explainTable(state, restaurant, selectedPolicy, table, partySize, startMs, endMs, date)
+    explainTable(state, restaurant, selectedPolicy, table, partySize, startMs, endMs)
   ));
 }
 
 // A pair is explained as its own entry, because a pair's capacity is the sum of the selected
 // policy's capacities and a pair can be available while neither member is available alone. The
 // entry names the pair in the restaurant's declared order.
-function explainForPair(state, restaurant, selectedPolicy, pair, partySize, startMs, endMs, date) {
+function explainForPair(state, restaurant, selectedPolicy, pair, partySize, startMs, endMs) {
   const capacity = policy.capacityUnder(selectedPolicy, pair);
   const capacityHolds = partySize <= capacity;
   // A closed table takes the pair out, for the same reason it takes the single out. A summed capacity
@@ -70,7 +70,7 @@ function explainForPair(state, restaurant, selectedPolicy, pair, partySize, star
   // is exactly where that would show up.
   const free = pair.every((tableId) => (
     !confirmedOverlaps(state, restaurant.id, tableId, startMs, endMs)
-    && !store.isTableClosed(state, restaurant.id, tableId, date)
+    && !store.isTableClosed(state, restaurant.id, tableId, startMs, endMs)
   ));
   const noOverlapHolds = free;
   const rules = RULE_ORDER.map((rule) => ({

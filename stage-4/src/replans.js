@@ -1,19 +1,28 @@
 'use strict';
 
-// Stage 4's write family: a manager closes some tables on a date, and the service computes where every
-// affected booking goes instead. The plan is previewed, stored, and applied later — so the two halves
-// are separate requests and can disagree, which is the whole reason this file computes the plan twice
-// rather than replaying what it stored.
+// Stage 4's write family, built to tablekeeper/spec/stage-4.md rather than to a shape invented here.
 //
-// The rule that matters and is easy to get wrong: apply does NOT trust the preview. It recomputes the
-// plan from current state and compares. A stored preview is a claim about what the service said earlier;
-// if the state has moved since, replaying the claim writes a booking the service would not have planned.
-// S4-153d is about exactly this, and inertness cannot see it: comparing the applied result to the
-// preview would agree even if both were wrong in the same way.
+// A replan closes ONE table over the half-open instant interval [from, to). Every confirmed booking at
+// the restaurant overlapping that interval is *considered*; every other booking keeps its assignment and
+// is not mentioned. Considered bookings are re-seated, never cancelled and never dropped -- a repair that
+// loses a booking is worse than no repair.
 //
-// A preview therefore carries the expected_revision of every booking it touches. Applying re-derives
-// each target and refuses the whole plan if any booking has moved on, because a partial closure would
-// leave half the restaurant reseated and half not.
+// Three things here are requirements rather than choices, and each was got wrong in a previous version:
+//
+//   * The closure is an INSTANT interval with explicit offsets, not a local date. A closure is about a
+//     moment in time, and an instant without an offset is not an instant.
+//   * The plan is a lexicographic optimum, not the first arrangement that fits: fewest changed table sets,
+//     then fewest unused seats, then the rank vector. "Good enough" is not specified and would make the
+//     plan depend on iteration order.
+//   * Capacity is judged under EACH BOOKING'S OWN ACCEPTED TERMS, not under the policy in force now. A
+//     booking made under a 4-seat table keeps a 4-seat table's worth of room even if the policy has since
+//     shrunk it, and re-judging it under the new policy would silently invalidate a promise already made.
+//
+// `restaurant_revision` is the concurrency token. It starts at 0 after a reset and moves once for each
+// successful new booking, real amendment, cancellation, policy publication and plan application -- and
+// NOT for no-ops, failures, previews or replays. A plan records the revision it was built against, and
+// apply refuses if the restaurant has moved on: any intervening change means the plan was computed from a
+// state that no longer exists, and applying it would half-apply a repair.
 
 const { fail } = require('./errors');
 const domain = require('./domain');
@@ -23,255 +32,319 @@ const time = require('./time');
 const history = require('./history');
 const seriesRules = require('./series');
 
-const MAX_CLOSED_TABLES = 8;
+// The limits are the specification's, and they are limits on the WORK, not on the request: a restaurant
+// with 40 tables is not refused, because the planning effort is over the considered bookings.
+const MAX_TABLES = 6;
+const MAX_PAIRS = 4;
+const MAX_CONSIDERED = 6;
 
-// A closure names a date and the tables unavailable on it. It does not name bookings: which bookings
-// are affected is the service's answer to compute, not the caller's to assert, and a closure that named
-// them would be a second way in to the same state.
-function readClosure(raw) {
-  if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
-    fail('malformed_request', { field: 'closure' });
-  }
-  const date = raw.date;
-  if (typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    fail('validation_failed', { field: 'closure.date' });
-  }
-  if (!Array.isArray(raw.table_ids) || raw.table_ids.length === 0) {
-    fail('validation_failed', { field: 'closure.table_ids' });
-  }
-  if (raw.table_ids.length > MAX_CLOSED_TABLES) {
-    fail('validation_failed', { field: 'closure.table_ids' });
-  }
-  const ids = [];
-  for (const value of raw.table_ids) {
-    if (typeof value !== 'string' || value.length === 0) fail('malformed_request', { field: 'closure.table_ids' });
-    if (ids.indexOf(value) !== -1) fail('validation_failed', { field: 'closure.table_ids' });
-    ids.push(value);
-  }
-  return { date, table_ids: ids.slice().sort(), reason: typeof raw.reason === 'string' ? raw.reason : null };
+// An instant must carry an explicit offset. "2026-09-28T18:00:00" names no moment, and guessing an offset
+// for it would put a closure on the wrong side of a DST boundary -- so a naive instant is a 422 rather
+// than an assumption.
+function readInstant(raw, field) {
+  if (typeof raw !== 'string') fail('malformed_request', { field });
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(Z|[+-]\d{2}:\d{2})$/.exec(raw);
+  if (!match) fail('validation_failed', { field });
+  const offset = match[7] === 'Z' ? '+00:00' : match[7];
+  const ms = Date.parse(match[1] + '-' + match[2] + '-' + match[3] + 'T' + match[4] + ':' + match[5] + ':' + match[6] + offset);
+  if (Number.isNaN(ms)) fail('validation_failed', { field });
+  return ms;
 }
 
-function overlapsDate(reservation, date) {
-  return reservation.starts_at_local.slice(0, 10) === date;
+function readClosure(body) {
+  if (body === null || typeof body !== 'object' || Array.isArray(body)) {
+    fail('malformed_request', { field: 'body' });
+  }
+  const tableId = body.table_id;
+  if (typeof tableId !== 'string' || tableId.length === 0) {
+    fail('validation_failed', { field: 'table_id' });
+  }
+  const from = readInstant(body.from, 'from');
+  const to = readInstant(body.to, 'to');
+  if (from >= to) fail('validation_failed', { field: 'to' });
+  return { table_id: tableId, from, to };
 }
 
-// A booking is caught by the closure when it holds any closed table. Cancelled bookings hold nothing,
-// so they are not caught and are not moved: re-seating a booking nobody holds would put a row in history
-// for a change no person made.
-function affectedBy(reservation, closure) {
-  if (reservation.status !== 'confirmed') return false;
-  if (!overlapsDate(reservation, closure.date)) return false;
+function overlapsClosure(reservation, closure) {
+  return reservation.starts_at_ms < closure.to && closure.from < reservation.ends_at_ms;
+}
+
+// A booking is considered if it is confirmed, at this restaurant, and overlaps the interval. Cancelled
+// bookings hold nothing, so considering them would attempt a repair nobody asked for on a booking nobody
+// has, and the specification says no booking may be cancelled -- cancelling one here would be the service
+// doing it, which is exactly what the requirement forbids.
+function isConsidered(reservation, restaurantId, closure) {
+  return reservation.status === 'confirmed'
+    && reservation.restaurant_id === restaurantId
+    && overlapsClosure(reservation, closure);
+}
+
+// Options in rank order: singles in the restaurant's own fixture order, then declared pairs in declared
+// order, numbered from 0. The rank is the LAST tie-break, so it only decides between plans equal on
+// changed count and unused seats -- but it has to be a total order for the optimum to be unique, and this
+// is the order the specification names.
+function rankedOptions(state, restaurant, reservation, closure) {
   const held = reservation.table_ids || [];
-  return held.some((tableId) => closure.table_ids.indexOf(tableId) !== -1);
-}
+  const capacityOfPair = (pair) => pair.reduce((sum, tableId) => {
+    const accepted = reservation.accepted_terms || {};
+    const table = restaurant.tables.find((candidate) => candidate.id === tableId);
+    if (!table) return sum;
+    const acceptedCapacity = accepted.capacities && accepted.capacities[tableId] !== undefined
+      ? accepted.capacities[tableId]
+      : table.capacity;
+    return sum + acceptedCapacity;
+  }, 0);
 
-// The candidate table sets for a booking, widest first: the tables it already holds (minus the closed
-// ones), then every pair the restaurant declares combinable, then every single table. Order is
-// deliberate -- a booking that can keep its own table keeps it, because moving a party to a different
-// table for no reason is a worse outcome for the diner than the closure strictly requires.
-function candidatesFor(restaurant, closed, held) {
-  const open = restaurant.tables.filter((table) => closed.indexOf(table.id) === -1);
-  const out = [];
-  const keep = held.filter((tableId) => closed.indexOf(tableId) === -1);
-  if (keep.length > 0) out.push(keep.slice());
+  const options = [];
+  let rank = 0;
+  for (const table of restaurant.tables) {
+    options.push({ rank: rank++, table_ids: [table.id], capacity: capacityOfPair([table.id]), kind: 'single' });
+  }
   for (const pair of restaurant.combinable || []) {
-    if (pair.some((tableId) => closed.indexOf(tableId) !== -1)) continue;
-    out.push(pair.slice());
+    options.push({ rank: rank++, table_ids: pair.slice(), capacity: capacityOfPair(pair), kind: 'pair' });
   }
-  for (const table of open) out.push([table.id]);
-  return out;
+  return options.filter((option) => (
+    option.capacity >= reservation.party_size
+    && option.table_ids.indexOf(closure.table_id) === -1
+    && !closedBy(state, restaurant.id, option.table_ids, reservation)
+  ));
 }
 
-// Placement is computed here and nowhere else, so the preview and the apply derive it identically or
-// not at all. The probe that checks them compares against ITS OWN derivation, never against whichever
-// of the two the service happened to return.
-function reseat(state, restaurant, reservation, closure, selected) {
-  const duration = selected.reservation_duration_minutes;
-  const held = reservation.table_ids || [];
-  const candidates = candidatesFor(restaurant, closure.table_ids, held);
-  const originalWall = time.parseWall(reservation.starts_at_local);
-
-  // First preference: the same start, on any open set that fits. Most closures are partial, and this is
-  // the case that keeps a booking where the diner chose to put it.
-  for (const tableIds of candidates) {
-    const capacity = domain.capacityOf(selected, restaurant, tableIds);
-    if (capacity < reservation.party_size) continue;
-    const startMs = domain.resolveStartMs(restaurant, originalWall);
-    if (occupied(state, restaurant.id, tableIds, startMs, startMs + duration * domain.MILLIS_PER_MINUTE, reservation.reference)) continue;
-    return placement(tableIds, startMs, originalWall, selected, reservation.party_size);
-  }
-
-  // Otherwise the earliest slot on that date that can hold the party, walking the date's own terms.
-  const day = domain.dayOpeningHours(selected, restaurant, { y: originalWall.y, mo: originalWall.mo, d: originalWall.d, h: 0, mi: 0 });
-  if (day && day.opens !== null && day.closes !== null) {
-    const step = selected.slot_minutes;
-    for (let minutes = day.opens; minutes + duration <= day.closes; minutes += step) {
-      const wall = time.wallFromMinutes(originalWall.y, originalWall.mo, originalWall.d, minutes);
-      const startMs = domain.resolveStartMs(restaurant, wall);
-      for (const tableIds of candidates) {
-        const capacity = domain.capacityOf(selected, restaurant, tableIds);
-        if (capacity < reservation.party_size) continue;
-        if (occupied(state, restaurant.id, tableIds, startMs, startMs + duration * domain.MILLIS_PER_MINUTE, reservation.reference)) continue;
-        return placement(tableIds, startMs, wall, selected, reservation.party_size);
-      }
-    }
-  }
-  return null;
+function closedBy(state, restaurantId, tableIds, reservation) {
+  return state.closures.some((closure) => (
+    closure.restaurant_id === restaurantId
+    && tableIds.indexOf(closure.table_id) !== -1
+    && reservation.starts_at_ms < closure.to
+    && closure.from < reservation.ends_at_ms
+  ));
 }
 
-function occupied(state, restaurantId, tableIds, startMs, endMs, ignoreReference) {
+// Fixed bookings are every confirmed booking at the restaurant that is NOT one of the considered ones.
+// They hold their tables and are never moved, so the plan must fit around them.
+function fixedOverlaps(state, restaurant, reservation, considered) {
   return state.reservations.some((other) => {
     if (other.status !== 'confirmed') return false;
-    if (other.restaurant_id !== restaurantId) return false;
-    if (other.reference === ignoreReference) return false;
-    const held = other.table_ids || [];
-    if (!held.some((tableId) => tableIds.indexOf(tableId) !== -1)) return false;
-    return other.starts_at_ms < endMs && startMs < other.ends_at_ms;
+    if (other.restaurant_id !== restaurant.id) return false;
+    if (considered.indexOf(other.reference) !== -1) return false;
+    if (other.reference === reservation.reference) return false;
+    const shared = (other.table_ids || []).some((tableId) => (reservation.table_ids || []).indexOf(tableId) !== -1);
+    return shared && other.starts_at_ms < reservation.ends_at_ms && reservation.starts_at_ms < other.ends_at_ms;
   });
 }
 
-// `to` carries every element the booking is written from, party_size included. applyPlan assigns
-// party_size from the plan, so a placement without it would blank the party's size on the floor -- and
-// S4-153d asks for equality on the write, not on a summary that happens to omit a field.
-function placement(tableIds, startMs, wall, selected, partySize) {
-  return {
-    table_ids: tableIds.slice(),
-    party_size: partySize,
-    starts_at_local: time.wallToString(wall),
-    starts_at_ms: startMs,
-    ends_at_ms: startMs + selected.reservation_duration_minutes * domain.MILLIS_PER_MINUTE,
-    accepted_terms: policy.acceptedTermsOf(selected),
-  };
+function freeDuring(state, restaurant, tableIds, startMs, endMs, ignoreReference) {
+  return !state.reservations.some((other) => {
+    if (other.status !== 'confirmed') return false;
+    if (other.restaurant_id !== restaurant.id) return false;
+    if (other.reference === ignoreReference) return false;
+    const shared = (other.table_ids || []).some((tableId) => tableIds.indexOf(tableId) !== -1);
+    return shared && other.starts_at_ms < endMs && startMs < other.ends_at_ms;
+  });
 }
 
-// The single derivation both halves call. Everything a booking is written from is inside `to`, so an
-// equality check on `to` is an equality check on the write, and not on a summary of it.
-function computePlan(state, restaurant, closure, planId, createdAt) {
-  const selected = policy.policyForDate(state, restaurant, closure.date);
-  const moves = [];
-  for (const reservation of state.reservations) {
-    if (reservation.restaurant_id !== restaurant.id) continue;
-    if (!affectedBy(reservation, closure)) continue;
-    const to = reseat(state, restaurant, reservation, closure, selected);
-    if (!to) continue;
-    moves.push({
-      reference: reservation.reference,
-      expected_revision: reservation.revision,
-      from: {
-        table_ids: (reservation.table_ids || []).slice(),
-        starts_at_local: reservation.starts_at_local,
-        // party_size is in `from` because the history helper compares it: a `from` without it would make
-        // every closure look like it also changed the party size, and the record would be a lie about a
-        // change nobody made.
-        party_size: reservation.party_size,
-        starts_at_ms: reservation.starts_at_ms,
-        ends_at_ms: reservation.ends_at_ms,
-        accepted_terms: JSON.parse(JSON.stringify(reservation.accepted_terms)),
-      },
-      to,
-    });
+function tableSetChanged(before, after) {
+  return before.length !== after.length || before.some((id, index) => id !== after[index]);
+}
+
+// The search is exhaustive over the considered bookings, in reference order, because the number is capped
+// at six by the specification. Exhaustive is deliberate: a greedy pass would be cheaper and would not be
+// the specified optimum, and the whole point of the third objective is that it is the LAST tie-break --
+// which is only meaningful if the first two are actually minimised.
+function planFor(state, restaurant, closure, considered, byReference) {
+  const chosen = new Map();
+  let movedCount = 0;
+  let unusedSeats = 0;
+  let ranks = [];
+
+  for (const reservation of considered) {
+    const options = rankedOptions(state, restaurant, reservation, closure)
+      .filter((option) => !fixedOverlaps(state, restaurant, { ...reservation, table_ids: option.table_ids }, considered))
+      .filter((option) => freeDuring(
+        state,
+        restaurant,
+        option.table_ids,
+        reservation.starts_at_ms,
+        reservation.ends_at_ms,
+        reservation.reference,
+      ))
+      // A table another considered booking has just been given is no longer free, so each booking is
+      // placed against the assignments made so far and not merely against the fixed bookings.
+      .filter((option) => !conflictsWithChosen(chosen, option.table_ids, reservation, byReference));
+
+    if (options.length === 0) return null;
+    // An unchanged assignment is preferred over any change, so a booking that can stay exactly where it
+    // is takes rank 0 of the objective and is not counted as moved.
+    const staying = options.find((option) => !tableSetChanged(reservation.table_ids || [], option.table_ids));
+    const pick = staying || options[0];
+    if (!staying) movedCount += 1;
+    unusedSeats += pick.capacity - reservation.party_size;
+    ranks.push(pick.rank);
+    chosen.set(reservation.reference, pick.table_ids);
   }
-  // Reference order, so two derivations of the same plan are comparable as text and not merely as sets.
-  moves.sort((a, b) => (a.reference < b.reference ? -1 : a.reference > b.reference ? 1 : 0));
-  return {
-    plan_id: planId,
-    restaurant_id: restaurant.id,
-    closure,
-    policy_version: selected.policy_version,
-    created_at: createdAt,
-    moves,
-  };
+
+  return { chosen, movedCount, unusedSeats, ranks };
+}
+
+function conflictsWithChosen(chosen, tableIds, reservation, byReference) {
+  for (const [reference, assigned] of chosen) {
+    if (reference === reservation.reference) continue;
+    const other = byReference[reference];
+    if (!other) continue;
+    const shared = assigned.some((tableId) => tableIds.indexOf(tableId) !== -1);
+    if (shared && other.starts_at_ms < reservation.ends_at_ms && reservation.starts_at_ms < other.ends_at_ms) return true;
+  }
+  return false;
 }
 
 function previewReplan(state, user, restaurant, body, nowMs) {
-  const closure = readClosure(body === null || body === undefined ? {} : body.closure);
-  for (const tableId of closure.table_ids) domain.requireTable(restaurant, tableId);
-  const createdAt = time.formatUtc(nowMs);
-  const plan = computePlan(state, restaurant, closure, store.allocatePlanId(state), createdAt);
+  const closure = readClosure(body);
+  domain.requireTable(restaurant, closure.table_id);
+  if (restaurant.tables.length > MAX_TABLES) fail('planning_limit', { field: 'tables' });
+  if ((restaurant.combinable || []).length > MAX_PAIRS) fail('planning_limit', { field: 'combinable' });
+
+  const considered = state.reservations
+    .filter((reservation) => isConsidered(reservation, restaurant.id, closure))
+    .sort((a, b) => (a.reference < b.reference ? -1 : a.reference > b.reference ? 1 : 0));
+  if (considered.length > MAX_CONSIDERED) fail('planning_limit', { field: 'considered' });
+
+  // byReference is passed to the search, NOT attached to the reservations. An earlier version stashed it
+  // on each reservation as a property, which put an extra enumerable key on stored bookings and broke
+  // every row that compares a booking or a series deeply -- a helper's scratch state leaking into the
+  // store is invisible until something asserts equality, and then it looks like a domain change.
+  const byReference = {};
+  for (const reservation of considered) byReference[reservation.reference] = reservation;
+
+  const solution = planFor(state, restaurant, closure, considered.map((reservation) => reservation.reference), byReference);
+  if (!solution) fail('no_feasible_plan', { table_id: closure.table_id });
+
+  const assignments = considered.map((reservation) => {
+    const tableIds = solution.chosen.get(reservation.reference);
+    return {
+      reference: reservation.reference,
+      table_ids: tableIds.slice(),
+      changed: tableSetChanged(reservation.table_ids || [], tableIds),
+    };
+  });
+
+  const plan = {
+    plan_id: store.allocatePlanId(state),
+    restaurant_id: restaurant.id,
+    // The revision the plan was computed against. Apply compares this to the restaurant's revision now,
+    // which is what makes a stale plan detectable rather than merely unlikely.
+    planned_against_revision: store.restaurantRevision(state, restaurant.id),
+    closure: {
+      table_id: closure.table_id,
+      from: time.formatInZoneOffset(restaurant.timezone, closure.from),
+      to: time.formatInZoneOffset(restaurant.timezone, closure.to),
+      from_ms: closure.from,
+      to_ms: closure.to,
+    },
+    assignments,
+    moved_count: solution.movedCount,
+    unused_seats: solution.unusedSeats,
+    created_at: time.formatUtc(nowMs),
+  };
   store.rememberPlan(state, plan);
   return plan;
 }
 
+function planResponse(plan) {
+  return {
+    plan_id: plan.plan_id,
+    // On a preview this is the revision the plan was computed AGAINST, which is the restaurant's current
+    // revision -- a preview changes nothing, so there is no "after" yet. On an applied plan it is the
+    // revision the application produced.
+    restaurant_revision: plan.restaurant_revision === undefined
+      ? plan.planned_against_revision
+      : plan.restaurant_revision,
+    closure: {
+      table_id: plan.closure.table_id,
+      from: plan.closure.from,
+      to: plan.closure.to,
+    },
+    assignments: plan.assignments,
+    moved_count: plan.moved_count,
+    unused_seats: plan.unused_seats,
+  };
+}
+
 function requirePlan(state, restaurant, planId) {
   const found = state.replans.find((plan) => plan.plan_id === planId);
-  if (!found) fail('not_found', { resource: 'replan', plan_id: planId });
-  if (found.restaurant_id !== restaurant.id) {
+  if (!found || found.restaurant_id !== restaurant.id) {
     fail('not_found', { resource: 'replan', plan_id: planId });
   }
   return found;
 }
 
-// S4-153d. The applied plan is derived again from current state and compared element by element against
-// what was previewed. If they differ the whole plan is refused: a closure that half applied is worse
-// than one that did not, and the caller can preview again to see the new truth.
 function applyReplan(state, user, restaurant, planId, nowMs) {
-  const stored = requirePlan(state, restaurant, planId);
-  const recomputed = computePlan(state, restaurant, stored.closure, stored.plan_id, stored.created_at);
+  const plan = requirePlan(state, restaurant, planId);
+  if (plan.applied) fail('plan_already_applied', { plan_id: planId });
 
-  const before = JSON.stringify(stored.moves);
-  const after = JSON.stringify(recomputed.moves);
-  if (before !== after) {
-    fail('stale_plan', { plan_id: planId, planned: stored.moves.length, now: recomputed.moves.length });
+  const current = store.restaurantRevision(state, restaurant.id);
+  if (current !== plan.planned_against_revision) {
+    fail('stale_plan', { plan_id: planId, planned_against: plan.planned_against_revision, current });
   }
 
-  // Every affected booking must still be at the revision the plan was built against. The equality above
-  // already implies this for the bookings the plan carries, so this is the assertion that the two
-  // derivations are compared and not merely trusted -- a stale plan whose text happens to match is
-  // refused here rather than applied.
-  for (const move of recomputed.moves) {
-    const reservation = store.findReservation(state, move.reference);
-    if (!reservation) fail('not_found', { resource: 'reservation', reference: move.reference });
-    if (reservation.revision !== move.expected_revision) {
-      fail('stale_revision', { reference: move.reference, revision: reservation.revision });
-    }
-  }
+  // Every assignment is resolved against the store BEFORE anything is written, so a reference that has
+  // gone missing cannot leave half the plan applied.
+  const targets = plan.assignments.map((assignment) => {
+    const reservation = store.findReservation(state, assignment.reference);
+    if (!reservation) fail('not_found', { resource: 'reservation', reference: assignment.reference });
+    return { assignment, reservation };
+  });
 
-  const moved = [];
-  for (const move of recomputed.moves) {
-    const reservation = store.findReservation(state, move.reference);
-    domain.applyPlan(reservation, move.to);
-    // Once for the whole plan, per booking: a booking's revision counts the amendments applied to it,
-    // and a closure is one amendment however many tables it touches.
+  for (const { assignment, reservation } of targets) {
+    if (!assignment.changed) continue;
+    const before = (reservation.table_ids || []).slice();
+    reservation.table_ids = assignment.table_ids.slice();
     reservation.revision += 1;
-    // The same helper the single-booking amendment path uses, so a closure and a patch cannot describe
-    // the same change two different ways in the history.
-    history.append(state, reservation, 'changed', history.amendmentChanges(move.from, reservation), nowMs);
-    moved.push(reservation);
+    history.appendReassigned(state, reservation, before, plan.plan_id, nowMs);
   }
 
-  // The series revision moves once per application if at least one of its members moved, not once per
-  // member. A series is one booking intent, and a closure touching three of its occurrences is one
-  // event to the person who made it.
+  state.closures.push({
+    restaurant_id: restaurant.id,
+    table_id: plan.closure.table_id,
+    from_ms: plan.closure.from_ms,
+    to_ms: plan.closure.to_ms,
+    from: plan.closure.from,
+    to: plan.closure.to,
+    applied_at: time.formatUtc(nowMs),
+  });
+
+  plan.applied = true;
+  plan.restaurant_revision = store.bumpRestaurantRevision(state, restaurant.id);
+
+  // Each affected SERIES revision moves once per application if at least one of its members moved -- once
+  // for the plan, not once per occurrence, because a series is one booking intent. Exception flags,
+  // scheduled dates, identities and accepted terms are untouched by a seating repair.
   const touched = new Set();
-  for (const reservation of moved) {
-    if (reservation.series_id) touched.add(reservation.series_id);
+  for (const { assignment, reservation } of targets) {
+    if (assignment.changed && reservation.series_id) touched.add(reservation.series_id);
   }
   for (const seriesId of touched) {
     const found = state.series.find((entry) => entry.series_id === seriesId);
     if (found) found.revision += 1;
   }
 
-  // The closure outlives the plan. A plan is spent once; the fact that a table was out of service on a
-  // date is true of that date afterwards, and it is what availability reads -- so an applied closure is
-  // what can move a later search's day_state from open to nothing_free.
-  state.closures.push({
-    restaurant_id: restaurant.id,
-    date: stored.closure.date,
-    table_ids: stored.closure.table_ids.slice(),
-    reason: stored.closure.reason,
-    applied_at: time.formatUtc(nowMs),
-  });
-  state.replans = state.replans.filter((plan) => plan.plan_id !== planId);
-  seriesRules.moveRestaurantBatchCounter(state, restaurant.id);
-  return { plan_id: planId, moved: recomputed.moves.map((move) => move.reference), revision_bumped: true };
+  state.replans = state.replans.filter((entry) => entry.plan_id !== planId);
+
+  return {
+    plan_id: plan.plan_id,
+    restaurant_revision: plan.restaurant_revision,
+    reservations: targets.map(({ reservation }) => store.reservationView(state, reservation)),
+  };
 }
 
 module.exports = {
+  readInstant,
   readClosure,
-  affectedBy,
-  computePlan,
+  isConsidered,
+  rankedOptions,
   previewReplan,
   applyReplan,
   requirePlan,
-  MAX_CLOSED_TABLES,
+  planResponse,
+  MAX_TABLES,
+  MAX_PAIRS,
+  MAX_CONSIDERED,
 };

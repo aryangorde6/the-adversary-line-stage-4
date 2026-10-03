@@ -33,6 +33,12 @@ const BUILTIN_STATUS_BY_CODE = Object.freeze({
   // A closure naming a table the restaurant does not have is a validation failure rather than a 404,
   // because the closure names many tables and one of them being unknown is a fault in the closure.
   unknown_table: 422,
+  // Stage 4 codes, from the stage specification rather than invented. planning_limit is 422 because the
+  // request is well formed and the service declines the WORK; no_feasible_plan and plan_already_applied
+  // and stale_plan are 409 conflicts with existing state, on the same grounds as stale_revision.
+  planning_limit: 422,
+  no_feasible_plan: 409,
+  plan_already_applied: 409,
 });
 
 let catalogue = null;

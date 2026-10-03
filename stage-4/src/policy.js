@@ -224,6 +224,9 @@ function publishPolicy(state, restaurant, body) {
   policy.policy_version = nextVersion(state, restaurant.id);
   policy.created_at = null;
   state.policies.push(policy);
+  // A publication is one of the four events the specification counts, and it is counted here rather than
+  // inside the reader for the same reason as the booking: the readers take drafts in some call paths.
+  require('./state').bumpRestaurantRevision(state, restaurant.id);
   return policy;
 }
 

@@ -41,6 +41,17 @@ function partsInZone(timeZone, instantMs) {
   return { y: out.year, mo: out.month, d: out.day, h: out.hour, mi: out.minute, s: out.second };
 }
 
+// The zone's UTC offset in minutes at an instant. Derived rather than read off the formatter's parts,
+// because formatToParts does not emit the offset and Intl gives no direct accessor: wall time in the zone
+// read as if it were UTC, minus the instant, is the offset. Stage 4 needs it because a closure in the
+// specification is an absolute instant carrying an explicit offset, so the response has to be able to
+// write one back out.
+function zoneOffsetMinutes(timeZone, instantMs) {
+  const p = partsInZone(timeZone, instantMs);
+  const asUtc = Date.UTC(p.y, p.mo - 1, p.d, p.h, p.mi, p.s);
+  return Math.round((asUtc - Math.floor(instantMs / 1000) * 1000) / (60 * 1000));
+}
+
 function offsetAt(timeZone, instantMs) {
   const p = partsInZone(timeZone, instantMs);
   const asUtc = Date.UTC(p.y, p.mo - 1, p.d, p.h, p.mi, p.s);
@@ -80,6 +91,20 @@ function offsetString(offsetMs) {
   const sign = total < 0 ? '-' : '+';
   const abs = Math.abs(total);
   return `${sign}${pad(Math.floor(abs / 60), 2)}:${pad(abs % 60, 2)}`;
+}
+
+// An instant as a wall time in a zone, WITH its offset -- "2026-09-28T18:00:00+02:00". The stage 4
+// specification's closure carries absolute instants with explicit offsets, and formatInZone already
+// exists for the booking side, so this is the same idea read the other way: instant -> stamped string.
+function formatInZoneOffset(timezone, ms) {
+  const parts = partsInZone(timezone, ms);
+  const offsetMinutes = zoneOffsetMinutes(timezone, ms);
+  const pad = (value) => String(value).padStart(2, '0');
+  const sign = offsetMinutes < 0 ? '-' : '+';
+  const absolute = Math.abs(offsetMinutes);
+  return `${pad(parts.y)}-${pad(parts.mo)}-${pad(parts.d)}T`
+    + `${pad(parts.h)}:${pad(parts.mi)}:${pad(parts.s)}`
+    + `${sign}${pad(Math.floor(absolute / 60))}:${pad(absolute % 60)}`;
 }
 
 function formatInZone(timeZone, instantMs) {
@@ -170,9 +195,11 @@ module.exports = {
   isValidTimeZone,
   partsInZone,
   offsetAt,
+  zoneOffsetMinutes,
   wallToInstants,
   resolveWallClock,
   formatInZone,
+  formatInZoneOffset,
   formatUtc,
   weekdayOf,
   parseHhmm,

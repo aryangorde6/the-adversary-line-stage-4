@@ -28,7 +28,7 @@ function nextSeq(state, reference) {
 // assertion in S3-075, so it is written down once here rather than being left to object key order.
 const CHANGE_ORDER = ['table_id', 'starts_at_local', 'party_size'];
 
-function append(state, reservation, kind, changes, nowMs) {
+function append(state, reservation, kind, changes, nowMs, extra) {
   // The entry names what happened in a field called event. "kind" was the first name and it reads
   // as a classification rather than as the thing that happened; event is also what a caller
   // branching on created/changed/cancelled is looking for.
@@ -41,6 +41,10 @@ function append(state, reservation, kind, changes, nowMs) {
     revision: reservation.revision,
     accepted_terms: JSON.parse(JSON.stringify(reservation.accepted_terms)),
   };
+  // `extra` carries an event's own fields rather than the booking's. A reassigned entry names the plan
+  // that moved it; nothing else does, and a field only some entries have is the honest shape here --
+  // every entry claiming a plan_id would be a lie about the ones that were not repairs.
+  if (extra) Object.assign(entry, extra);
   state.history.push(entry);
   return entry;
 }
@@ -84,6 +88,16 @@ function amendmentChanges(before, after) {
   return changes.sort((a, b) => CHANGE_ORDER.indexOf(a.field) - CHANGE_ORDER.indexOf(b.field));
 }
 
+// A seating repair is its own event, not an ordinary amendment. It is distinguishable from a diner's change
+// because the person who caused it was an operator closing a table, and a record that cannot tell those two
+// apart cannot answer "why is this booking on a different table". The plan_id is in the entry so the repair
+// can be traced to the closure that caused it.
+function appendReassigned(state, reservation, beforeTableIds, planId, nowMs) {
+  return append(state, reservation, 'reassigned', [
+    { field: 'table_ids', from: beforeTableIds.slice(), to: (reservation.table_ids || []).slice() },
+  ], nowMs, { plan_id: planId });
+}
+
 function hasHistory(state, reference) {
   return state.history.some((entry) => entry.reference === reference);
 }
@@ -93,6 +107,7 @@ module.exports = {
   historyFor,
   nextSeq,
   append,
+  appendReassigned,
   creationChanges,
   amendmentChanges,
   hasHistory,
