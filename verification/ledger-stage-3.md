@@ -54,7 +54,7 @@ reached one.
 ## Standing clauses, restated here because they do not travel into a new ledger by themselves
 
 Every clause below was added after a real reading error on this build. Each costs one line and each
-removes a class of confident wrong number. **Restate them at the top of every stage-3 probe file too.** Clauses 1-13 are the whole of the
+removes a class of confident wrong number. **Restate them at the top of every stage-3 probe file too.** Clauses 1-15 are the whole of the
 method this project arrived at; none of them was anticipated at the start.
 
 1. **Assert the injected fault or the setup step actually happened before asserting the product's
@@ -95,6 +95,17 @@ method this project arrived at; none of them was anticipated at the start.
     not the symptom's usual costume.** Stage 3 is built on fields whose absence reads as a state: a
     missing `explain` is not an empty explanation, `policy_version: 0` is not an absent version, and a
     `200` is not proof a screen showed the right thing.
+14. **A row can be measuring the wrong gate.** Assert the absence you are checking for and the request
+    may have failed *earlier*, so the absence was never tested: a policy sent with neither an
+    idempotency key nor a token answers 401, and reading that as the missing key's answer is a
+    confident number about a gate the row never reached. When a row expects one refusal, send a request
+    that can only be refused for that reason.
+15. **A staged failure that does not fail is the worst of the staging faults.** Every other one hides a
+    wrong measurement behind a red; a row asserting a *failure* it never caused would report **green for
+    a defect that does not exist**. Stage 3's own example: a "failing adoption" that simply succeeded,
+    until another account took the anchor's table at the first generated slot. Assert the fault landed
+    before asserting the product's reaction — and if you cannot cause the fault, delete the row rather
+    than weaken it.
 
 **Standing convention: every row states both halves of its assertion.** Where a requirement says
 something must appear, the row also says what must *not* appear, and vice versa.
