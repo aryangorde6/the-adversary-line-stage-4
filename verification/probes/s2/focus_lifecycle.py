@@ -48,6 +48,19 @@ FIXTURE = {
 # The element that carries the indicator: the wrapper class if it is on, otherwise the focused
 # element itself. The background walked is the nearest non-transparent one BEHIND that element, so a
 # ring drawn on a wrapper is compared against what the wrapper sits on.
+BLUR_AND_READ = """
+() => {
+  const el = document.activeElement;
+  if (el && el.blur) { el.blur(); }
+  const now = document.activeElement;
+  const carrier = document.querySelector('[data-date-field]');
+  const cs = carrier ? getComputedStyle(carrier) : null;
+  return { inside: !!(now && carrier && carrier.contains(now)),
+           present: !!(carrier && carrier.classList.contains('kb-focus')),
+           painted: !!(cs && cs.outlineStyle !== 'none' && parseFloat(cs.outlineWidth) > 0) };
+}
+"""
+
 READ = """
 () => {
   const el = document.activeElement;
@@ -291,11 +304,17 @@ def main():
 
             # ---- programmatic blur ------------------------------------------------
             focus_field()
-            # The uncovered state, reported as a residual rather than asserted: with no poll and no
-            # `blur` in the handler list, a programmatic blur from the field's first stop leaves the
-            # indicator on with the keyboard outside. Same condition as focus_reentry's residual row,
-            # reached from here; asserted in neither place, because a FAIL here would be a red for a
-            # condition the ledger records and a PASS would claim it closed.
+            # The uncovered state is CLOSED: `focusout` is in the handler list, so a programmatic
+            # blur from the first stop clears the indicator in the same evaluate. Asserted with no
+            # wait and no bound. The row also reads WHICH element is painted, because after a Tab out
+            # the neighbouring control's own ring is painted while the date field's is not — a probe
+            # that reads "painted" without asking what painted it reports a red against correct code.
+            cleared = page.evaluate(BLUR_AND_READ)
+            (good if (not cleared["inside"] and not cleared["present"]) else bad).append(
+                ("FL-exit-blurcall-" + tag, (not cleared["inside"]) and (not cleared["present"]),
+                 "programmatic .blur() from the field's first stop, same evaluate: inside=%s "
+                 "kb-focus=%s painted=%s" % (cleared["inside"], cleared["present"], cleared["painted"])))
+
             page.goto(BASE + "/", wait_until="domcontentloaded")
             page.wait_for_timeout(200)
             for _ in range(30):
@@ -304,14 +323,14 @@ def main():
                                  "return !!(a && a.getAttribute && "
                                  "a.getAttribute('data-testid')==='date-input');}"):
                     break
-            page.evaluate("()=>document.activeElement && document.activeElement.blur()")
-            page.wait_for_timeout(200)
-            residual_present = page.evaluate("()=>!!document.querySelector('.kb-focus')")
-            residual_inside = page.evaluate(IN_WRAPPER)
-            residual_rows.append(("FL-residual-blurcall-" + tag, residual_present and not residual_inside,
-                "programmatic .blur() from the field's first stop: keyboard inside = %s, indicator "
-                "present = %s — the recorded residual, no poll and no `blur` handler"
-                % (residual_inside, residual_present)))
+            page.keyboard.press("Tab")           # one press leaves for the next internal stop
+            mid = page.evaluate(READ)
+            (good if (mid["tid"] == "date-input" and mid["painted"]) else bad).append(
+                ("FL-one-press-is-not-a-departure-" + tag,
+                 mid["tid"] == "date-input" and mid["painted"],
+                 "one Tab from inside the field lands on %s with the indicator still painted "
+                 "(painted=%s): a single keystroke is not a departure when the control holds four "
+                 "internal stops" % (json.dumps(mid["tid"]), mid["painted"])))
 
             # ---- a search that rebuilds the region while the keyboard is inside it ----
             focus_field()

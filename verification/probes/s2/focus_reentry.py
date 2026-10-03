@@ -81,6 +81,19 @@ READ_AFTER = """
 }
 """
 
+BLUR_AND_READ = """
+() => {
+  const el = document.activeElement;
+  if (el && el.blur) { el.blur(); }
+  const now = document.activeElement;
+  const carrier = document.querySelector('[data-date-field]');
+  const cs = carrier ? getComputedStyle(carrier) : null;
+  return { inside: !!(now && carrier && carrier.contains(now)),
+           present: !!(carrier && carrier.classList.contains('kb-focus')),
+           painted: !!(cs && cs.outlineStyle !== 'none' && parseFloat(cs.outlineWidth) > 0) };
+}
+"""
+
 READ = """
 () => {
   const el = document.activeElement;
@@ -255,12 +268,16 @@ def main():
         page.evaluate("()=>document.activeElement && document.activeElement.blur()")
         page.wait_for_timeout(150)
         residual = page.evaluate(READ_AFTER)
-        residual_rows.append(("FR-residual-blur-" + tag, bool(residual and not residual["inside"]),
-            "programmatic .blur() from the field's first stop: activeElement inside the wrapper = %s, "
-            "indicator present = %s. No poll, and `blur` is not in the handler list, so an indicator "
-            "left on with the keyboard outside is the uncovered state the ledger records as measured "
-            "rather than denied."
-            % (bool(residual and residual["inside"]), bool(residual and residual["present"]))))
+        # The residual is CLOSED at this hash and is asserted as an ordinary row: the read happens in
+        # the same evaluate that causes the blur, with no wait and no bound, because there is no timer
+        # and a bound would be a hedge. `focusout` is now in the handler list, which is what closes it.
+        cleared = page.evaluate(BLUR_AND_READ)
+        (good if (not cleared["inside"] and not cleared["present"] and not cleared["painted"]) else bad).append(
+            ("FR-blur-only-cleared-" + tag,
+             (not cleared["inside"]) and (not cleared["present"]) and (not cleared["painted"]),
+             "programmatic .blur() from the field's first stop, read in the SAME evaluate: %s — the "
+             "keyboard is outside, the indicator is off and nothing is painted. This is the hole that "
+             "existed at 80e91db." % json.dumps(cleared)))
 
         # ---- nothing runs in the background ----
         page.goto(BASE + "/", wait_until="domcontentloaded")

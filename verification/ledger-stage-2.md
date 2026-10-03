@@ -70,6 +70,12 @@ conclusion already held — and it was held *while the instrumented trace that w
 error was already collected*. Anything that will be graded, or that will justify keeping or removing a
 mechanism, must come from a trace.
 
+**Standing clause 10: removing a mechanism can uncover the defects it was covering, and the removal is
+not finished until those are found.** With the interval present, a `blur()`-only departure cleared within
+500ms — the poll was silently repairing a missing departure signal for as long as it existed.
+Deleting it on a false story exposed the defect the story had been hiding. A mechanism kept on a story
+can be masking a second defect, so removing it is not one change but an obligation to go looking.
+
 **Standing clause 9: every mechanism added on a story about why it was needed must have that story
 re-derived when the mechanism's surroundings change.** This build added a poll on a story and removed
 it when the story turned out to be false; nothing was wrong in between, the evidence simply expired.
@@ -77,7 +83,7 @@ A mechanism defended by a story rather than a trace will eventually meet someone
 the story describes — and a measurement that justifies a decision must be re-derived when the
 mechanism it measured changes, since the same stale number would have argued either way.
 
-All nine clauses, plus the both-halves convention, are here because each was added after a real
+All ten clauses, plus the both-halves convention, are here because each was added after a real
 reading error on this build, not because they were anticipated. They cost one line each and each
 one removes a whole class of confident wrong numbers.
 
@@ -207,45 +213,54 @@ well, so a verifier reading one row sees the interpretation it is checking again
 Rows: 70 (S2-001 to S2-070). Ambiguities: 6 (S2-A1 to S2-A6), all six ruled by the Foreman from the
 specification text before any stage-2 code was written; each ruling is stated inside the row it
 settles as well as in the table below.
-## The focus indicator: event-completeness, and one recorded residual (measured at `3af2a2f`)
+## The focus indicator: containment, tracked on every arrival and departure (re-cut at `f4fdcb0`)
 
-**There is no poll.** `grep setInterval stage-2/src/` returns nothing in the browser; the only
-interval in the product is a `.unref()`'d shutdown timer in `src/main.js`. Nothing runs in the
-background. The earlier version recomputed the indicator twice a second on the belief that focus
-could return without firing any event; that belief was **re-derived and found false** — every arrival
-fires something the handler list already hears — and the mechanism was removed rather than defended.
-A poll that fixes nothing is a mechanism nobody can later justify.
+**This section replaces the earlier reconciliation rather than amending it.** That one described a
+poll — a 500ms interval recomputing the indicator — and the poll no longer exists. A ledger entry
+describing a deleted mechanism is worse than none, because the next reader checks the mechanism.
 
-**So the row is a property, not a bound: the design is event-complete.** The indicator must be
-correct on **every arrival and departure that fires an event**, asserted **immediately** after the
-causing event — no settle time, no wait, no bound. A bound in a row is a hedge: it weakens into
-"true eventually" and keeps passing a mechanism that has been removed. Measured: `focusin` onto
-another control **3–11ms**; a real trusted click **3–9ms**; four internal date-field stops holding the
-indicator including the `:focus`-mismatched one; rebuild with the keyboard inside correct both ways; a
-lifecycle freeze holding inside the field and, outside it, creating nothing.
+**No timer runs in the browser.** `grep` for `setInterval` and `requestAnimationFrame` across
+`stage-2/src/` returns nothing.
 
-**The residual, as a measured state and not as a caveat.** "The ring is always correct" is **not**
-true, and the counter-example is recorded here rather than denied:
+**The row.** The indicator tracks containment — *where the keyboard is* — on **every arrival and every
+departure, including the departure that fires only `focusout`.** That last clause is measured, not
+hoped for: on a native `input[type=date]`, moving the keyboard **between the field's inner segments
+fires no event at all**, and `focusout` fires **exactly once**, on the transition out, with
+`relatedTarget` naming where the keyboard went. So `focusout` is a departure signal here and not a
+segment-changer, and adding it to the handler list cannot reintroduce the premature teardown that
+`6f056f4` was about. Asserted **immediately after the causing event, with no wait and no bound** — a
+bound with no timer behind it is a hedge that weakens into "true eventually" and keeps passing a
+mechanism that has been removed.
 
-> A programmatic `.blur()` from the field's **first** stop leaves `kb-focus` on while
-> `document.activeElement` is `BODY` and containment is false. `blur` is not in the handler list and
-> there is no poll, so nothing recomputes. From an **inner** segment the same call leaves
-> `activeElement` on the input, containment still holds, and the indicator correctly stays — so the
-> row must blur from the first stop or it cannot reach the state it names.
+**Not "the ring is always correct."** A path nobody has driven exists by definition, so the honest
+form names what was driven. What was driven at this hash, both widths, zero page errors: the twelve
+cells (baseline / `window blur` / `pagehide`, each by real click and by `focus()`) with the inner
+segment painted `3px solid` and exactly one indicator element; all four internal stops holding; every
+arrival route — click, middle-click, double-click, `Enter`, `Shift+Tab`; every departure route —
+click away, `Tab` out, `Shift+Tab` out, cell click; the rebuild correct mouse- and keyboard-triggered;
+a lifecycle freeze holding inside the field and **creating nothing outside it**; and 30 focus moves
+across every control with **zero containment mismatches**.
 
-This is the `372e879` failure class in the opposite direction and is reachable only through script.
-My probes report it as `RESIDUAL` and count it for neither pass nor fail: a FAIL would be a red for a
-condition the ledger records, and a PASS would claim it closed. **Open question with the Finisher:**
-a `blur` listener would close it with no timer, but on this control `blur` may fire while the keyboard
-moves *between* inner segments, which would reintroduce the premature-teardown defect from `6f056f4`.
-That trade is the owner's to make; this row records the state as it stands.
+**The residual is closed, by an event.** At `80e91db` a programmatic `.blur()` from the field's first
+stop left the indicator on with `document.activeElement` on `BODY` and containment false, and nothing
+repaired it. Measured now, in the same evaluate that causes the blur: containment **false**,
+indicator **absent**, nothing painted — and it stays that way across repeated samples with no timer to
+put it back. `blur()` then `focus()` brings it straight back.
 
-**Unmeasurable here, recorded as unreachable rather than as coverage:** an OS window-manager focus
-change — headless has no window manager — and any DOM surgery a caller performs on the wrapper, which
-neither the poll nor the handlers repaired.
+**Two things unmeasurable here, recorded as unreachable rather than as coverage:** an OS
+window-manager focus change (headless has no window manager), and any DOM surgery a caller performs
+on the wrapper.
 
-**The falsifiable number, quoted instead of any derived count:** **18 of 18 internal date-field stops
-painted, 4 of which do not match `:focus`.** If a later change makes the 4 something else, the
-mechanism has moved and this row is re-opened on that basis.
+**Reading the wrong element inverts a row.** After a `Tab` out of the field, the *neighbouring*
+control's own ring is painted while the date field's is not. A probe that reads "painted" without
+reading **which** element painted it reports a red against correct code — so the rows read the
+carrier's class, and one row exists purely to assert that a single keystroke is **not** a state
+transition while the control still holds internal stops.
+
+**The falsifiable number, re-measured at this hash:** **all four internal date-field stops hold the
+indicator, and one of them does not match `:focus`.** Earlier figures that counted eighteen stops came
+from a walk that cycled the field repeatedly; the count that means something is the one the control
+actually has. If a later change makes that mismatched stop disappear, the mechanism has moved and this
+row is re-opened on that basis.
 
 Judgment rows: S2-008, S2-042 (contrast half), S2-043, S2-044, S2-045, S2-046.
