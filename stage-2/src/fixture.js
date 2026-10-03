@@ -72,6 +72,34 @@ function parseTables(raw) {
   return tables;
 }
 
+// A restaurant declares the pairs of its own tables that may be booked together. Entries are
+// unordered pairs of two, never three, and both members have to be tables the restaurant actually
+// has. A malformed declaration is refused here rather than quietly dropped, so a fixture cannot
+// claim a pair the service will then refuse at the counter with a different reason.
+function parseCombinable(raw, tables) {
+  const tableIds = new Set(tables.map((table) => table.id));
+  const entries = fixtureArray({ combinable: raw }, 'combinable');
+  const seen = new Set();
+  const pairs = [];
+  for (const entry of entries) {
+    if (!Array.isArray(entry)) fail('malformed_request', { field: 'combinable' });
+    if (entry.length !== 2) fail('validation_failed', { field: 'combinable', reason: 'pairs_only' });
+    for (const member of entry) {
+      if (typeof member !== 'string') fail('malformed_request', { field: 'combinable' });
+    }
+    if (entry[0] === entry[1]) fail('validation_failed', { field: 'combinable', reason: 'pairs_only' });
+    for (const member of entry) {
+      if (!tableIds.has(member)) fail('validation_failed', { field: 'combinable', reason: 'unknown_table' });
+    }
+    // Order is the restaurant's, so t_1+t_2 and t_2+t_1 are the same pair declared once.
+    const key = entry[0] < entry[1] ? `${entry[0]}\u0000${entry[1]}` : `${entry[1]}\u0000${entry[0]}`;
+    if (seen.has(key)) fail('validation_failed', { field: 'combinable', reason: 'duplicate_pair' });
+    seen.add(key);
+    pairs.push([entry[0], entry[1]]);
+  }
+  return pairs;
+}
+
 function parseRestaurant(raw) {
   expectObject(raw, 'restaurants');
   const id = fixtureId(raw.id, 'restaurant_id');
@@ -83,6 +111,7 @@ function parseRestaurant(raw) {
   const cutoff = raw.cancellation_cutoff_minutes === undefined
     ? 0
     : integerAtLeast(raw.cancellation_cutoff_minutes, 'cancellation_cutoff_minutes', 0);
+  const tables = parseTables(raw.tables);
   return {
     id,
     name,
@@ -91,7 +120,8 @@ function parseRestaurant(raw) {
     reservation_duration_minutes: duration,
     cancellation_cutoff_minutes: cutoff,
     opening_hours: parseOpeningHours(raw.opening_hours),
-    tables: parseTables(raw.tables),
+    tables,
+    combinable: parseCombinable(raw.combinable, tables),
   };
 }
 
@@ -118,8 +148,7 @@ function parseSeededReservation(raw, state, nowMs) {
   const restaurantId = fixtureId(raw.restaurant_id, 'restaurant_id');
   const restaurant = store.findRestaurant(state, restaurantId);
   if (!restaurant) fail('validation_failed', { field: 'restaurant_id' });
-  const tableId = fixtureId(raw.table_id, 'table_id');
-  if (!store.findTable(restaurant, tableId)) fail('validation_failed', { field: 'table_id' });
+  const tableIds = domain.resolveSeededTableIds(raw, restaurant);
   if (!has(raw, 'starts_at_local')) fail('validation_failed', { field: 'starts_at_local' });
   const wall = time.parseWall(raw.starts_at_local);
   if (!wall) fail('validation_failed', { field: 'starts_at_local' });
@@ -139,7 +168,7 @@ function parseSeededReservation(raw, state, nowMs) {
     reference,
     user_id: userId,
     restaurant_id: restaurantId,
-    table_id: tableId,
+    table_ids: tableIds,
     party_size: partySize,
     status,
     starts_at_local: time.wallToString(wall),
@@ -189,5 +218,6 @@ module.exports = {
   textOr,
   parseOpeningHours,
   parseTables,
+  parseCombinable,
   parseRestaurant,
 };

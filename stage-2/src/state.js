@@ -76,14 +76,17 @@ function allocateReference(state) {
   return newReference((reference) => isReferenceTaken(state, reference));
 }
 
+// table_ids is always present because a booking is a set. table_id is kept only when the set has a
+// single member, which is what a stage 1 client reads and what a one-table booking still expects.
 function reservationView(state, reservation) {
   const restaurant = findRestaurant(state, reservation.restaurant_id);
   const timeZone = restaurant ? restaurant.timezone : 'UTC';
-  return {
+  const tableIds = Array.isArray(reservation.table_ids) ? reservation.table_ids : [];
+  const view = {
     reservation_id: reservation.id,
     reference: reservation.reference,
     restaurant_id: reservation.restaurant_id,
-    table_id: reservation.table_id,
+    table_ids: tableIds.slice(),
     party_size: reservation.party_size,
     status: reservation.status,
     starts_at_local: reservation.starts_at_local,
@@ -91,6 +94,8 @@ function reservationView(state, reservation) {
     ends_at: formatInZone(timeZone, reservation.ends_at_ms),
     created_at: reservation.created_at,
   };
+  if (tableIds.length === 1) view.table_id = tableIds[0];
+  return view;
 }
 
 module.exports = {

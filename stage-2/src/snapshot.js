@@ -5,6 +5,7 @@ const time = require('./time');
 const store = require('./state');
 const { parseRestaurant } = require('./fixture');
 const { isPlainObject, has } = require('./fields');
+const domain = require('./domain');
 
 const TRACK = 'tablekeeper';
 const FORMAT_VERSION = 1;
@@ -21,13 +22,26 @@ function requireInteger(value, field) {
   return value;
 }
 
+// A reservation is stored as a set, and the document says so the same way the API does: table_ids
+// always, table_id only when there is one member. Reading a stage 1 export, which carries only
+// table_id, therefore keeps working. The other direction cannot: a combined booking has no stage 1
+// form, so a stage 2 export naming a pair is not something a stage 1 client can represent.
+function snapshotReservation(reservation) {
+  const copy = JSON.parse(JSON.stringify(reservation));
+  const tableIds = Array.isArray(copy.table_ids) ? copy.table_ids : [];
+  delete copy.table_id;
+  copy.table_ids = tableIds;
+  if (tableIds.length === 1) copy.table_id = tableIds[0];
+  return copy;
+}
+
 function snapshotState(state) {
   return JSON.parse(
     JSON.stringify({
       users: state.users,
       tokens: state.tokens,
       restaurants: state.restaurants,
-      reservations: state.reservations,
+      reservations: state.reservations.map(snapshotReservation),
       idempotency: state.idempotency,
     }),
   );
@@ -69,8 +83,7 @@ function validateReservations(raw, restaurants) {
     const restaurantId = requireString(entry.restaurant_id, 'restaurant_id');
     const restaurant = restaurants.find((candidate) => candidate.id === restaurantId);
     if (!restaurant) fail('validation_failed', { field: 'restaurant_id' });
-    const tableId = requireString(entry.table_id, 'table_id');
-    if (!store.findTable(restaurant, tableId)) fail('validation_failed', { field: 'table_id' });
+    const tableIds = domain.resolveSeededTableIds(entry, restaurant);
     const startsAtLocal = requireString(entry.starts_at_local, 'starts_at_local');
     const wall = time.parseWall(startsAtLocal);
     if (!wall) fail('validation_failed', { field: 'starts_at_local' });
@@ -91,7 +104,7 @@ function validateReservations(raw, restaurants) {
       reference,
       user_id: entry.user_id === null ? null : requireString(entry.user_id, 'user_id'),
       restaurant_id: restaurantId,
-      table_id: tableId,
+      table_ids: tableIds,
       party_size: requireInteger(entry.party_size, 'party_size'),
       status,
       starts_at_local: startsAtLocal,
@@ -145,6 +158,7 @@ function stateFromDocument(document) {
 
 module.exports = {
   TRACK,
+  snapshotReservation,
   FORMAT_VERSION,
   snapshotState,
   exportDocument,

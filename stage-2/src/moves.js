@@ -3,7 +3,7 @@
 const { fail } = require('./errors');
 const store = require('./state');
 const domain = require('./domain');
-const { has, isPlainObject, optionalId, optionalPartySize, optionalStartsAtLocal } = require('./fields');
+const { has, isPlainObject, optionalPartySize, optionalStartsAtLocal } = require('./fields');
 
 const MIN_MOVES = 1;
 const MAX_MOVES = 8;
@@ -28,9 +28,16 @@ function validateMoveList(body) {
   return items;
 }
 
+function sharesTable(a, b) {
+  return a.table_ids.some((id) => b.table_ids.includes(id));
+}
+
+// Two resulting bookings may not hold the same table at the same time. With sets that means any
+// member in common, so moving t_1 onto a slot where another booking holds t_2 as half of the pair
+// t_1+t_2 is still a conflict, because that booking holds t_1 too.
 function overlaps(a, b) {
   return a.restaurant_id === b.restaurant_id &&
-    a.table_id === b.table_id &&
+    sharesTable(a, b) &&
     a.starts_at_ms < b.ends_at_ms &&
     b.starts_at_ms < a.ends_at_ms;
 }
@@ -40,11 +47,19 @@ function occupiedByUnlisted(state, plan, listed) {
     (reservation) =>
       reservation.status === 'confirmed' &&
       reservation.restaurant_id === plan.restaurant_id &&
-      reservation.table_id === plan.table_id &&
+      sharesTable(plan, reservation) &&
       !listed.has(reservation.reference) &&
       reservation.starts_at_ms < plan.ends_at_ms &&
       plan.starts_at_ms < reservation.ends_at_ms,
   );
+}
+
+// A move may name its tables as table_id or table_ids, judged by the same rules as a create, and
+// may leave them out to keep the ones the booking already has.
+function moveTableSet(move, restaurant) {
+  const requested = domain.tableSetFromRequest(move);
+  if (requested === undefined) return undefined;
+  return domain.canonicalTableSet(restaurant, requested);
 }
 
 function applyMoves(state, user, body, nowMs) {
@@ -74,7 +89,7 @@ function applyMoves(state, user, body, nowMs) {
     const move = moves[index];
     plans.push(
       domain.planAmendment(state, reservation, restaurant, {
-        table_id: optionalId(move, 'table_id'),
+        table_ids: moveTableSet(move, restaurant),
         starts_at_local: optionalStartsAtLocal(move),
         party_size: optionalPartySize(move),
       }),
@@ -85,11 +100,11 @@ function applyMoves(state, user, body, nowMs) {
   for (let index = 0; index < plans.length; index += 1) {
     const plan = plans[index];
     if (occupiedByUnlisted(state, plan, listed)) {
-      fail('table_unavailable', { reference: targets[index].reference, table_id: plan.table_id });
+      fail('table_unavailable', { reference: targets[index].reference, table_ids: plan.table_ids.slice() });
     }
     for (let other = index + 1; other < plans.length; other += 1) {
       if (overlaps(plan, plans[other])) {
-        fail('table_unavailable', { reference: targets[index].reference, table_id: plan.table_id });
+        fail('table_unavailable', { reference: targets[index].reference, table_ids: plan.table_ids.slice() });
       }
     }
   }

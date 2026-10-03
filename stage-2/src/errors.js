@@ -16,6 +16,7 @@ const BUILTIN_STATUS_BY_CODE = Object.freeze({
   outside_opening_hours: 422,
   party_exceeds_capacity: 422,
   invalid_local_time: 422,
+  combination_not_allowed: 422,
 });
 
 let catalogue = null;
@@ -26,14 +27,23 @@ try {
   catalogue = null;
 }
 
-const STATUS_BY_CODE = catalogue ? catalogue.STATUS_BY_CODE : BUILTIN_STATUS_BY_CODE;
-const CODES = catalogue && Array.isArray(catalogue.ERROR_CODES) ? catalogue.ERROR_CODES : Object.keys(STATUS_BY_CODE);
+// The catalogue owns the wording and may be edited independently of this file, so it wins
+// wherever it speaks. A code the service can raise is never allowed to go missing just because
+// the catalogue has not caught up: combination_not_allowed arrived in stage 2 and its sentence
+// is still a placeholder, so merging keeps the status right and the placeholder reachable.
+const STATUS_BY_CODE = catalogue
+  ? Object.freeze({ ...BUILTIN_STATUS_BY_CODE, ...catalogue.STATUS_BY_CODE })
+  : BUILTIN_STATUS_BY_CODE;
+const CODES = catalogue && Array.isArray(catalogue.ERROR_CODES)
+  ? Object.freeze([...new Set([...catalogue.ERROR_CODES, ...Object.keys(STATUS_BY_CODE)])])
+  : Object.freeze(Object.keys(STATUS_BY_CODE));
 
 class ApiError extends Error {
   constructor(code, context) {
     super(code);
     this.name = 'ApiError';
     this.code = STATUS_BY_CODE[code] === undefined ? 'validation_failed' : code;
+    this.rawCode = code;
     this.status = STATUS_BY_CODE[this.code];
     this.context = context && typeof context === 'object' ? context : {};
   }

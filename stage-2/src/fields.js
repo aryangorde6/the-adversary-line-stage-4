@@ -54,6 +54,20 @@ function optionalStartsAtLocal(object) {
   return requireStartsAtLocal(object);
 }
 
+// A table set is one or two ids. Reading it is separate from checking it against a restaurant,
+// because the shape is the request's business and the pairing is the model's.
+function readTableIds(object, name) {
+  if (!has(object, name)) return undefined;
+  const value = object[name];
+  if (!Array.isArray(value)) fail('malformed_request', { field: name });
+  if (value.length === 0) fail('validation_failed', { field: name });
+  for (const member of value) {
+    if (typeof member !== 'string') fail('malformed_request', { field: name });
+    if (member.length === 0 || member.length > MAX_ID_LENGTH) fail('validation_failed', { field: name });
+  }
+  return value;
+}
+
 function optionalString(object, name) {
   if (!has(object, name)) return undefined;
   const value = object[name];
@@ -107,6 +121,7 @@ module.exports = {
   has,
   requireId,
   optionalId,
+  readTableIds,
   requirePartySize,
   optionalPartySize,
   requireStartsAtLocal,
