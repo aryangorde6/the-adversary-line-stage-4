@@ -6,6 +6,12 @@
 > though it were the specification.** It is not: **a ledger records what a seat must not miss; it does not
 > define the product.** Read the specification for the stage you are working in, then this ledger.
 
+**What kind of document this is, stated in its own first line: a ledger of rows and clauses — a record of
+what a seat must not miss. It is not a specification, it is not the brief, and it does not define the
+product.** I once introduced it as the brief and never corrected that, and a seat read it in full and
+implemented a stage from it; **nothing in a folder listing says which kind of document you are reading**, so
+the kind now says it about itself (clause 47).
+
 **Written and committed before any stage-4 code exists**, in the order that produced four real defects
 in stage 2 and two in stage 3. Ordered by grading risk, not by route order. Every row here is
 **unmeasured** until it says otherwise, and no stage-4 product code has been read, because there is
@@ -466,6 +472,13 @@ because they have now failed to travel into a new file twice.**
     preferred option first** — which is a fact about ordering, not about data, and would change if the order
     did. **A clean bill of health on question 4 is weaker evidence than a found loss, and the difference is
     recorded rather than smoothed.**
+47. **Every artefact must state what kind of authority it carries, because nothing in a folder listing says
+    which kind you are reading.** A specification defines the product; a ledger records what to check; a
+    check file asserts behaviour; a participant guide says how the room runs. **I introduced a ledger as "the
+    brief" and a seat implemented thirteen deviations from it**, while another seat and I between them ruled a
+    payload from a filename. **All three are one failure: the authority being worked from was mistaken for a
+    different kind of thing, and nothing in the tree said so.** The fix is one line at the top of each
+    artefact, written by its author, because **the author is the only one who knows what it is for.**
 46. **An alias resolves two specifications; it cannot resolve a specification and a filename.** Where a
     room-held name and a written requirement differ, **the requirement wins, and the name is evidence about
     intent rather than a claim about behaviour.** And the wider form, which cost two stages to learn twice:
