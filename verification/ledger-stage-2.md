@@ -39,7 +39,24 @@ stage 2: export → import → export is byte-identical and login still returns 
 the hash. Asserting only "a hash is present and login works" would pass against an import that
 silently re-hashed every credential, so it is not sufficient on its own.
 
-All three clauses, plus the both-halves convention, are here because each was added after a real
+**Standing clause 5: a ring drawn outside an element's box is measured against that element's
+parent, not against the element.** An outline and a box-shadow render outside the box they belong
+to, so resolving the first non-transparent ancestor *starting at the element* compares the ring with
+the control it surrounds and yields exactly 1.00:1. That produced eight false focus failures across
+four routes before the walk started at the parent. The same walk resolves the *text* background, so
+one rule now covers both halves of S2-042 — but they are different elements, and reading both from
+the element itself is the mistake.
+
+**Standing clause 6: assert that the fault you injected actually happened, before you assert what
+the product did about it.** A proxy that relays a request and *then* closes the socket has already
+written a complete response, so a "lost" booking completed normally and the probe measured a
+confirmation instead of an uncertainty. The fault and the assertion are the same act, so the
+injection has to be verified as an observation in its own right: the upstream status was recorded,
+the client received nothing, and only then is `booking-uncertain` evidence about the product. This
+is the sharpest form of clause 2, because the step that can fail silently is the step that
+manufactures the condition.
+
+All six clauses, plus the both-halves convention, are here because each was added after a real
 reading error on this build, not because they were anticipated. They cost one line each and each
 one removes a whole class of confident wrong numbers.
 
