@@ -462,7 +462,8 @@ function availabilityFor(state, restaurant, date, partySize, options) {
   const day = dayOpeningHours(selected, restaurant, { y: date.y, mo: date.mo, d: date.d, h: 0, mi: 0 });
   const step = selected.slot_minutes;
   const duration = selected.reservation_duration_minutes;
-  if (day && day.opens !== null && day.closes !== null && step > 0) {
+  const hasHours = Boolean(day) && day.opens !== null && day.closes !== null;
+  if (hasHours && step > 0) {
     for (let minutes = day.opens; minutes + duration <= day.closes; minutes += step) {
       const wall = time.wallFromMinutes(date.y, date.mo, date.d, minutes);
       const instants = time.wallToInstants(restaurant.timezone, wall.y, wall.mo, wall.d, wall.h, wall.mi);
@@ -512,12 +513,42 @@ function availabilityFor(state, restaurant, date, partySize, options) {
       slots.push(slot);
     }
   }
-  return {
+  const body = {
     restaurant_id: restaurant.id,
     date: dateString,
     timezone: restaurant.timezone,
     slots,
   };
+  // day_state is added under the same condition as slot.explain and for the same reason: the plain
+  // response's key set is asserted by rows that already exist, and a discriminator is an explanation.
+  // The cost is real and is written in the row: a client that does not pass explain=true cannot read
+  // the day state at all.
+  //
+  // It is computed here from two independent questions rather than from `slots.length`, because the
+  // three states it names include two that both present as slots: []. An implementation that answered
+  // `shut` whenever slots came back empty would be green on presence and on distinguishability while
+  // being wrong about half of them, so the branch order below is the requirement:
+  //
+  //   1. The terms in force for this date carry no hours for this weekday. Read from `day`, which comes
+  //      from the selected policy and is computed before the slot loop runs, so it cannot be a restatement
+  //      of the loop's output.
+  //   2. The terms carry hours, and the slot arithmetic under them yields nothing at all -- a window
+  //      shorter than one reservation. This is the case a shut day and an excluded day look identical for,
+  //      and it is the reason this field exists.
+  //   3. Slots exist and every one of them has nothing free, counting pairs, because a pair can be free
+  //      when neither member is.
+  //   4. Otherwise some slot has something free.
+  if (settings.explain) {
+    const somethingFree = slots.some(
+      (slot) => slot.available_table_ids.length > 0 || slot.available_options.length > 0,
+    );
+    body.day_state = !hasHours
+      ? 'shut'
+      : slots.length === 0
+        ? 'terms_exclude_all'
+        : somethingFree ? 'open' : 'nothing_free';
+  }
+  return body;
 }
 
 module.exports = {
