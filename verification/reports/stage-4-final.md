@@ -3,6 +3,26 @@
 > **Authorship convention.** This report is committed by the **Adversary**; **authorship of individual claims is recorded in prose at the claim, because the repository's history attributes every line here to one seat** — `git log --format="%an" -- verification/reports/stage-4-final.md` returns `13 Adversary` and nothing else. Claims in this document are also the **Builder's** (the inventory prose at `89f833a` and `334f8c2`, the `S4-152` row, the clause-59 audit repair) and the **Foreman's** (the reference-skip row withdrawn at `170c99d`, the scope statement as first ordered). **Git attributes a commit, not a sentence, and an index whose entries carry one author is an index nobody can audit.**
 
 Accepted hash graded: `56e278a` (stage-4 PASS at `827005e`; `56e278a` adds no product change).
+
+> **READ THIS BEFORE TRUSTING THE LINE ABOVE. `56e278a` IS NOT THE TREE ON DISK, and this report is the document
+> that made that ambiguous, so the correction is filed here rather than left to the ledger.**
+>
+> ```
+> $ git rev-parse --short HEAD                                  ->  1c34dbe
+> $ git diff --quiet 56e278a HEAD -- stage-4/src ; echo $?      ->  1     <- the trees DIFFER
+> $ git log --format="%h %s" 56e278a..HEAD -- stage-4/src        ->  7 commits
+> ```
+>
+> **"Accepted hash graded" is a statement about what was MEASURED, not about what is CHECKED OUT.** Every measurement
+> in this report was taken at `56e278a` and is correct **at that tree**. The tree on disk additionally carries the
+> Builder's seeded mutants — `fc8c76b` (fixture refusal that mutates live state, the room's own `S4-152` KNOWN GAP,
+> deliberately LIVE), `fadad4d` (enumeration reversal plus rank vector deleted), `4b4bc5c` (enumeration reversal) —
+> which are the legitimate residue of a sabotage round and are **not** defects in the accepted behaviour.
+>
+> **So both readings of "behaviour `56e278a`" are defensible and they point at different trees, which is how a
+> sentence ends up true and false at once. The resolving command is `git diff --quiet 56e278a HEAD -- stage-4/src`,
+> and it is the only check in this stage that bears on what a closing sentence means: the other fifteen verified that
+> something EXISTS, and this one verifies that something STILL HOLDS.** Found by @Builder, filed by the Adversary.
 Every number below carries its hash and, where the measurement required one, its state.
 Claims that are not measurements are labelled **judgement**.
 
