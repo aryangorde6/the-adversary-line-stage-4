@@ -26,10 +26,9 @@
 
 ## Export Judgement (Owed)
 
-| Mutant | Ledger Row / Spec § | Status |
-|--------|---------------------|--------|
-| Export field list not enumerated | Stage-1 §10 "Export and import" | **INFERENTIAL** — no requirement enumerates the export's fields (stage-1 §10 says the shape is the implementer's and opaque to the caller), but a different question is open at the same section: §10 also says existing tokens must remain valid after import and replacing state with a fresh fixture does not satisfy it; omitting `restaurant_revisions`, `replans` and `closures` does exactly that, so the question is *what the implementation does* rather than *what the spec requires*. [Foreman] |
-| Concurrency token round-trip not preserved | Stage-4 §105/107 | **VERBATIM** — stage-4 §107 mandates accepting exports from stages 1-3, and §105 forbids concurrent amendments from the same expected revision both making a real change; the replan concurrency token in `restaurant_revisions` is omitted from export/import, so a round-trip resets it to 0, allowing a stale expected_revision to be accepted as valid. The mechanism is specific to the replan concurrency token in `restaurant_revisions` (not exported), and the measurement is preview → export → import → apply at original `expected_revision`, expecting `409 stale_plan`. [Builder] |
+| Mutant | Requirement | Status |
+|--------|-------------|--------|
+| Export does not preserve complete state | Stage-1 §10 "Export and import" | **INFERENTIAL** — stage-1 §10 says "Export is an atomic, read-only snapshot" and "Import takes that entire object and atomically replaces the service's state", and "The state format is opaque to the caller and must be accepted unchanged by import." The exported state omits `restaurant_revisions` (holding replan concurrency tokens), `replans`, and `closures`, so import installs a state missing a third of the exporting service's state. This is not a field-list omission — stage-1 §10 makes the format opaque and leaves the shape to the implementer — but a violation of the snapshot-and-replacement principle. The round-trip resets the replan concurrency token in `restaurant_revisions` to 0, allowing a stale `expected_revision` to be accepted. [Foreman] |
 
 ## Closed/Not a Defect
 
