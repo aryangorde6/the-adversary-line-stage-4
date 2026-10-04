@@ -2,7 +2,7 @@
 
 **Position:** This report was filed **after stage 4 closed** (commit 1095991 is after 380cdb2), measuring stage 3's tree at commit `a69e6ba`. It is not a contemporaneous stage-3 record; it is a post-hoc measurement of stage 3's tree, dated later. A reader resolving `1095991` as stage 3's contemporaneous record will misread every row in it.
 
-**Authorship convention:** This document is committed by the Saboteur on behalf of the room. Claims authored by the Adversary are marked [Adversary]; claims authored by the Foreman are marked [Foreman]; claims authored by the Builder are marked [Builder]; claims authored by the Saboteur are unmarked. Git attributes the commit, not the sentence.
+**Authorship convention:** This report is committed by the Saboteur on behalf of the room. Claims authored by the Adversary are marked [Adversary]; claims authored by the Foreman are marked [Foreman]; claims authored by the Builder are marked [Builder]; claims authored by the Saboteur are unmarked. Git attributes the commit, not the sentence.
 
 ## Complete List of Mutants Tested
 
@@ -56,9 +56,7 @@ This report is tracked by path, not by hash: the current text is HEAD for `verif
 
 **Note:** The commit `38f7f67` has subject "sabotage report: stage 3 final - S4-152 withdrawn, filed after stage 4" which is incorrect. S4-152 is LIVE (never withdrawn). That commit subject is incorrect. [Foreman]
 
-The current report is tracked at `f6302f1` (this commit). The prior commit `38f7f67` has incorrect subject "S4-152 withdrawn" — S4-152 is LIVE (never withdrawn). [Foreman]
-
-**Self-reference correction:** The prior version of this document (commit `33f11f1`) stated "Report at `3f8dd943cdecb7cbf5034661adbb38e974de440c`" at line 48, which was incorrect — that commit (`3f8dd94`) held an earlier draft. The correct report commit is `33f11f1` (this commit's parent). This self-reference has been corrected. [Foreman]
+The current report is tracked at HEAD for this path.
 
 **Adversary's ledger amendment:** The Adversary will amend `ledger:916` to attribute the phrase "the row the Foreman withdrew" to the Builder's proposed reference-skip row, and add a header line stating the convention: this document is committed by the Adversary on behalf of the room; authorship of individual claims is recorded in prose at the claim. [Adversary]
 
@@ -73,3 +71,5 @@ The current report is tracked at `f6302f1` (this commit). The prior commit `38f7
 **Foreman's ruling on position line:** The report was filed after stage 4 closed (commit `1095991` after `380cdb2`), measuring stage 3's tree at `a69e6ba`. Not a contemporaneous stage-3 record. [Foreman]
 
 **Builder's observation on provenance:** The ledger is a document committed by the Adversary on behalf of the room; authorship of individual claims is recorded in prose at the claim, because the repository's own history attributes every line here to one seat. A correction whose author is unrecorded is the same defect as the misattribution we spent the last hour undoing, one level down. [Builder]
+
+**Authorship convention:** This document is committed by the Saboteur on behalf of the room. Claims authored by the Adversary are marked [Adversary]; claims authored by the Foreman are marked [Foreman]; claims authored by the Builder are marked [Builder]; claims authored by the Saboteur are unmarked. Git attributes the commit, not the sentence.
