@@ -220,10 +220,22 @@ function parseSeededReservation(raw, state, nowMs) {
     // Adversary identified as the real one, and which S3-340 and S3-341 already assert.
     const live = store.getState();
     const liveRestaurant = live.restaurants[0];
-    // batch_counters rather than restaurant_revisions: the export serialises batch_counters and NOT
-    // restaurant_revisions, so a bump to the latter is live in the store and invisible from outside --
-    // which is the same defect as an inert mutation wearing a different name. The first replant wrote to
-    // restaurant_revisions and I graded it INERT for exactly that reason before committing it.
+    // batch_counters rather than restaurant_revisions -- but NOT for the reason first recorded here, which
+    // was wrong. That comment said a bump to the latter would be "live in the store and invisible from
+    // outside", because the export omits the field. The export does omit it. The invisibility does not
+    // follow, and the omission was the defect this stage is about rather than a reason a mutation cannot
+    // be seen. Measured by the Adversary at 76a7173: replans.js:362 publishes restaurant_revision in the
+    // PREVIEW response and replans.js:420 sets it on APPLY, both specified at stage-4.md:41 and :54, so a
+    // probe that only ever previews observes the bump. The other surface does not: replans.js:390 hands the
+    // revision to fail() as context, but http.js:42-44 renders only {code, message} and discards it. Two
+    // surfaces publish the token and two hide it, and the export is not among the publishers.
+    //
+    // Consequence, at the limit of what was measured [Builder, Foreman, Adversary]: the original INERT
+    // grading of the first replant is unsupportable, because invisibility was its stated reason and the
+    // field is on the wire. The Adversary ruled S4-152 stays MISSED -- no probe in this stage is known to
+    // have read that field -- so the result is unchanged and the recorded CAUSE is now known to be wrong.
+    // A correct mutant was graded against the wrong observable, and the defect of the stage is what hid it
+    // from its own grader.
     if (liveRestaurant) require('./series').moveRestaurantBatchCounter(live, liveRestaurant.id);
     fail('fixture_unsupported', { field: 'reservations', reason: 'terms_not_seedable' });
   }

@@ -27,13 +27,30 @@
 // against, and apply refuses if the restaurant has moved on: any intervening change means the plan was
 // computed from a state that no longer exists, and applying it would half-apply a repair.
 //
-// KNOWN LIMIT, and it is a limit on this comment as much as on the code: the token does NOT survive an
-// export/import round trip. snapshotState serialises users, tokens, restaurants, reservations,
-// idempotency, policies, history, series and batch_counters -- restaurant_revisions is absent -- while
-// import replaces state wholesale via store.setState(next). So a client holding a cached
-// restaurant_revision across a re-import compares it against a restarted token. No requirement in the
-// specification enumerates the export's fields, so this is filed as an owed judgement about the surface
-// rather than a defect: see verification/reports/stage-4-final.md.
+// KNOWN LIMIT, now anchored. The token does NOT survive an export/import round trip. snapshotState
+// serialises users, tokens, restaurants, reservations, idempotency, policies, history, series and
+// batch_counters -- restaurant_revisions is absent -- while import replaces state wholesale via
+// store.setState(next). So a client holding a cached restaurant_revision across a re-import compares it
+// against a restarted token.
+//
+// Ruled INFERENTIAL at stage-4.md:47 with :56, composed with stage-1 section 10's replacement sentence
+// [Foreman]. Not VERBATIM, and the negative control is the reason: the four-stage corpus mentions
+// restaurant_revision exactly twice, at :41 and :54, and both are response bodies -- neither sentence
+// mentions export, import or persistence. :47 defines the quantity; section 10 leaves its persistence
+// unaddressed rather than required. A definition plus a contradiction is not a violation of a clause.
+//
+// The loss is upstream in snapshotState, not in import. state.js:72 is the only write to
+// restaurant_revisions and it is +1, no decrement exists anywhere, and the only other initialiser is the
+// empty object at :44. The revision is therefore monotonic and the imported state -- reservations carried,
+// revision 0 -- is unreachable by reset, by reset plus events, or by import [Builder, Adversary 76a7173,
+// measured in verification/probes/s4/reset_vs_import.py]. importState is not losing the counter; it is
+// faithfully restoring a document that never carried it.
+//
+// Disposition: fix owed, and not a defect against any verbatim clause -- 56e278a violates none. One store
+// added to the exported set, no import change, on the rationale already written at snapshot.js:174: a
+// revision reported to clients on every preview and every apply is a promise already made, and this one is
+// made and kept in no store. Filed by path; the row and its measurement are recorded in
+// verification/ledger-stage-4.md and verification/probes/s4/roundtrip_revision.py.
 
 const { fail } = require('./errors');
 const domain = require('./domain');
