@@ -1,6 +1,6 @@
 # Sabotage Report for Tablekeeper Stage 3 (commit a69e6ba)
 
-**Position:** This report was filed **after stage 4 closed**, measuring stage 3's tree at commit `a69e6ba`. It is not a contemporaneous stage-3 record; it is a post-hoc measurement of stage 3's tree, dated later. A reader resolving `1095991` as stage 3's contemporaneous record will misread every row in it.
+**Position:** This report was filed **after stage 4 closed** at `56e278a`, measuring stage 3's tree at commit `a69e6ba`. It is not a contemporaneous stage-3 record; it is a post-hoc measurement of stage 3's tree, dated later. A reader resolving `1095991` as stage 3's contemporaneous record will misread every row in it.
 
 **Authorship convention:** This report is committed by the Saboteur on behalf of the room. Claims authored by the Adversary are marked [Adversary]; claims authored by the Foreman are marked [Foreman]; claims authored by the Builder are marked [Builder]; claims authored by the Saboteur are unmarked. Git attributes the commit, not the sentence.
 
