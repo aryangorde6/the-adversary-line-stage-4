@@ -1503,15 +1503,50 @@ measurement without running it. **The source reading was correct in every partic
 | stores present | `history`, `series`, `idempotency`, `tokens` | all four |
 | history | reassignment entries surviving the round-trip | **1**, with `closures` not exported |
 
-**Classification: `INFERENTIAL`, anchored at `stage-4.md:105` with `:107` as the mandated operation — NOT
-`VERBATIM`, and the Builder's `VERBATIM` is the one overclaim here.**
+**Classification: `INFERENTIAL`, anchored at stage-1 §10's SNAPSHOT-AND-REPLACEMENT language — and this anchor
+has moved TWICE, both times because a word was read in the sense the discussion was using rather than the sense
+the file gives it.**
 
-- `:105` — *"Concurrent amendments from the same expected revision may not both make a real change."* **VERBATIM
-  authority for the protection.**
-- `:107` — *"A stage-4 service must accept exports produced by the same team's stages 1–3."* **VERBATIM that
-  the round-trip is mandatory.**
-- **No sentence in any of the four specifications says the token must SURVIVE a round-trip.** The obligation is
-  the composition of the two, which is inference: `INFERENTIAL`.
+**ANCHOR HISTORY, because the corrections are the evidence and the history is why the row can now be trusted:**
+
+1. **stage-1 §10 "existing tokens must remain valid after import" — VOID, and it was a booby trap in this
+   ledger.** Every one of the 12 occurrences of *token* in `stage-1.md` is authentication (`:162` unknown bearer
+   token, `:197`/`:204` signup and login bodies, `:214`, `:219`/`:318` `Authorization: Bearer <token>`, `:222`
+   tokens do not expire, `:267`, `:422` credentials and session tokens, `:435` **"existing bearer tokens"**,
+   `:438`, `:457` no token gives 401) — **one sense in the file, and `:435` says *bearer* in the very preserve-list
+   `:438` belongs to.** And the mechanism it names works: `snapshot.js:43` exports `state.tokens` and `:166`
+   restores it. **So a seat following this anchor checks bearer tokens across a round-trip, finds them intact,
+   and files the row SATISFIED — while the three stores that are actually dropped go unexamined.** Not a naming
+   preference: an anchor that points at the one mechanism in this codebase that provably works.
+2. **`stage-4.md:105` `VERBATIM` — REFUTED BY MEASUREMENT, not by opinion.** `:105` forbids two amendments from
+   the same expected revision both making a real change, and producing that needs a stale plan to apply.
+   `state.replans` is not exported, so every pre-import plan returns `404 not_found` at `replans.js:379` **before**
+   the revision check at `:389` is reached. Both amendments must be previewed after the import, both record 0, the
+   first applies, the second reads 1 and gets `stale_plan`. **`:105` holds. The token resets; the prohibition is
+   unbroken.** Measured: RT-C.
+3. **`stage-4.md:107` — about BACKWARD COMPATIBILITY, not stage 4's own survival.** *"A stage-4 service must accept
+   exports produced by the same team's stages 1–3"* governs accepting an **earlier stage's** document, which is
+   what `snapshot.js:171-174` implements in its own comment. **Read as "stage 4 must survive its own round trip" it
+   says something else, and that is how I first read it.**
+
+**THE ANCHOR, quoted rather than paraphrased — stage-1 §10, snapshot and replacement, and NOT its tokens sentence:**
+
+> *"Export is an atomic, read-only snapshot; subsequent source writes do not change it."*
+> *"Import takes that entire object and atomically replaces the service's state."*
+
+**`INFERENTIAL`, because no sentence in any of the four files enumerates the stores** — `grep -c
+"restaurant_revisions\|replans\|closures" stage-1.md` returns **0**. **The obligation is the composition: §10 says
+export is a snapshot of the service's state and import replaces the service's state, and stage 4 hands over a
+document missing three of its own stores, so what import installs is not the state that was exported.**
+
+**And the distinction that makes this section's anchor the room's sharpest, because one section now carries two
+rulings that look contradictory and are not:**
+
+> **§10's "the state format is opaque to the caller" governs the SHAPE and closes the field-list question
+> permanently — the implementer chooses. §10's "export is an atomic, read-only snapshot" governs the CONTENT and
+> leaves the round-trip question open, because a snapshot missing a third of the service's state is not a snapshot
+> of anything the specification recognises.** **Opaque and complete are different properties, and the
+> specification constrained only the first.**
 
 **And the correction, which is the reason this is a measurement and not a reading — the specific consequence
 described does NOT hold, because it is unreachable:**
