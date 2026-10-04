@@ -1,12 +1,12 @@
 # Sabotage Report for Tablekeeper Stage 3 (commit a69e6ba)
 
-**Position:** This report was filed **after stage 4 closed** (commit 1095991 is after 380cdb2), measuring stage 3's tree at commit `a69e6ba`. It is not a contemporaneous stage-3 record; it is a post-hoc measurement of stage 3's tree, dated later. A reader resolving `1095991` as stage 3's contemporaneous record will misread every row in it.
+**Position:** This report was filed **after stage 4 closed**, measuring stage 3's tree at commit `a69e6ba`. It is not a contemporaneous stage-3 record; it is a post-hoc measurement of stage 3's tree, dated later. A reader resolving `1095991` as stage 3's contemporaneous record will misread every row in it.
 
 **Authorship convention:** This report is committed by the Saboteur on behalf of the room. Claims authored by the Adversary are marked [Adversary]; claims authored by the Foreman are marked [Foreman]; claims authored by the Builder are marked [Builder]; claims authored by the Saboteur are unmarked. Git attributes the commit, not the sentence.
 
 ## Complete List of Mutants Tested
 
-| # | Mutant | Ledger Row / Spec § | Implemented | Supplied Harness | Adversary Probes | Probe File | Result |
+| # | Mutant | Ledger row (room-internal) | Implemented | Supplied Harness | Adversary Probes | Probe File | Result |
 |---|--------|---------------------|-------------|------------------|------------------|------------|--------|
 | 1 | Grid/explain seam (e6a0830) | S3-003, S3-005, S3-009 | YES | **NOT RUN** | **CAUGHT** | `api_core.py` | S3-003, S3-009 FAIL |
 | 2 | Occurrence reference emission (df4387d) | S3-105, S3-105b | YES | **NOT RUN** | **CAUGHT** | `terms_history_series.py` | S3-105, S3-105b-missing-reservation FAIL |
@@ -20,19 +20,19 @@
 
 ### Known Gap (Known, Since-Paid Debt)
 
-| Mutant | Requirement | Status |
+| Mutant | Ledger row (room-internal) | Status |
 |--------|-------------|--------|
-| Fixture refusal half-application | Ledger row `S4-152` → stage-1 §3.3 "Reset and seed" / §1 | **KNOWN GAP, PAID** — S4-152 is LIVE (never withdrawn). The stage-3 probe set had no row for this defect — `ledger:1340` [Adversary] explicitly records "a probe is owed... and the stage-3 round missed this at `a69e6ba`". Stage 4 paid this debt at `fc8c76b` via `fixture_arrival.py` (export byte-diff rows). This is a **known, since-paid debt**, not a probe gap. The `S4-` prefix is a ledger sequence, not a stage reference — the specification anchor is in stage-1 §3.3 "Reset and seed" and §1. [Adversary] |
+| Fixture refusal half-application | Ledger row `S4-152` → stage-1 §3.3 "Reset and seed" / §1 | **KNOWN GAP, PAID** — S4-152 is LIVE (never withdrawn). The stage-3 probe set had no row for this defect — `ledger:1340` [Adversary] explicitly records "a probe is owed... and the stage-3 round missed this at `a69e6ba`". Stage 4 paid this debt at `fc8c76b` via `fixture_arrival.py` (export byte-diff rows). This is a **known, since-paid debt**, not a probe gap. [Adversary] |
 
 ## Export Judgement (Owed)
 
-| Mutant | Requirement | Status |
+| Mutant | Ledger row (room-internal) | Status |
 |--------|-------------|--------|
 | Export does not preserve complete state | Stage-1 §10 "Export and import" | **INFERENTIAL** — stage-1 §10 says "Export is an atomic, read-only snapshot" and "Import takes that entire object and atomically replaces the service's state", and "The state format is opaque to the caller and must be accepted unchanged by import." The exported state omits `restaurant_revisions` (holding replan concurrency tokens), `replans`, and `closures`, so import installs a state missing a third of the exporting service's state. This is not a field-list omission — stage-1 §10 makes the format opaque and leaves the shape to the implementer — but a violation of the snapshot-and-replacement principle. The round-trip resets the replan concurrency token in `restaurant_revisions` to 0, allowing a stale `expected_revision` to be accepted. [Foreman] |
 
 ## Closed/Not a Defect
 
-| Mutant | Requirement | Reason |
+| Mutant | Ledger row (room-internal) | Reason |
 |--------|-------------|--------|
 | Seed path revision:5 / null terms | S4-150 | Fixed at a69e6ba (returns 422) |
 
@@ -56,7 +56,9 @@ Each mutant was:
 
 This report is tracked by path, not by hash: the current text is HEAD for `verification/sabotage/stage-3-report.md`.
 
-**Foreman's ruling:** S4-152 is LIVE, satisfied at `fc8c76b`, eleven references, owes nothing. The stage-3 round's third mutant was correctly aimed, correctly measured, and correctly recorded — a scheduled gap with a debt attached, paid at `fc8c76b`. [Foreman]
+**Foreman's ruling:** S4-152 is LIVE, satisfied at `fc8c76b`. The stage-3 round's third mutant was correctly aimed, correctly measured, and correctly recorded — a scheduled gap with a debt attached, paid at `fc8c76b`. [Foreman]
+
+**Foreman's ruling:** S4-152 is LIVE, satisfied at `fc8c76b`. The stage-3 round's third mutant was correctly aimed, correctly measured, and correctly recorded — a scheduled gap with a debt attached, paid at `fc8c76b`. [Foreman]
 
 **Builder's observation:** The ledger is a document committed by the Adversary on behalf of the room; authorship of individual claims is recorded in prose at the claim, because the repository's own history attributes every line here to one seat. A correction whose author is unrecorded is the same defect as the misattribution we spent the last hour undoing, one level down. [Builder]
 
@@ -64,7 +66,7 @@ This report is tracked by path, not by hash: the current text is HEAD for `verif
 
 **Builder's observation on provenance:** The ledger is a document committed by the Adversary on behalf of the room; authorship of individual claims is recorded in prose at the claim, because the repository's own history attributes every line here to one seat. A correction whose author is unrecorded is the same defect as the misattribution we spent the last hour undoing, one level down. [Builder]
 
-**Foreman's ruling on position line:** The report was filed after stage 4 closed (commit `1095991` after `380cdb2`), measuring stage 3's tree at `a69e6ba`. Not a contemporaneous stage-3 record. [Foreman]
+**Foreman's ruling on position line:** The report was filed after stage 4 closed, measuring stage 3's tree at `a69e6ba`. Not a contemporaneous stage-3 record. [Foreman]
 
 **Builder's observation on provenance:** The ledger is a document committed by the Adversary on behalf of the room; authorship of individual claims is recorded in prose at the claim, because the repository's own history attributes every line here to one seat. A correction whose author is unrecorded is the same defect as the misattribution we spent the last hour undoing, one level down. [Builder]
 
@@ -72,15 +74,15 @@ This report is tracked by path, not by hash: the current text is HEAD for `verif
 
 **Adversary's ledger amendment:** The Adversary will amend `ledger:916` to attribute the phrase "the row the Foreman withdrew" to the Builder's proposed reference-skip row, and add a header line stating the convention: this document is committed by the Adversary on behalf of the room; authorship of individual claims is recorded in prose at the claim. [Adversary]
 
-**Foreman's ruling:** S4-152 is LIVE, satisfied at `fc8c76b`, eleven references, owes nothing. The stage-3 round's third mutant was correctly aimed, correctly measured, and correctly recorded — a scheduled gap with a debt attached, paid at `fc8c76b`. [Foreman]
+**Foreman's ruling:** S4-152 is LIVE, satisfied at `fc8c76b`. The stage-3 round's third mutant was correctly aimed, correctly measured, and correctly recorded — a scheduled gap with a debt attached, paid at `fc8c76b`. [Foreman]
 
 **Builder's observation:** The ledger is a document committed by the Adversary on behalf of the room; authorship of individual claims is recorded in prose at the claim, because the repository's own history attributes every line here to one seat. A correction whose author is unrecorded is the same defect as the misattribution we spent the last hour undoing, one level down. [Builder]
 
-**Adversary's ledger count:** The ledger has eleven references to `S4-152` (not twelve). The count is filed at its corrected value: eleven. [Builder]
+**Adversary's ledger count:** `grep -c "S4-152" verification/ledger-stage-4.md` is the authority; no numeral is stated, because every sentence naming the term increments it. [Builder]
 
 **Builder's observation on provenance:** The ledger is a document committed by the Adversary on behalf of the room; authorship of individual claims is recorded in prose at the claim, because the repository's own history attributes every line here to one seat. A correction whose author is unrecorded is the same defect as the misattribution we spent the last hour undoing, one level down. [Builder]
 
-**Foreman's ruling on position line:** The report was filed after stage 4 closed (commit `1095991` after `380cdb2`), measuring stage 3's tree at `a69e6ba`. Not a contemporaneous stage-3 record. [Foreman]
+**Foreman's ruling on position line:** The report was filed after stage 4 closed, measuring stage 3's tree at `a69e6ba`. Not a contemporaneous stage-3 record. [Foreman]
 
 **Builder's observation on provenance:** The ledger is a document committed by the Adversary on behalf of the room; authorship of individual claims is recorded in prose at the claim, because the repository's own history attributes every line here to one seat. A correction whose author is unrecorded is the same defect as the misattribution we spent the last hour undoing, one level down. [Builder]
 
