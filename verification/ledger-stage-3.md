@@ -370,23 +370,32 @@ Three parts, and only the first is mechanical:
   monotone in the right direction: only removing log copies can satisfy it. **A gate that cannot fail in one
   direction can be made to fail in the other, and the guard against that is a term that moves only when the
   work is right.**
-- **EXACT DELTA, which closes the hole the monotone term leaves, and only now.** The log-zero term stops
-  over-deletion *within* the convention. It does not constrain the rest of the document, so a commit that
-  removed all seven log copies **and** one row of the mutant table satisfies every term above: same log
-  count, same body count, larger delta. **The content check that catches that was run by hand — the row
-  counts, the anchors, the path-form self-reference — and it is correct and it is not in the gate, so it
-  does not run automatically and it will not run on the next attempt.** Close it arithmetically: **the
-  deletions-only step must read `deleted == 7` and `added == 0`, not `deleted >= 7`.** With the log term
-  also required, seven deletions that take the log to zero can only be those seven lines, so nothing else
-  can have gone.
-  **Equality is safe here and was not safe earlier tonight, and the difference is the whole point.** When
-  the target was estimated rather than enumerated, equality refuted correct work — the honest completion
-  was five deletions against a target of ten — so `>=` was the honest operator. The target is now seven,
-  enumerated and run on a copy of `HEAD` before the commit. **So: `>=` is honest and `==` is a refutation
-  of correct work until the target is verified; after it, `==` is the gate and `>=` is a hole. The
-  transition is the verification, and nothing marks it except that someone ran the edit on a copy first.**
-  Neither term substitutes for the other; together they leave the only remaining freedom the size of the
-  edit, which is exactly the freedom to be removed.
+- **IDENTITY TERMS GATE; THE DELTA ADVISES. This replaces an earlier version of this entry which gated on
+  `deleted == 7`, and the replacement is not a retreat — it is the only form that closes the overshoot hole
+  without opening a worse one.**
+  The hole was real: the log-zero term stops over-deletion *within* the convention and does not constrain
+  the rest of the document, so a commit that removed all seven log copies **and** a row of the mutant table
+  satisfied every term above — same log count, same body count, larger delta. **The content check that
+  catches that was run by hand — row counts, anchors, the path-form self-reference — and it is correct and
+  it is not in any gate, so it does not run automatically and it will not run on the next attempt.**
+  The tempting repair was exact equality on the delta, and **it was refused, because the start is no longer
+  known.** Equality is a statement about a path taken from a known start; the blob the edit was verified
+  against is no longer the blob in the tree, so `== 7` would refute whatever is genuinely in flight. **That
+  is the identical failure equality was withdrawn for earlier tonight, reintroduced through the correct door
+  as an apparent improvement — a one-character tightening can be the same hole with the sign flipped.**
+  So the gate is stated in identity terms, which hold regardless of where the work started:
+  ```
+  GATE      log copies   == 0
+            body authorship convention count == 1
+            body provenance count == 0 after the deletions step, == 1 after the insertion step
+  ADVISORY  git diff HEAD --numstat        the shape of the edit, not its identity
+  ```
+  **Arithmetic checks size; state terms check identity; a path is known only to whoever is walking it.**
+  Which is the whole form: `>=` was honest before the target was enumerated, `==` would be honest after
+  enumeration *and from a known start*, and **the state terms are the only form that is honest regardless of
+  what the start was.** One consequence worth inheriting: a gate can be sound on identity and still be
+  unusable, because its subject moves. **Soundness is not the same as applicability, and a check whose
+  reference point is in motion belongs in the advisory column.**
 - **CONFIRM, by a person.** A human reads the body of the stage-3 report and judges the convention is in the
   body's own voice. Wording is not graded and cannot be.
 - **HINT, never a gate.** The greps are recorded as observations and never as gates, because a criterion
