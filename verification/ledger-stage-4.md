@@ -1671,7 +1671,7 @@ the file gives it.**
    by reading `:47`, `:56`, `:77`, `:82` and `:105` directly rather than accepting the distinction from the thread.
 4. **`stage-4.md:107` — about BACKWARD COMPATIBILITY, not stage 4's own survival.** *"A stage-4 service must accept
    exports produced by the same team's stages 1–3"* governs accepting an **earlier stage's** document, which is
-   what `snapshot.js:171-174` implements in its own comment. **Read as "stage 4 must survive its own round trip" it
+   what the comment at `snapshot.js:175-177` implements, sitting directly below the assignments at `:173-174`. **My pointer said `171-174`, which is pure code and contains no comment at all -- the range I cited stopped exactly one line short of the sentence I was quoting. Corrected here rather than left, because the substance is right and only the pointer was wrong.** **Read as "stage 4 must survive its own round trip" it
    says something else, and that is how I first read it.**
 
 **THE ANCHOR, quoted rather than paraphrased -- `stage-4.md:47` with `:56`, and NOT `:105`:**
@@ -2317,3 +2317,61 @@ and asserting is not mutating.**
 > **SO THE OPERATIVE RULE, and it is cheap: after you file a result, re-run YOUR OWN check once, unprompted, before
 > anyone else does.** Not because your check is probably wrong -- because it is the only artefact of yours that nobody
 > else will look at unless you have already been caught, and being caught is a worse way to find out than looking.
+
+
+## CORRECTION filed by @Builder and verified here, not accepted: the disposition of the round-trip fix, and a
+## citation of mine that four seats repeated and nobody opened
+**`snapshot.js:174` IS NOT THE RATIONALE, and neither is any line of that file. OPENED, per the twentieth rule:**
+
+```
+$ sed -n '174p' stage-4/src/snapshot.js
+  state.idempotency = validateIdempotency(raw.idempotency === undefined ? [] : raw.idempotency);
+$ grep -n "restaurant_revisions|closures|replans" stage-4/src/snapshot.js   ->  exit 1, NO MATCHES
+$ sed -n '175,177p' stage-4/src/snapshot.js
+  // The four stores added for policies, series, history and the batch counter are optional in a
+  // document, so an earlier stage's export imports without them. Each is carried across verbatim
+  // rather than re-derived, because a policy's version number and a history entry's seq are promises made.
+```
+
+**The only rationale in that file covers a DISJOINT set of four stores -- `policies`, `series`, `history`, `batch_counters`
+-- which are the ones the export DOES carry.** `snapshot.js` never names `restaurant_revisions`, `closures` or
+`replans` anywhere. **So "the rationale is already written, therefore one line of mechanical work" was resting on a
+comment that does not exist.**
+
+**CLASSIFICATION IS UNCHANGED -- `INFERENTIAL` at `stage-4.md:47`/`:56` composed with stage-1 §10 never depended on
+that comment. THE DISPOSITION CHANGES: RATIONALE ABSENT. THE FIX IS A DECISION PLUS A LINE, NOT A MECHANICAL EDIT.**
+
+**And the contrast is what makes the absence a finding rather than an oversight, because the file argues BOTH ways
+about the other two stores and says nothing about this one:**
+
+```
+state.js:36-38   replans   -- "a plan is a claim about a moment ... which is why it does not travel in an export"
+state.js:40-42   closures  -- "Applied closures persist, unlike plans ... a closure is a fact about a date"
+state.js:44      restaurant_revisions: {},      <- initialised, and named NOWHERE else in the source
+```
+
+**Two omissions with recorded rationales and one without. By this room's own standard -- an omission with no recorded
+rationale IS the defect -- the absence is the finding, and it is not resolvable by editing `snapshot.js`.**
+
+**THE TWENTIETH RULE, and it is the only one of the twenty with no trigger in it: OPEN THE LINE YOU CITED.** Not a rule
+about what to believe -- a rule about the citation. **All eighteen earlier rules fire when a claim is made; an omission
+makes no claim, so nothing attaches to it.** The final failure of this stage was not a belief, it was a skipped step
+dressed as one, and no rule written against belief can catch a step nobody took.
+
+## COUNTER-EXAMPLE to the growth prediction, filed because it falsifies a general law from one instance
+**@Foreman predicted the ledger's corrections log would re-file standing facts the way the stage-3 report does, and
+predicted the count would equal the number of correction runs. BOTH WRONG, and @Builder was right to check:**
+
+```
+ledger : commits touching the file = 77   "Authorship convention" occurrences = 1, at :176
+ledger : occurrences after :176 = 0
+```
+
+**ONE statement, in the BODY at `:176`, outside any corrections log, stable across seventy-seven commits.** The cause
+of the stage-3 report's six copies is therefore NOT that the file is append-only -- **it is the FILING SITE. A
+convention stated in the body does not re-file; a convention stated in the log does, once per run.** The ledger has
+been doing what the stage-3 report is being asked to start doing since early in this stage.
+
+**A law proposed by one seat, about a file, on the strength of a different file, is the exact shape of the thing this
+room spent five hours dismantling -- and `1780d45`'s tree got checked while this ledger did not, and both were called
+a pattern. That is the mistake worth carrying, and it is still the easiest one here to make.**

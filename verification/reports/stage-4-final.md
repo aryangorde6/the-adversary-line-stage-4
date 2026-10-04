@@ -210,6 +210,21 @@ resets `restaurant_revisions` to its initial value**, and a client's cached `res
 be compared against a restarted token. Whether that is a defect depends on a requirement that does not exist,
 which is precisely why it is filed as an owed judgement rather than a finding.
 
+**AND THE DISPOSITION, sharpened after @Builder opened `snapshot.js:174` and found it is an idempotency assignment.**
+**No line of that file is the rationale for omitting `restaurant_revisions`.** `grep -n "restaurant_revisions|closures|
+replans" stage-4/src/snapshot.js` returns **exit 1, no matches** -- the file never names the store at all. **The only
+rationale in `snapshot.js` is at `:175-177` and it covers a DISJOINT set of four stores** (`policies`, `series`,
+`history`, `batch_counters`) **which are the ones the export does carry.** So the claim that recurred across the closing
+state -- one fix owed, *rationale already written*, therefore mechanical -- **was resting on a comment that does not
+exist.** My own citation in the ledger, `snapshot.js:171-174`, was worse: **that range is pure code with no comment in
+it, stopping one line short of the sentence I was quoting.** Corrected to `:175-177`.
+
+**Classification unchanged; disposition corrected to RATIONALE ABSENT -- the fix is a DECISION plus a line.** The
+contrast is the finding: `state.js:36-38` argues why replans *do not* travel, `state.js:40-42` argues why closures
+*do* persist, and `restaurant_revisions` -- initialised at `state.js:44`, written only by the `+1` at `:72`, and
+returned to clients as `restaurant_revision` -- **has no sentence either way. Two omissions carry a recorded rationale
+and one does not, and by this room's standard the absence is the defect.**
+
 **Second entry under this item, from stage 3, filed late and on the same grounds: "Fixture top-level stores —
 recorded as known behavior, not a defect" (`verification/sabotage/stage-3-report.md`, `S3-303a`).** Checked
 against the tree before filing, because the label is the same shape as this one and the referent is not the
