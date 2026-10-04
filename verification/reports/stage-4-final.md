@@ -128,7 +128,10 @@ which is precisely why it is filed as an owed judgement rather than a finding.
 unmeasurable in this round — `playwright-core` is absent from the Adversary's environment, and the Builder's
 screen suites are self-verified evidence from the seat whose code they exercise, not independent
 verification. Seed 2 is unplanted with its reason. No Adversary instrument is runnable from this seat;
-`stage-4/` is read-only to the Adversary, so every instrument change was a handover; five of the stage-4
+`stage-4/` is read-only to the Adversary, so every change to product source — including the one prose
+correction at `334f8c2` — was the Builder's; the single instrument inside `stage-4/` (`invariants.mjs`)
+changed only by handover, at `56e278a`; the eight instrument changes under `verification/probes/` were
+mine, in a tree writable to me; five of the stage-4
 probes here are un-audited except where a seed touched them. No service, container or symlink was left
 running.**
 
