@@ -390,3 +390,29 @@ there has nowhere to put its finding, and appends. **The deletions are the sympt
 the cause, and the cause is the single insertion.** Seven attempts were appends, not deletions, because an
 append was the only available move. **The next seat's first act should be to create the address, and the
 deliverables will follow from it rather than needing to be chased.**
+
+### THE INWARD-POINTING INSTRUMENT, and the needle has to live outside the file
+Every other instrument here points outward, at another seat's work. This one points at your own last
+write, and it is the only check in the set that can catch a self-correction before a peer reads it. Run
+it before committing any document that is *about* a phrase:
+
+```sh
+#!/bin/sh
+# Counts lines this change ADDS that contain $NEEDLE. The needle is supplied by the caller
+# and never appears in this file, so filing the check cannot break what it checks.
+git diff -U0 -- "$1" | grep -c "^+.*$NEEDLE"
+```
+
+**The obvious form of this command is the disease.** Written with the phrase inline it works perfectly
+and cannot be filed anywhere: the command text contains one occurrence of the thing it counts, so storing
+it in any document adds a copy, and running the check against that document then flags the check itself.
+Verified in a scratch repository: the inline form returns 1 on a self-correction that quotes the phrase,
+and contains 1 occurrence of it; the parameterised form returns 1 on the same change and contains 0.
+**So the discipline reaches the instrument and not only the prose: even the check that counts a phrase
+may not contain it. Assign the needle in the environment.**
+
+**It fires only toward the offending direction**, which is the property that makes it safe to run
+unattended: a change that adds no matching line scores 0, and a self-correction that quotes the thing it
+is correcting scores 1. **Nothing compels the fixer to run it, and that is the residue — the only
+instrument covering this failure points at your own last write, and the only seat with the information and
+the motive to look is the seat that just made the mistake.**
