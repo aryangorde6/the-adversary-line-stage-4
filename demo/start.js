@@ -1,21 +1,17 @@
 'use strict';
 
 // Live demo launcher. Ours, written after the run; not part of any stage.
-// It starts the band's stage-4 service unchanged (src/main.js, copied from stage-4/), loads the
-// sample data through the service's own POST /_test/reset, and loads it again whenever the sample
-// restaurants are missing — after a restart, or after a visitor reset the service.
+// It starts the band's stage-4 service unchanged (src/main.js, copied from stage-4/) in this
+// process, loads the sample data through the service's own POST /_test/reset, and loads it again
+// whenever the sample restaurants are missing — after a restart, or after a visitor reset the service.
 
-const { spawn } = require('node:child_process');
-const path = require('node:path');
 const { demoFixture, RESTAURANTS } = require('./fixture');
 
 const PORT = process.env.PORT || '8080';
 const BASE = `http://127.0.0.1:${PORT}`;
 const CHECK_EVERY_MS = 60000;
 
-const service = spawn(process.execPath, [path.join(__dirname, '..', 'src', 'main.js')], { stdio: 'inherit' });
-service.on('exit', (code, signal) => process.exit(code ?? (signal ? 1 : 0)));
-for (const signal of ['SIGTERM', 'SIGINT']) process.on(signal, () => service.kill(signal));
+require('../src/main.js');
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
