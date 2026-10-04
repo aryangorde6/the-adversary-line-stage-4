@@ -883,6 +883,59 @@ probe written end-to-end from an incident is the one that saw the incident -- wh
 too and are owed nothing for it.** The fourth horn did not fire: **no catch came from a Builder probe in place
 of mine.**
 
+## SEED 1 REPLANTED -- `fc8c76b`, graded. The one live defect the round caught.
+
+```
+PLANTED STATE, read by me before any probe result (clause 59), Builder's check reproduced independently:
+
+  clean reset                      -> 204
+  export before    batch_counters  {} 
+  REFUSING reset (declared terms) -> 422 fixture_unsupported
+  export after     batch_counters  {"r_1": 1}
+  BYTE-DIFF ACROSS THE REFUSAL     -> CHANGED
+  => THE PLANT IS LIVE. Reproduced at my own port, not taken from the commit message.
+```
+
+**Note the confound before the numbers: `fc8c76b` descends from `fadad4d`, so its tree carries three
+defects -- the enumeration reversal, seed 4's accept-and-drop, and the vector deletion. It is not a clean
+plant. What makes the attribution exact anyway is that I hold the baselines: `644ee7c` and `fadad4d` were
+graded, so the reds *new at this hash* are attributable by difference rather than by argument.**
+
+| probe | `fc8c76b` | new reds vs `644ee7c` |
+|---|---|---|
+| `write_family.py` | 9/9 | -- |
+| `discriminator.py` | 11/16 | -- (seed 4's five) |
+| `planner_property.py` | 14/15 | -- (M2's `S4-171b`) |
+| `negative_control.py` | 7/8 | -- (`NC-004`, seed 4's) |
+| `s3/fixture_arrival.py` | **27/36** | **`S3-340-declared-terms`, `S3-340-declared-revision`, `S3-341`** |
+
+**Three new reds, all named, all the same sentence: `reset 422, export unchanged=False`.** So:
+
+- **The prediction held, and it held in the form that matters: the observable is the export byte-diff across
+  a refusal, and the rows that already asserted it fired.** `S3-340-declared-terms`,
+  `S3-340-declared-revision` and `S3-341` are `S4-152`'s first `saw` -- **the row the Foreman withdrew was
+  replaced by rows that were already written,** exactly as predicted, and **three of them rather than two.**
+- **Those rows passed at `170c99d` and at `644ee7c` and would have passed forever against an inert plant.**
+  **Their earlier green was not evidence about the defect; it was evidence that the defect was absent.** This
+  is the sharpest form of the round's rule: **a green row over a mutation nobody verified is not a passing
+  row, it is an unmeasured one.**
+- **Per-probe `saw` for the seed:** `fixture_arrival.py` sees the mutating refusal **and** seed 4's door
+  defect; `planner_property` sees M2' via `S4-171b`; `discriminator` sees seed 4's policy rows; `write_family`
+  sees nothing here and is not thereby exonerated.
+
+### The five-commit round, graded
+
+| commit | kind | grade |
+|---|---|---|
+| `170c99d` | seed 1 attempt 1 -- allocate into the candidate | **INERT** -- throw precedes the only write; 84 green rows mean nothing |
+| (uncommitted) | replant 1 -- `restaurant_revisions` on live | **LATENT** -- real, held, never exported; caught before commit |
+| `fc8c76b` | seed 1 attempt 2 -- `batch_counters` on live | **CAUGHT** -- three named reds in `fixture_arrival.py` |
+| `1780d45` | precondition -- enumeration divergence | earns nobody a `saw`; not a mutant |
+| `644ee7c` | seed 4 -- the door accepts and drops | **CAUGHT** -- six reds in `fixture_arrival.py`, five in `discriminator` |
+| `fadad4d` | M2' -- precondition plus the vector deleted | **CAUGHT** -- `S4-171b`, not the row it was aimed at |
+| seed 2 | unplanted by agreement | two mutants in one function are one experiment |
+| `4b4bc5c` | the real precondition; **not orphaned, and not amended** | graded as the precondition |
+
 ### Clause 56: _reports_ and _sees_ are two facts, and only one is cheap
 
 **A manufactured red proves a probe can _report_; it does not prove it can _see_.** Inverting an assertion
