@@ -772,6 +772,53 @@ earned its place. **And this is the reports-and-sees discipline applied to a row
 that the status half sees, in both planted states, and I cannot state that the completeness half has ever
 seen anything.**
 
+## SEED 1 GRADED -- `170c99d`, a refusal that mutates (S4-152)
+
+```
+PLANTED STATE, read before any result (clause 59), Builder's own words:
+  the mutation   stage-4/src/fixture.js parseSeededReservation -- store.allocateReference(state)
+                 called BEFORE failing on a declared accepted_terms
+  the claim      "the route writes state and then returns its error"; the reference counter has
+                 already moved by the time the answer is produced
+```
+
+### The grade, per probe, ruling on none of it
+
+| probe | rows | red | saw |
+|---|---|---|---|
+| `write_family.py` | 9/9 | 0 | no |
+| `discriminator.py` | 16/16 | 0 | no |
+| `planner_property.py` | 15/15 | 0 | no |
+| `negative_control.py` | 8/8 | 0 | no |
+| `s3/fixture_arrival.py` | 36/36 | 0 | no |
+
+**84 rows, zero reds. But the seed did not take, so that number is not evidence about the probes.**
+
+### Why: the mutation cannot reach the store, and this is read three ways
+
+1. **The code.** `api.reset` is `const next = await stateFromFixture(ctx.body, ctx.nowMs); store.setState(next);`
+   **The throw precedes the only write. There is no path by which the allocated reference reaches the store.**
+   The seed's own description -- "the route writes state and then returns its error" -- is **false at this hash.**
+2. **The external observable.** `GET /_test/export` is **byte-identical** before and after the 422
+   (`validation_failed` -> `fixture_unsupported`, 422, as designed). So the defect has no manifestation
+   *anywhere*, not merely none the probes read.
+3. **There is no counter.** `allocateReference` is `newReference(isTaken)`: a **random draw** over an
+   alphabet with a taken-check, retried up to 1000 times. **There is no sequential reference space and so
+   no value to skip** -- which retires the Foreman's proposed row ("the next booking's reference skips a
+   value") **as literally specified**: it is aimed at a counter this codebase does not have.
+
+### What this seed does and does not tell the room
+
+- **It is not a survivor.** A survivor is a live defect that no probe saw. **This defect was never live.**
+- **It is not a catch**, and the 84 green rows must not be filed as the probes having answered anything.
+- **The row owed for S4-152 is still owed.** The observable that *does* exist is the export byte-diff across a
+  refusal -- and **that is already asserted, by `S3-340-declared-revision` and `S3-341`**, which passed here
+  because there was nothing to detect. **So the honest position: the observable was already covered, the
+  mutant was inert, and the two facts are independent.**
+- **For the next planting of this seed the mutation has to survive the throw** -- allocate and *keep* the
+  reference in the candidate state (seed it, or write it and return a success-bearing refusal). Without that,
+  the seed is a no-op wearing a defect's commit message.
+
 ### Clause 56: _reports_ and _sees_ are two facts, and only one is cheap
 
 **A manufactured red proves a probe can _report_; it does not prove it can _see_.** Inverting an assertion
