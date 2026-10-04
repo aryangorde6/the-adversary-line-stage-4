@@ -16,7 +16,34 @@ fc8c76b  seed 1 replanted — batch_counters on the live state      LIVE, a THRE
 seed 2   unplanted by agreement
 ```
 
-**The amend recorded as amending `644ee7c` and not `4b4bc5c`.** `1780d45` is a message-only amend: its
+**The amend recorded as amending `644ee7c` and not `4b4bc5c`, on the reflog rather than on either seat's
+account of it:**
+
+```
+1780d45 HEAD@{2026-10-04 05:33:53}: commit (amend): precondition: enumeration order diverges...
+644ee7c HEAD@{2026-10-04 05:33:06}: commit: sabotage: seed 4 of 4 -- the pre-registered seed
+```
+
+**An amend occurred and it did not touch `4b4bc5c`, which is untouched. `1780d45` is a message-only amend of
+`644ee7c` — seed 4, the pre-registered experiment — which is therefore unreachable from HEAD and resolvable
+only from the reflog, where the Adversary found it. The Builder reported the amend against the wrong commit,
+and the room briefly recorded `4b4bc5c` as orphaned and instructed two seats not to resolve the genuine
+precondition. A false confession was believed because it was self-incriminating, and nobody checked it for
+that reason.**
+
+**Two accounts of this were wrong in opposite directions — the Builder blamed `4b4bc5c`, I declared from md5
+that no amend occurred — and both findings stand, because a message-only amend produces an identical tree,
+which is exactly why tree comparison cannot see it.** **A message-only amend is invisible to every check that
+compares trees: md5, `git diff`, and a grader resolving hashes all see nothing. Only the reflog records it.**
+
+**Correction to my own contribution, entered here rather than left in the room's memory: my line "no amend
+occurred" is wrong and is struck.** My md5 work was right about the trees and right that `1780d45` carries
+both mutants and describes neither; the amend claim was the one line I exceeded my evidence on, and the
+reason is the rule the room then wrote from it — **a seat's severity is not evidence about its accuracy, so
+the claims that arrive in the register of a confession must be verified exactly as hard as the claims that
+arrive in the register of an accusation.**
+
+ `1780d45` is a message-only amend: its
 tree is byte-identical to `644ee7c`'s and it shares `644ee7c`'s parent, so it carries the reversal it
 inherits plus seed 4's fixture diff **and its message describes neither**. `4b4bc5c` is the genuine
 precondition and was graded: **84 rows, 0 reds, correctly.** `644ee7c` was resolved from the reflog and
@@ -123,3 +150,13 @@ came from something that went wrong at eleven at night; that one came from a fau
 only one that would have prevented half of them. **The companion sentence, from the same night: establish
 that the thing you planted took, and establish that something can see it, before you ask what the probes say
 about it.** *Judgement, stated as such.*
+
+**A pre-registered experiment must be reachable, or the pre-registration is theatre.** The value of
+committing an interpretation before a mutant exists depends entirely on the mutant surviving as something a
+grader can resolve, and **a round that amended away its own best-designed experiment kept the commitment and
+lost the thing the commitment was about** — the one failure mode in this round that no rule in the ledger had
+predicted.
+
+**Grade the stack last: attribute by subtracting baselines you already hold, never by arguing.** The three new
+reds at `fc8c76b` are attributable because `644ee7c` and `fadad4d` were graded first; grade the stack first
+and you will be arguing instead of measuring.
