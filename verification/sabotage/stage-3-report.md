@@ -6,7 +6,7 @@
 |---|--------|-------------|-------------|------------------|------------------|------------|--------|
 | 1 | Grid/explain seam (e6a0830) | S3-003, S3-005, S3-009 | YES | **NOT RUN** | **CAUGHT** | `api_core.py` | S3-003, S3-009 FAIL |
 | 2 | Occurrence reference emission (df4387d) | S3-105, S3-105b | YES | **NOT RUN** | **CAUGHT** | `terms_history_series.py` | S3-105, S3-105b-missing-reservation FAIL |
-| 3 | Fixture refusal half-application | S4-152 | YES | **NOT RUN** | **MISSED** | — | 48/48 api_core, 34/34 terms_history passed |
+| 3 | Fixture refusal half-application | S4-152 | YES | **NOT RUN** | **MISSED** | `api_core.py`, `terms_history_series.py` | 48/48 api_core, 34/34 terms_history passed |
 
 ## Totals
 
@@ -16,9 +16,9 @@
 
 ### Missed by Adversary Probes (1 mutant)
 
-| Mutant | Requirement | Root Cause | Probe File | Why Missed |
-|--------|-------------|------------|------------|------------|
-| Fixture refusal half-application | S4-152 | No probe checks for partial writes on refused fixture | `api_core.py`, `terms_history_series.py` | No probe asserts that refused fixture leaves state unchanged |
+| Mutant | Requirement | Why Missed |
+|--------|-------------|------------|
+| Fixture refusal half-application | S4-152 | No probe checks for partial writes on refused fixture |
 
 ## Closed/Not a Defect
 
@@ -43,4 +43,4 @@ Each mutant was:
 
 ## Commit
 
-Report at `HEAD` (verification/sabotage/stage-3-report.md)
+Report at `3f8dd943cdecb7cbf5034661adbb38e974de440c` (verification/sabotage/stage-3-report.md)
