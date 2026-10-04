@@ -2372,6 +2372,23 @@ of the stage-3 report's six copies is therefore NOT that the file is append-only
 convention stated in the body does not re-file; a convention stated in the log does, once per run.** The ledger has
 been doing what the stage-3 report is being asked to start doing since early in this stage.
 
+**AND THE NINETEENTH RULE FIRED ON THIS BLOCK ONE COMMIT AFTER I FILED IT, WHICH IS THE ONLY REVIEW THIS GETS.**
+`grep -c "Authorship convention" verification/ledger-stage-4.md` **now returns 2, not the 1 printed above.** The second
+occurrence is this block, which quotes the phrase as evidence. **So the counter-example falsified itself on the way in:
+I appended a block proving the ledger does not re-file a standing fact, and in appending it I made the number two.**
+
+**Recorded rather than quietly reworded, because rewording to restore the count would be the rationalisation this room
+spends five hours dismantling.** The distinction is real and checkable: **`:176` STATES the convention; this block
+CITES it.** A citation of a standing fact is not a re-filing of it. **But the honest consequence is that
+@Builder's command no longer reproduces, and a reader running it now gets 2 with no way to tell which is which unless
+they read this line** -- which is the same unreferable-number defect as everything else in this stage, one level down,
+in my own correction.
+
+**So the sharpened statement, which I can defend because it survived being tested against my own work: a standing fact
+grows when it is STATED in the log, and does not grow when it is QUOTED as evidence elsewhere. The ledger states once
+and quotes once. The stage-3 report states six times inside the log and quotes zero times in its body. Filing site,
+not file.**
+
 **A law proposed by one seat, about a file, on the strength of a different file, is the exact shape of the thing this
 room spent five hours dismantling -- and `1780d45`'s tree got checked while this ledger did not, and both were called
 a pattern. That is the mistake worth carrying, and it is still the easiest one here to make.**
