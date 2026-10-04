@@ -10,7 +10,7 @@
 |---|--------|---------------------|-------------|------------------|------------------|------------|--------|
 | 1 | Grid/explain seam (e6a0830) | S3-003, S3-005, S3-009 | YES | **NOT RUN** | **CAUGHT** | `api_core.py` | S3-003, S3-009 FAIL |
 | 2 | Occurrence reference emission (df4387d) | S3-105, S3-105b | YES | **NOT RUN** | **CAUGHT** | `terms_history_series.py` | S3-105, S3-105b-missing-reservation FAIL |
-| 3 | Fixture refusal half-application | Ledger row `S4-152` → stage-4 §"Seating changes after a table closure" | YES | **NOT RUN** | **MISSED** | `api_core.py`, `terms_history_series.py` | 48/48 api_core, 34/34 terms_history passed |
+| 3 | Fixture refusal half-application | Ledger row `S4-152` → stage-1 §3.3 "Reset and seed" / §1 | YES | **NOT RUN** | **MISSED** | `api_core.py`, `terms_history_series.py` | 48/48 api_core, 34/34 terms_history passed |
 
 ## Totals
 
@@ -22,13 +22,13 @@
 
 | Mutant | Requirement | Status |
 |--------|-------------|--------|
-| Fixture refusal half-application | Ledger row `S4-152` → stage-4 §"Seating changes after a table closure" | **KNOWN GAP, PAID** — S4-152 is LIVE (never withdrawn). The stage-3 probe set had no row for this defect — `ledger:1340` [Adversary] explicitly records "a probe is owed... and the stage-3 round missed this at `a69e6ba`". Stage 4 paid this debt at `fc8c76b` via `fixture_arrival.py` (export byte-diff rows). This is a **known, since-paid debt**, not a probe gap. [Adversary] |
+| Fixture refusal half-application | Ledger row `S4-152` → stage-1 §3.3 "Reset and seed" / §1 | **KNOWN GAP, PAID** — S4-152 is LIVE (never withdrawn). The stage-3 probe set had no row for this defect — `ledger:1340` [Adversary] explicitly records "a probe is owed... and the stage-3 round missed this at `a69e6ba`". Stage 4 paid this debt at `fc8c76b` via `fixture_arrival.py` (export byte-diff rows). This is a **known, since-paid debt**, not a probe gap. The `S4-` prefix is a ledger sequence, not a stage reference — the specification anchor is in stage-1 §3.3 "Reset and seed" and §1. [Adversary] |
 
 ## Export Judgement (Owed)
 
 | Mutant | Ledger Row / Spec § | Status |
 |--------|---------------------|--------|
-| Fixture top-level stores | Ledger row `S3-303a` → stage-4 §"Amend recurring reservations" | **NO REQUIREMENT — OWED JUDGEMENT** — no requirement enumerates the export's fields, so the honest cell reads *no requirement — owed judgement* [Foreman] |
+| Fixture top-level stores | Ledger row `S3-303a` → stage-4 §"Amend recurring reservations" | **NO REQUIREMENT — OWED JUDGEMENT** — no requirement enumerates the export's fields, so the honest cell reads *no requirement — owed judgement*. `S3-303a` is a ledger row label (room-internal), not a specification citation [Foreman] |
 
 ## Closed/Not a Defect
 
