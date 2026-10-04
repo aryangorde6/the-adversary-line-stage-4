@@ -752,6 +752,26 @@ is worth stating: **the setup assertion is not bookkeeping before the measuremen
 precondition, and a probe that reads a result before establishing its state has produced a number, not a
 finding.**
 
+### The second state was measured, and my prediction did not happen
+
+```
+state 1  key stashed by a replan on a produced reservation        -> export 422 validation_failed
+state 2  key stashed by the seeder on a fixture-seeded booking   -> export 422 validation_failed
+```
+
+**So the defect has one manifestation, my question about which reservation carries the key does not
+discriminate, and the hypothesis is _answered_ rather than discarded.** And the outcome I called the
+stronger one — *200 with records present, where each half of the row catches a state the other misses* —
+**did not occur: the status half catches both.**
+
+**The consequence belongs to the row, not to the argument: the completeness half is currently _unproven_,
+not justified, and it must not be cited as part of what makes the row work until a state exists where the
+status half is green.** It is retained for a reason that has now been tested and returned "the other half
+was sufficient" — which is a legitimate reason to keep redundancy and an illegitimate reason to claim it
+earned its place. **And this is the reports-and-sees discipline applied to a row's own halves: I can state
+that the status half sees, in both planted states, and I cannot state that the completeness half has ever
+seen anything.**
+
 ### Clause 56: _reports_ and _sees_ are two facts, and only one is cheap
 
 **A manufactured red proves a probe can _report_; it does not prove it can _see_.** Inverting an assertion
