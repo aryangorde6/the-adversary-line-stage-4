@@ -368,11 +368,18 @@ function parseFixtureBatchCounters(raw) {
 }
 
 function seedStageState(state, fixture) {
-  const policies = has(fixture, 'policies')
-    ? parseFixturePolicies(fixture.policies, state.restaurants)
-    : [];
+  // SABOTAGE SEED 4 (the pre-registered seed): the reset door ACCEPTS the four store keys and silently
+  // drops them. This is the stage-3 defect the Adversary's fixture_arrival.py was written about: the reset
+  // answers 204, the author believes they seeded a policy, and every assertion they then write is quietly
+  // about policy 0 with nothing red.
+  //
+  // No parser is called. Nothing is refused. The four keys are accepted and ignored, which is the whole
+  // shape of the original defect and the reason fixture_arrival.py owes controls asserting the door
+  // REFUSES what it cannot seed.
+  const policies = [];
+  if (false) { policies.length = parseFixturePolicies(fixture.policies, state.restaurants).length; }
 
-  const series = has(fixture, 'series') ? parseFixtureSeries(fixture.series, state.users, state.restaurants) : [];
+  const series = [];
   state.policies = policies;
   // A seeded reservation is parsed before the policies are known, so its terms are derived again here
   // against the policies this same fixture declared. Without this pass a fixture could state a 15-minute
@@ -390,8 +397,8 @@ function seedStageState(state, fixture) {
   }
 
   state.series = series;
-  state.history = has(fixture, 'history') ? parseFixtureHistory(fixture.history) : [];
-  state.batch_counters = has(fixture, 'batch_counters') ? parseFixtureBatchCounters(fixture.batch_counters) : {};
+  state.history = [];
+  state.batch_counters = {};
   // Every seeded occurrence's reservation carries its series identity, so the series and the bookings
   // agree rather than two halves of one fixture describing different worlds.
   const byReference = new Map(state.reservations.map((reservation) => [reservation.reference, reservation]));
