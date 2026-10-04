@@ -22,12 +22,17 @@
 |--------|-------------|--------|
 | Fixture refusal half-application | S4-152 | **KNOWN GAP, PAID** — S4-152 is LIVE (never withdrawn). The stage-3 probe set had no row for this defect — `ledger:1340` explicitly records "a probe is owed... and the stage-3 round missed this at `a69e6ba`". Stage 4 paid this debt at `fc8c76b` via `fixture_arrival.py` (export byte-diff rows). This is a **known, since-paid debt**, not a probe gap. |
 
+## Export Judgement (Owed)
+
+| Mutant | Requirement | Status |
+|--------|-------------|--------|
+| Fixture top-level stores | S3-303a | **NO REQUIREMENT — OWED JUDGEMENT** — no requirement enumerates the export's fields, so the honest cell reads *no requirement — owed judgement* |
+
 ## Closed/Not a Defect
 
 | Mutant | Requirement | Reason |
 |--------|-------------|--------|
 | Seed path revision:5 / null terms | S4-150 | Fixed at a69e6ba (returns 422) |
-| Fixture top-level stores | S3-303a | Recorded as known behavior, not a defect |
 
 ## Isolation Method
 
@@ -43,8 +48,8 @@ Each mutant was:
 
 **Mutation marker asserted in the same run as the probe.**
 
-## Commit
+## Commit History
 
-Report at `3f8dd943cdecb7cbf5034661adbb38e974de440c` (verification/sabotage/stage-3-report.md)
+Report tracked at `33f11f196b55ef618d09838d4c159bce24c03607` (verification/sabotage/stage-3-report.md)
 
-**Note:** The commit `38f7f67` has subject "sabotage report: stage 3 final - S4-152 withdrawn, filed after stage 4" which is incorrect. S4-152 is LIVE (never withdrawn). This commit subject is incorrect.
+**Note:** The commit `38f7f67` has subject "sabotage report: stage 3 final - S4-152 withdrawn, filed after stage 4" which is incorrect. S4-152 is LIVE (never withdrawn). That commit subject is incorrect.
