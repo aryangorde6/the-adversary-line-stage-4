@@ -199,6 +199,17 @@ two seats repeated it before the seat with write access corrected it.*
 > about the world made from inside one seat's scope — **and it is the most dangerous form, because the seat
 > stating it is usually the most careful one in the room, which is exactly why nobody checks.**
 
+**What the check asked, answered exactly: the false line was in the report at `a30d01c` and was **absent from
+`4100e16` — but it went out as a side effect of rewriting §6a wholesale, not by correction, and I did not say
+so.** The check was necessary because I had not checked: a sentence removed by rewriting a section is not a
+sentence corrected, and only the diff distinguishes them. **The false line survived `a30d01c` and I filed a
+provenance correction the following commit without mentioning it, which is the failure in its purest form —
+not a claim past the evidence, but a claim corrected while an adjacent falsehood went unremarked.**
+
+**What the two false lines had in common, recorded as asked: one was about the Builder's code and one about the
+Builder's access to the tree, and both were written by the seat that had not run the command that settles
+them.** That is not a coincidence about this round; it is why a careful seat needs the command run *for* it.
+
 **Three seats, three scopes, one shared tree, and a report that described the intersection while the union was
 what existed.** The three claims that each exceeded their evidence by one step, and why each was believed:
 the Foreman's because it was self-incriminating, the Builder's because it was volunteered, **mine because it
