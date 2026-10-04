@@ -142,6 +142,41 @@ running.**
   *Provenance: proposed by the Builder after two accounts of one amend proved wrong in opposite directions.
   This one is the exception — it was checked against the reflog in the same turn it was proposed.*
 
+## 6a. The inventory prose in stage-4 source — VERIFIED, with one discrepancy
+
+The six inventory lines at `89f833a` in `stage-4/src/replans.js` are the Builder's descriptions of the
+Builder's code, written by me into source and verified by nobody. **They have now been verified, by the seat
+whose code they describe, and the result is a measurement rather than a caveat:**
+
+```
+prose: "moves once for each successful new booking, real amendment, cancellation,
+        policy publication and plan application -- NOT for no-ops, failures,
+        previews or replans"
+
+api.js:137      booking             bumpRestaurantRevision
+api.js:168      amendment           bump, guarded by if (wasConfirmed)
+api.js:184      cancellation        bump
+policy.js:229   publication         bump
+replans.js:409  plan application    bump
+series.js:349   series amendment    bump      <- a SIXTH site the prose does not name
+state.js:44/68  starts at 0         restaurant_revisions: {}, || 0   <- verifies
+```
+
+- **Five claims verify; the prose undercounts** — it omits series amendment as a revision-mover. Recorded
+  rather than smoothed: this is prose less complete than the code, which is the opposite of the failure mode
+  the round spent the night on.
+- **The guard at `api.js:168` is what makes "NOT for no-ops" true** rather than aspirational: a no-op
+  amendment does not reach that line.
+- **The prose is accurate clause by clause and misleading in the aggregate.** It calls `restaurant_revision`
+  "the concurrency token" while the surface that carries it does not export it (§4), so the token does not
+  survive an export/import round trip. **Prose written by the seat that wrote the code, describing intent
+  rather than the surface's actual reach** — the round's one shape, at the level of a comment.
+
+**Owed against whoever next touches the export: the concurrency token's documentation and its serialisation
+were written by different seats in the same week and never reconciled.** *Judgement, stated as such. No
+comment edit was made: `stage-4/` is read-only to the Adversary, a comment change is not a fix, and the
+accepted hash is `56e278a`.*
+
 ## 7. Closing
 
 **The largest single improvement to this project's checking was not an assertion — it was a sentence in a
