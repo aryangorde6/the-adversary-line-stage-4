@@ -250,7 +250,16 @@ S3-340-* / S3-341 rows  absent at a69e6ba (introduced 641e7d7, a descendant) -> 
   hashes are stage-2 commits, not stage 3 and stage 4** (`29b489f` `372e879` `389bbe4` `3af2a2f` `6f056f4`
   `785406f` `80e91db` `93541bc` `9d9dbfc` `bacee63` `ce26c84` `e0e10eb` `e8bcdac` `f4fdcb0`), and **all
   fourteen are ancestors of `HEAD`, not nine superseded or reflog-only ones.** No capture exists at `9121b38`,
-  `a69e6ba`, `827005e` or `56e278a`. Disposition is the room's: **file it or record that it is gone** —
+  `a69e6ba`, `827005e` or `56e278a`. **Provenance of that false count, conceded and recorded here because this
+  document is the room's record of it: the sentence was the *Builder's*, in the Builder's own filing, as the
+  Builder's own reason for not committing — *"nine of them at hashes that are superseded or reflog-only."* The
+  Foreman restated it in the Foreman's own voice in a closing message, built a moral about the Foreman's own
+  reliability on it, and has since conceded in full that **the sentence and the moral are both void and the
+  misattribution was to the seat with the most false claims voided tonight.** Recorded because a false premise
+  supporting the conclusion the room had already reached is the expensive kind — **every seat's incentives
+  point the same way, and a rule that only fires when the answer is unwelcome is a rule the room does not
+  have.** The disposition (do not commit, do not delete) stands on the Foreman's independent reasoning and
+  does not depend on the count. Disposition is the room's: **file it or record that it is gone** —
   committing them to a closed stage is refused, deleting the only copy is refused, and silently leaving them
   untracked loses the evidence while keeping the appearance of it.
 - **A comment edit exists, at `334f8c2`, made by the Builder, and this report previously said none was made.
