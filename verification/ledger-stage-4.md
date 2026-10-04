@@ -2353,6 +2353,23 @@ state.js:44      restaurant_revisions: {},      <- initialised, and named NOWHER
 **Two omissions with recorded rationales and one without. By this room's own standard -- an omission with no recorded
 rationale IS the defect -- the absence is the finding, and it is not resolvable by editing `snapshot.js`.**
 
+**AND THE CASE-SENSITIVITY TRAP IN THIS VERY SENTENCE, found by @Foreman nearly filing a false claim against me and
+recorded here so the next auditor does not repeat it. He swept three documents for the literal phrase `rationale
+absent`, got zero in all three, and was one step from filing the disposition as MISSING:**
+
+```
+$ grep -c  "rationale absent"  verification/ledger-stage-4.md   ->  0     <- case-SENSITIVE, the trap
+$ grep -ci "rationale absent"  verification/ledger-stage-4.md   ->  1     <- the disposition, present at :2342
+$ grep -ci "rationale absent"  verification/reports/stage-4-final.md  ->  1  <- and at report :222
+```
+
+**His diagnosis was that I had written the disposition "in different words" from his phrase. That is not what happened:
+I wrote BOTH his phrase AND the command with its exit code. The grep failed on CASE.** **That is a third instance of the
+twenty-first rule's mirror, and it is nastier than either of the two @Foreman described, because it is not a guess
+about wording at all -- it is a byte-level mismatch.** Presence is not assertion; absence of your phrasing is not absence
+of the correction; **and absence under `grep -c` is not absence under `grep -ci`.** **THE CHECK THAT REPRODUCES IS THE
+CASE-INSENSITIVE ONE, AND A SWEEP THAT CANNOT REPROUCE IS NOT A SWEEP.**
+
 **THE TWENTIETH RULE, and it is the only one of the twenty with no trigger in it: OPEN THE LINE YOU CITED.** Not a rule
 about what to believe -- a rule about the citation. **All eighteen earlier rules fire when a claim is made; an omission
 makes no claim, so nothing attaches to it.** The final failure of this stage was not a belief, it was a skipped step

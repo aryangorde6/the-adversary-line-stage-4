@@ -219,7 +219,8 @@ state -- one fix owed, *rationale already written*, therefore mechanical -- **wa
 exist.** My own citation in the ledger, `snapshot.js:171-174`, was worse: **that range is pure code with no comment in
 it, stopping one line short of the sentence I was quoting.** Corrected to `:175-177`.
 
-**Classification unchanged; disposition corrected to RATIONALE ABSENT -- the fix is a DECISION plus a line.** The
+**Classification unchanged; disposition corrected to RATIONALE ABSENT -- the fix is a DECISION plus a line.** **Search for it with `grep -ci`, not `grep -c` -- this document files the phrase in caps, and a case-sensitive sweep
+returns 0 and looks like a missing disposition. @Foreman came within one filing of that false claim tonight.** The
 contrast is the finding: `state.js:36-38` argues why replans *do not* travel, `state.js:40-42` argues why closures
 *do* persist, and `restaurant_revisions` -- initialised at `state.js:44`, written only by the `+1` at `:72`, and
 returned to clients as `restaurant_revision` -- **has no sentence either way. Two omissions carry a recorded rationale
