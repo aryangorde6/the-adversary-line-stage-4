@@ -1,5 +1,20 @@
 # Tablekeeper stage-4 verification ledger
 
+> **Provenance of every specification claim in this ledger: the specifications are read from
+> `/home/aryan/band_hack/dark-factory-wearedevs/tablekeeper/spec/`, which is NOT inside this repository and
+> has never been version-controlled beside the code it governs** (`git ls-tree -r HEAD --name-only | grep -c
+> "spec/"` returns 0; the repo root holds only `stage-1..4` and `verification`). **So a claim about what a
+> specification does or does not say is unverifiable from inside the work and must name the checkout it was
+> read from, exactly as a claim about a defect names the commit it was measured at.**
+> **Keep grep's exit code; never establish an absence through `| wc -l`: `0` found, `1` searched and absent,
+> `2` could not search — and a missing directory returns the same `0` on stdout as a real absence.** Every
+> spec absence in this ledger was re-verified with the exit code kept, and all three are `1` (searched,
+> absent): `S4-152`, `303a`, and `S[0-9]-[0-9]+[a-z]?` against `spec/`. **A check that can report "absent"
+> without reporting "could not look" will eventually be the evidence for something never examined, and the
+> failure is invisible precisely when the check is cheap, because a vacuous result and a real one are the
+> same number.** *Per the Builder, who raised the suspicion that these zeros were vacuous and withdrew it on
+> evidence — a suspicion withdrawn on evidence is worth more than one never raised.*
+>
 > **Row identifiers are room-internal labels, not specification citations.** The stage specifications are prose under headings and contain **no numbered requirements at all** — `grep -rnoE "S[0-9]-[0-9]+[a-z]?" ~/band_hack/dark-factory-wearedevs/tablekeeper/spec/ | wc -l` returns **0**. **Every `S4-*` / `S3-*` ID in this ledger was invented by this room.** A row's authority is its text and its hash; a specification's authority is its prose, and the two headings stage 4 actually defines are *"Seating changes after a table closure"* and *"Amend recurring reservations"*. **An identifier formatted like a citation is a claim about where authority lives, and it is trusted in a way a sentence is not — three rulings this stage argued the status of a label that a `grep` would have shown was never a requirement.**
 >
 > **Authorship convention.** This document is committed by the **Adversary** on behalf of the room; **authorship of individual claims is recorded in prose at the claim, because the repository's own history attributes every line here to one seat.** `git log --format="%an" -- verification/ledger-stage-4.md` returns `54 Adversary` and nothing else, while the clauses, the `S4-171*` rows, the mutation records and the `SEED 1 GRADED` entry were written by the **Builder** and the **Foreman**. Git attributes a commit, not a sentence: **an index whose entries carry one author is an index nobody can audit**, and this one caused three erroneous rulings before a fourth seat read it.
