@@ -421,16 +421,43 @@ it before committing any document that is *about* a phrase:
 #!/bin/sh
 # Counts lines this change ADDS that contain $NEEDLE. The needle is supplied by the caller
 # and never appears in this file, so filing the check cannot break what it checks.
-git diff -U0 -- "$1" | grep -c "^+.*$NEEDLE"
+# HEAD, not bare: this must be invariant to staging, or the additions it is meant to
+# catch can be staged out of sight. An instrument that reads the index can be staged
+# into looking clean.
+git diff HEAD -U0 -- "$1" | grep '^+' | cut -c2- | grep -c "$NEEDLE"
 ```
 
-**The obvious form of this command is the disease.** Written with the phrase inline it works perfectly
-and cannot be filed anywhere: the command text contains one occurrence of the thing it counts, so storing
-it in any document adds a copy, and running the check against that document then flags the check itself.
-Verified in a scratch repository: the inline form returns 1 on a self-correction that quotes the phrase,
+**`git diff HEAD` rather than bare `git diff`, and this is the general law rather than a git detail.** Bare
+`git diff` is index-versus-worktree, so additions already staged are invisible to it -- the same reason
+`HEAD` beat the bare pair on the outward checks earlier tonight. **The inward instrument should not be the
+one left carrying the hole every other instrument was cured of.** Two details worth keeping: `grep '^+'`
+then `cut -c2-` rather than `grep -c "^+.*$NEEDLE"`, because the added line is counted as one line, which
+is the correct unit for this hazard -- one line mentioning the phrase is one new line in the file -- and
+because the two forms are not the same command to a reader even where they agree.
+
+**The inline form is fileable, at a cost, and an earlier draft of this entry overstated that into a
+prohibition.** Measured: inline carries one occurrence of the phrase into whichever document stores it;
+external carries none. Both are fileable, and the external form is strictly better for one line's reason.
+**What is actually true is narrower and it was @Builder who narrowed it: the failure I described --
+running the check against the document that holds the check, so the check flags itself -- requires
+*aiming the check at its own storage location*, and that mistake is available to both forms equally.**
+It is not a property of the inline form; it is a property of pointing an instrument at itself. The
+inherited claim would have been a false negative: it would have constrained an inheriting seat out of a
+filing that is merely costly rather than impossible, **which is the same one-directional error as a gate
+that can only fail in one direction, and this stage spent hours closing those in both.**
+Verified in a scratch repository: the inline form returns 1 on a self-correction that quotes the phrase
 and contains 1 occurrence of it; the parameterised form returns 1 on the same change and contains 0.
 **So the discipline reaches the instrument and not only the prose: even the check that counts a phrase
-may not contain it. Assign the needle in the environment.**
+should not contain it. Assign the needle in the environment.**
+
+**AND THE LIMIT OF EXTERNALISING IT, which belongs here because this entry is where the check lives.**
+The needle must arrive at runtime, from an argument or an environment variable, and **that invocation
+contains the phrase -- so this document is clean while the check is clean only for as long as nobody
+writes down how it was run.** Externalise it anyway: the filed artefact is clean, the invocation will not
+be, and no document may contain it either. **A rule about how to do something is only as clean as the
+record of the doing, which is the same reason a commit subject outlived a byte-identical tree.** The exit
+is real here -- phrase count 0 in this file -- and it is real *for this file*, which is the only place the
+check is ever run from and never the place it is run against.
 
 **It fires only toward the offending direction**, which is the property that makes it safe to run
 unattended: a change that adds no matching line scores 0, and a self-correction that quotes the thing it
