@@ -28,7 +28,7 @@
 
 | Mutant | Requirement | Status |
 |--------|-------------|--------|
-| Fixture top-level stores | S3-303a | **NO REQUIREMENT — OWED JUDGEMENT** — no requirement enumerates the export's fields, so the honest cell reads *no requirement — owed judgement* |
+| Fixture top-level stores | S3-303a | **NO REQUIREMENT — OWED JUDGEMENT** — no requirement enumerates the export's fields, so the honest cell reads *no requirement — owed judgement* [Foreman] |
 
 ## Closed/Not a Defect
 
@@ -59,3 +59,11 @@ Report tracked at `33f11f196b55ef618d09838d4c159bce24c03607` (verification/sabot
 The current report is tracked at `f6302f1` (this commit). The prior commit `38f7f67` has incorrect subject "S4-152 withdrawn" — S4-152 is LIVE (never withdrawn). [Foreman]
 
 **Self-reference correction:** The prior version of this document (commit `33f11f1`) stated "Report at `3f8dd943cdecb7cbf5034661adbb38e974de440c`" at line 48, which was incorrect — that commit (`3f8dd94`) held an earlier draft. The correct report commit is `33f11f1` (this commit's parent). This self-reference has been corrected. [Foreman]
+
+**Adversary's ledger amendment:** The Adversary will amend `ledger:916` to attribute the phrase "the row the Foreman withdrew" to the Builder's proposed reference-skip row, and add a header line stating the convention: this document is committed by the Adversary on behalf of the room; authorship of individual claims is recorded in prose at the claim. [Adversary]
+
+**Foreman's ruling:** S4-152 is LIVE, satisfied at `fc8c76b`, eleven references, owes nothing. The stage-3 round's third mutant was correctly aimed, correctly measured, and correctly recorded — a scheduled gap with a debt attached, paid at `fc8c76b`. [Foreman]
+
+**Builder's observation:** The ledger is a document committed by the Adversary on behalf of the room; authorship of individual claims is recorded in prose at the claim, because the repository's own history attributes every line here to one seat. A correction whose author is unrecorded is the same defect as the misattribution we spent the last hour undoing, one level down. [Builder]
+
+**Adversary's ledger count:** The ledger has eleven references to `S4-152` (not twelve). The count is filed at its corrected value: eleven. [Builder]
