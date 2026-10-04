@@ -1661,6 +1661,28 @@ spent the hour on `:47` instead.** And the Builder's unavailable argument is the
 carries the quantity, so import discards it"* cannot be made, because the document does not carry it -- **and that
 absence is precisely why nothing here is `VERBATIM`.**
 
+**AND NOW THE RETRACTION ITSELF IS PARTLY RETRACTED, because @Builder proved the reachability claim by the one
+route I could not -- not by driving the service, but by showing NO PATH EXISTS -- and it is airtight in source:**
+
+```
+state.js:71-73   the ONLY write to restaurant_revisions is  = restaurantRevision(...) + 1
+state.js:44      the only other initialiser is {}  -- a fresh store, i.e. a reset
+grep             restaurant_revisions appears at state.js:44,68,72,73 and NOWHERE ELSE in the source
+call sites       api.js:137,168,184  policy.js:229  replans.js:420  series.js:349
+                 == exactly the five operations stage-4.md:47 names
+```
+
+**There is no decrement anywhere, so the revision is MONOTONIC within a state's life and the only route to 0 is an
+empty store -- which reset produces by emptying everything else too. Any reservation implies at least one increment
+under `:47`'s own words, so `(reservations=1, revision=0)` is unreachable by reset, by reset-plus-events, AND by
+import.** I had retracted this; the retraction was wrong, and it was wrong because **I merged two claims that are
+compatible: WHERE the value is lost (upstream, in `snapshotState`) and WHETHER the resulting state is possible (it
+is not).** Retracting the second because the first was newly learned is the same error as anchoring a row from
+memory: **I revised a true claim because a nearby claim changed, without re-deriving it.**
+
+**Both now stand, and they are different claims with different fixes: the value is lost UPSTREAM (so the fix is in
+`snapshotState`), and the state that results is IMPOSSIBLE (so the defect is real rather than a taste difference).**
+
 **RELOCATED CONSEQUENCE, and it is the part that changes the fix: the row is `owed`, and the fix is in
 `snapshotState`, NOT in `importState`.** No semantics of import -- reset-like or not -- can restore a value that was
 never serialised. **A promise made in every preview and apply response (`:41`, `:54`) and kept in no store is not a
@@ -1965,6 +1987,42 @@ assertion remove the failure mode that made the trap cost a reported finding.**
 "the suite is slow" and "the suite is pointing at the wrong port" are the same observation until the
 invocation is checked.** Silence is the answer you get when the question was never asked, and it is the most
 comfortable answer available.
+
+## `S4-152`'s MISSED status: the Builder's INERT grading rests on an unsupportable premise, and it is RULED
+### the mutant is observable, on two independent paths, both verified in source
+**@Builder reported rather than edited, and the reason is right: a comment that justifies a grading and the record
+that depends on it must move together, or source and report disagree silently.** `fixture.js:223-226` grades a
+`restaurant_revisions` bump INERT on the premise that it is *"live in the store and invisible from outside"* --
+because the export omits the field. **That premise is false, and it is false in the room's own class: the export's
+omission was the defect of the stage, and it was used as the reason a mutant could not be seen. The defect hid the
+mutant from the grader, and the grading was made on the hiding.**
+
+**Verified in source, on two independent paths, so this does not rest on my reading of the Builder's argument:**
+
+```
+replans.js:339    planned_against_revision: store.restaurantRevision(state, restaurant.id)   <- every PREVIEW
+replans.js:420    plan.restaurant_revision  = store.bumpRestaurantRevision(state, ...)      <- every APPLY
+stage-4.md:41     {"plan_id": "opaque", "restaurant_revision": 4, ...                        <- specified
+stage-4.md:54     Return 201 with {"plan_id": "...", "restaurant_revision": 5, ...          <- specified
+```
+
+**A bump to `restaurant_revisions` is returned to clients in ordinary responses. It is not invisible from outside;
+the export is not the only observable, and the API surface is specified separately and says the opposite.**
+**`grep -rn restaurant_revisions` over the source returns `state.js:44,68,72,73` and nothing else** -- so the store
+has exactly one writer, one reader-by-name, and two response surfaces, and the export's silence is the only place
+the field fails to appear.
+
+**RULED: the INERT grading is unsupportable as written, and `S4-152` does NOT move to "caught" -- because neither of
+those is what the evidence supports, and the honest position is between them.** What is established: **the mutant is
+observable, so the reason it was graded INERT is wrong.** What is NOT established: that any probe in this stage
+actually read `planned_against_revision` or `restaurant_revision` to catch it. **So the status stays MISSED, and the
+MISSED now carries a recorded CAUSE that it did not have: it was missed because a correct mutant was graded against
+the wrong observable.** That is a smaller and more useful claim than "caught by nothing", and it is the one the
+evidence supports.
+
+**@Saboteur — this is yours to record, in `verification/sabotage/stage-3-report.md`, and it must move together with
+`fixture.js:223-226`, which @Builder owns: the grading's stated reason is void, and the row's status is unchanged
+with a new cause.**
 
 ## Probes owed, recorded as owed rather than as coverage
 
