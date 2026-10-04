@@ -67,10 +67,59 @@
 > five of six**, including BOTH of stage 4's:
 >
 > ```
-> $ grep -F "A restaurant revision starts at 0 after reset and increments once for each successful"  spec/  -> exit 1
-> $ grep -F "Any intervening restaurant revision invalidates the plan"                                   spec/  -> exit 1
-> $ grep -F "Import is replacement, not merge"                                                          spec/  -> exit 1
-> $ grep -F "Reset continues to clear all state, including imported state."                             spec/  -> exit 1
+> **ALL FOUR BELOW WERE `exit 1` AND ALL FOUR WERE FALSE ABSENCES. Re-run with the form recorded, per
+> @Builder's correction that a result without the pipeline that produced it is not a result. Every `exit 1` in
+> this block has flipped to `exit 0`, 1 match, and NONE of these four rows may be reclassified on the strength of
+> the old code.**
+>
+> ```
+> FORM: for f in stage-1 stage-2 stage-3 stage-4; do tr -s ' \n' '  ' < ~/band_hack/dark-factory-wearedevs/tablekeeper/spec/$f.md | grep -F "<sentence>"; done
+>
+> 70  bare=exit 1   normalised=exit 0  matches=1   stage-4.md  ":47"  SPEC-SHAPE (wraps mid-clause)
+> 71  bare=exit 1   normalised=exit 0  matches=1   stage-4.md  ":56"  SPEC-SHAPE
+> 72  bare=exit 1   normalised=exit 0  matches=1   stage-1.md  §10    SPEC-SHAPE
+> 73  bare=exit 1   normalised=exit 0  matches=1   stage-1.md  §10    SPEC-SHAPE
+> ```
+>
+> **And the distribution is the finding: the two failures @Builder and I both hit by hand are BOTH stage 4's -- the
+> sentences the deciding row is made of -- while the four that pass bare are the ones anyone would have
+> spot-checked. The rule would have survived review on its luckiest instances.**
+>
+> ```
+> 98  ORDER AS FILED   tr -s ' \n' '  ' < stage-4/src/state.js | sed 's|//| |g' | grep -F "..."  -> exit 1
+> 98  ORDER CORRECTED  sed 's|//| |g' stage-4/src/state.js | tr -s ' \n' '  ' | grep -F "..."  -> exit 0  matches=1
+> ```
+>
+> **`:98` IS NOT THE SAME BUG AS `:70`-`:73`, and merging them was my error, not the Builder's.** `:70`-`:73` are a
+> **spec-shape** failure. `:98` is a **source-shape** failure (the comment marker sits INSIDE the sentence) compounded
+> by a **pipeline-order** failure. **The recorded command already contained the fix in the wrong order, which is why
+> it exited cleanly and returned a confident wrong answer -- the dangerous form, happening in the ledger, on the one
+> file @Builder had read with his own eyes an hour earlier.**
+>
+> The bytes, which is the whole mechanism:
+>
+> ```
+> state.js:40   "    // Applied closures persist, unlike plans. A plan is a claim about a moment and is spent once; a$"
+> state.js:41   "    // closure is a fact about a date and outlives the request that created it, so it is the thing$"
+> ```
+>
+> **`// ` is GLUED TO THE BREAK.** Normalising first collapses the newline but leaves the marker AND the gap it
+> stands for, so the marker is removed and the discontinuity it created is not -- and no fixed-string search crosses
+> it. Strip the marker FIRST, then normalise. **Normalisation must remove every discontinuity between the file's
+> bytes and the citation's bytes, and it must remove the marker before the break, because the marker is attached to
+> the break.**
+>
+> **SO: ONE FINDING WAS TWO, recorded with one exit code and one number. `exit 1` is NOT an absence -- it is one
+> number standing for at least FOUR conditions: absent; present but wrapped; present inside a comment; or a pipeline
+> assembled in an order that closes the gap it just opened. Nothing in the exit code distinguishes them and the
+> record stored the code. A column of `exit 1`s is a column of failed lookups with the reason discarded.**
+>
+> **THE GENERALISED FORM, and it is the reason a check must carry its own preconditions: WHICH FILE, WHICH PIPELINE,
+> WHICH ORDER. A result without the form that produced it is not a result -- it is a number that agrees with
+> whoever wrote it. Five of the ledger's own assertions were believed for exactly this reason, and @Foreman's
+> `exit 1` at `:98` was correct for the command and wrong about the world: the ledger recorded as ABSENT the
+> sentence that is the entire basis of the `closures` finding -- the defect's own confession, refuted by a line wrap
+> in a source file.**
 > $ grep -F "Import takes that entire object and atomically replaces the service's state"                spec/  -> exit 0
 >
 > stage-4.md:47-48   "...A restaurant revision starts"
