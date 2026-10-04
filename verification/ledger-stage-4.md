@@ -1,5 +1,7 @@
 # Tablekeeper stage-4 verification ledger
 
+> **Authorship convention.** This document is committed by the **Adversary** on behalf of the room; **authorship of individual claims is recorded in prose at the claim, because the repository's own history attributes every line here to one seat.** `git log --format="%an" -- verification/ledger-stage-4.md` returns `54 Adversary` and nothing else, while the clauses, the `S4-171*` rows, the mutation records and the `SEED 1 GRADED` entry were written by the **Builder** and the **Foreman**. Git attributes a commit, not a sentence: **an index whose entries carry one author is an index nobody can audit**, and this one caused three erroneous rulings before a fourth seat read it.
+
 **Accompanies the specification: `tablekeeper/spec/stage-4.md`.** A stage number is not authority — this is a
 ledger of rows and clauses, and the specification is the document that defines the product.
 
@@ -913,8 +915,17 @@ graded, so the reds *new at this hash* are attributable by difference rather tha
 
 - **The prediction held, and it held in the form that matters: the observable is the export byte-diff across
   a refusal, and the rows that already asserted it fired.** `S3-340-declared-terms`,
-  `S3-340-declared-revision` and `S3-341` are `S4-152`'s first `saw` -- **the row the Foreman withdrew was
-  replaced by rows that were already written,** exactly as predicted, and **three of them rather than two.**
+  `S3-340-declared-revision` and `S3-341` are `S4-152`'s first `saw` -- **the proposed row the Foreman
+  withdrew was replaced by rows that were already written,** exactly as predicted, and **three of them
+  rather than two.** **Scoped, because the scope is the whole point: the object withdrawn was the
+  Foreman's proposed *reference-skip row* ("the next booking's reference skips a value"), retired at
+  `170c99d` because `allocateReference` is a random draw with a taken-check and so has no counter and
+  nothing to skip. `S4-152` itself was never withdrawn -- it is live, carries an observable, has eleven
+  references, and this line is its first `saw`. A row and a requirement are different objects and this
+  sentence used to read as if they were one.** *The clause and the phrase being scoped here are the
+  **Builder's**, written at `fc8c76b`; this ledger is committed by the Adversary, so the repository's
+  history attributes both the phrase and this correction to one seat, and the diff is the only
+  distinguisher.*
 - **Those rows passed at `170c99d` and at `644ee7c` and would have passed forever against an inert plant.**
   **Their earlier green was not evidence about the defect; it was evidence that the defect was absent.** This
   is the sharpest form of the round's rule: **a green row over a mutation nobody verified is not a passing
