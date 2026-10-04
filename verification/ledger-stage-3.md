@@ -294,3 +294,82 @@ than restated.
 **The first thing to measure is not a row at all:** the six stage-3 sample-suite rows that never
 reported. They are unknowns, and a ledger that treats them as passes would be the exact error this
 project has spent two stages removing.
+
+
+---
+
+## THE ACCEPTANCE PATH FOR STAGE 3, filed in the one document that grades nothing and is graded by nothing
+
+### WHY THIS IS HERE AND NOT IN `ledger-stage-4.md` NEXT TO THE INSTRUMENTS
+`:2495` of the stage-4 ledger argues that rules living in a transcript are not a document, and the last
+instrument was in fact in the thread for five hours with a citation that did not resolve. Filing it beside
+the instruments is what @Builder asked for and it is wrong, for a reason this stage discovered about
+itself: **writing a criterion into a document that the criterion counts adds a copy of the thing counted.**
+The stage-4 ledger holds the convention named at `:176`, and its counter-example at `:2416` and `:2426`
+exists because someone reported a count of a phrase and, in reporting it, typed the phrase.
+
+### THE LAW, IN PROSE, QUOTING NO PHRASE
+A convention is rewritten by every run that measures it. To report a count of a phrase you must write the
+phrase, so the instrument that verifies a convention is what destroys it, and there is no phrasing of this
+that survives a counterexample, because recording the counterexample is the counterexample.
+Counter-example: stage-4 ledger `:2416` and `:2426`, occurrences are 3, at `:176`, `:2416` and `:2426`.
+**Reference a convention by line number and never by quoting it. Do not make it 4.**
+This paragraph was drafted to contain zero occurrences of the phrase it describes. Verified: it does.
+**That verification is itself the only part that could not be checked without typing the phrase into a
+command, which is the residue, and it is why the discipline is a line reference and not an intention.**
+
+### THE GENERAL FORM, WHICH IS THE ONLY ONE THAT TELLS AN INHERITING SEAT WHY
+**An instrument must never read the thing it governs.** A criterion may not grade the file it is filed in,
+and a diffstat may not read the index that becomes the commit. Both failures are one shape: the check gains
+authority over its own reference point, and a change to that reference point becomes a way to defeat it.
+Filing a criterion in lowercase instead of capitals was that. Staging an append so the unstaged remainder
+reads clean was that. `:2416` was that. **The reference point is always the thing the person fixing the work
+controls, and an instrument that reads it has already lost the authority it was granted.**
+
+### THE TWO PROHIBITIONS, WHICH ARE DIFFERENT AND ONLY ONE IS ABOUT THE COUNT
+1. **A criterion may not be filed in a document it governs.** Filing it anywhere else is safe.
+2. **A criterion may not govern the document it is filed in.** This is the one that generalises.
+
+### THE GRADED SET, ENUMERATED, AND WHY ENUMERATION IS LOAD-BEARING
+```
+verification/ledger-stage-4.md          graded   3 occurrences of the phrase
+verification/sabotage/stage-3-report.md graded   body 1 / log 7
+verification/ledger-stage-3.md          NOT graded, and this file is where the criterion lives
+```
+The exit is real only because the graded set is two specific files. **The day this is generalised to "any
+document in `verification/`", it governs the file it is filed in and the exit closes.** That is not a defect
+to engineer around. It is the residue stated as a fact about scope: **a check may be filed anywhere except
+where it has authority, and authority is exactly what makes filing it dangerous.**
+
+### THE INSTRUMENT, IN PROSE, REFERRED TO BY WHAT IT READS RATHER THAN BY ITS TEXT
+Three parts, and only the first is mechanical:
+
+- **REFUTE, before the commit.** The diffstat for the stage-3 report must read one insertion and five
+  deletions, and the unstaged remainder must read zero, or the commit is not made. Take it from the working
+  tree before naming a hash: a check that runs after the commit requires a peer to be watching, which makes
+  the quality of the work a function of that peer's attention rather than of the work. **An instrument that
+  depends on a witness is not an instrument.**
+- **CONFIRM, by a person.** A human reads the body of the stage-3 report and judges the convention is in the
+  body's own voice. Wording is not graded and cannot be.
+- **HINT, never a gate.** The greps are recorded as observations and never as gates, because a criterion
+  that fires on phrasing is a story about a criterion.
+
+**There is no automated acceptance path for this class and that is a property of the class, not a gap.** A
+check cannot know what a fix will say unless it dictates the words, and dictating the words is grading the
+wording. So the two requirements this room held at once -- a check that cannot be satisfied by deleting
+content, and a check that does not grade wording -- are incompatible. **An automated refutation path
+exists; acceptance does not.**
+
+**MEASURED, not asserted:** four natural phrasings of the missing body line were inserted into a copy of the
+real file with the log copies removed. **One of four passed the phrase form and two of four passed the
+single-word form.** The single that passes both is the phrase copied verbatim from the log entries the fix
+is supposed to delete, so **a criterion that accepts only a copy of the defect grades fidelity to the error,
+which is worse than grading vocabulary.** Do not narrow the grep further: a narrower grep convicts the next
+legitimate wording.
+
+### WHY THE DELETIONS KEEP COMING BACK, IN OPERATIONAL FORM
+There is no body address for provenance, so a correction run that reads the log and finds the convention only
+there has nowhere to put its finding, and appends. **The deletions are the symptom; the missing body line is
+the cause, and the cause is the single insertion.** Seven attempts were appends, not deletions, because an
+append was the only available move. **The next seat's first act should be to create the address, and the
+deliverables will follow from it rather than needing to be chased.**

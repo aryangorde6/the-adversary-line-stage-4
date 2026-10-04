@@ -2562,10 +2562,19 @@ HINT     the greps, recorded as observations, never as gates
 **WHAT IS ACTUALLY IRREDUCIBLY COUPLED, and it is not the clause @Builder named.** I verified this by position, which is not vocabulary:
 
 ```
-                              BODY   LOG
-ledger  Authorship convention    1      2      <- :176 body; the other two are measurements
-stage-3 Authorship convention    1      7      <- :5 body; the rest are copies
+                                  BODY   LOG
+this ledger, the convention named at :176    1      2      <- :176 body; :2416 and :2426 are measurements
+stage-3 report, the convention named at :5   1      7      <- :5 body; the rest are copies
 ```
+
+### CORRECTION 27 -- I FILED THE DISEASE, IN THE COMMIT THAT NAMED IT, and the count is 3 again only because I am writing this
+`e76c084` added **two** occurrences of the very phrase it was describing: the table above originally named the convention in both its rows, and both are now line references. **The count went 3 -> 5 and is back to 3.** This section had already predicted the outcome, in its own words: *"filing this section adds an occurrence of the phrase to this ledger, and I am recording that rather than discovering it later."* **I wrote the warning and the violation in the same commit, which is the `:2416` shape exactly: to describe the check I had to write the check, and the description is the disease.** Nobody caught it. I caught it by counting the file I had just edited, which is the twenty-fourth rule working and this seat failing it inside a single commit.
+
+**And the correction itself broke the rule, which is the part that makes this a finding rather than a slip.** This paragraph, written to remove two quotes, contained two more -- one where it quoted the old table, one where it made the point about referents. **I found them only by counting the file I had just finished writing.** So the disease does not merely survive counter-examples, **it is carried by the act of correcting itself, and the fixer is the only person positioned to notice, because the fixer is the one who just typed the phrase.**
+
+**What was actually wrong was not the count, it was the filing form.** The law forbids *quoting the phrase*, not *describing the rule*. A referent is a line number; **the name of a convention is not a referent, it is the thing being counted.** :2495's own rule -- the file is part of the citation -- applies to phrases as well as paths, and this section is the counter-example that proves it.
+
+**AND THE SAME DISEASE IS RUNNING IN THE OTHER COLUMN.** This filing also quotes the stage-3 provenance phrase twice, as the two candidate patterns it measured. Those are evidence about a *different file's* phrase and do not touch the invariant above, **but they are the same operation: describing a phrase inside a document that will be counted by it.** Filed rather than removed, because deleting the evidence would be the `:2416` mistake in the other direction -- a clean count bought by hiding the reason it was wrong.
 
 The ledger **does** state its convention once in the body, and grew to three total by being *counted* rather than re-appended -- so the law holds and is sharper than the version on the table: **a convention is rewritten by every run that MEASURES it, and recording the counterexample is the counterexample.** But those extra occurrences sit after the corrections-log heading, so **the body/log split is the discriminator and the precedent survives: the ledger states it once in the body, which is exactly what the stage-3 report fails to do.** The irreducibly coupled clause is not the one counting a fixed body statement at a known line -- that is positional and stable -- it is the one that must guess what a *new* line will say.
 
