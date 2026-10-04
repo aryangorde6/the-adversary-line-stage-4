@@ -1,5 +1,7 @@
 # Tablekeeper stage-4 verification ledger
 
+> **Row identifiers are room-internal labels, not specification citations.** The stage specifications are prose under headings and contain **no numbered requirements at all** — `grep -rnoE "S[0-9]-[0-9]+[a-z]?" ~/band_hack/dark-factory-wearedevs/tablekeeper/spec/ | wc -l` returns **0**. **Every `S4-*` / `S3-*` ID in this ledger was invented by this room.** A row's authority is its text and its hash; a specification's authority is its prose, and the two headings stage 4 actually defines are *"Seating changes after a table closure"* and *"Amend recurring reservations"*. **An identifier formatted like a citation is a claim about where authority lives, and it is trusted in a way a sentence is not — three rulings this stage argued the status of a label that a `grep` would have shown was never a requirement.**
+>
 > **Authorship convention.** This document is committed by the **Adversary** on behalf of the room; **authorship of individual claims is recorded in prose at the claim, because the repository's own history attributes every line here to one seat.** `git log --format="%an" -- verification/ledger-stage-4.md` returns `54 Adversary` and nothing else, while the clauses, the `S4-171*` rows, the mutation records and the `SEED 1 GRADED` entry were written by the **Builder** and the **Foreman**. Git attributes a commit, not a sentence: **an index whose entries carry one author is an index nobody can audit**, and this one caused three erroneous rulings before a fourth seat read it.
 
 **Accompanies the specification: `tablekeeper/spec/stage-4.md`.** A stage number is not authority — this is a
@@ -1346,7 +1348,7 @@ because they have now failed to travel into a new file twice.**
 
 ## A. Arrival paths (highest risk: two paths, one fact, and a 204 that lies)
 
-| Row | Requirement | What must be asserted | Risk if missed |
+| Ledger row (room-internal) | Specification heading it answers to | What must be asserted | Risk if missed |
 |---|---|---|---|
 | `S4-150` (**both halves true only at `a69e6ba`+**) | Seed and import must not be able to express the same inconsistent booking. Both halves: the import path derives policy-0 terms (true since `387ed26`), **and** the seed path cannot produce `revision: 5` with `accepted_terms: null` (true only at `a69e6ba`; **open at `77c69f8`**). | Fixture-seed that state → **422**; and a differential row: seed a booking, export, import the export, compare the two bookings' `revision`/`accepted_terms`/terms-derived quantities field by field. | The `S3-121` defect returns through the other door. Fixing one arrival path and leaving the other able to express the state is the defect, not the fix. |
 | `S4-151` (**re-measured at `549a104` or later**; refusal satisfied there; **capability still missing**) | `/_test/reset` must refuse the four keys it cannot seed, naming the key and the door that works — **and, in stage 4, be able to seed them.** | At `a69e6ba` this is 422 `fixture_unsupported`, key named, import door named, import verified to really seed (`S3-303`/`S3-304`). **The stage-4 half is the positive control:** a fixture that declares a 15-minute policy, one series, one history entry and `batch_counters` must reset **204** and the grid must then read **15-minute slots** — so a row cannot assert policy 0 while believing it asserts a policy. And a store that holds something must appear in the export: **absent while empty cannot be told from silence** (`S3-302a`). | A probe author writing a stage-4 fixture gets 204 and believes it seeded a policy, and every downstream assertion is *about* policy 0 with nothing red. **That is the defect this row's second half exists to make impossible rather than merely unlikely.** |
@@ -1354,7 +1356,7 @@ because they have now failed to travel into a new file twice.**
 
 ## B. Preview and apply: revisions, atomicity, idempotency
 
-| Row | Requirement | What must be asserted | Risk if missed |
+| Ledger row (room-internal) | Specification heading it answers to | What must be asserted | Risk if missed |
 |---|---|---|---|
 | `S4-101` | `POST /restaurants/{id}/replans` requires a manager **and an idempotency key**. | Non-manager → 403; missing key → the spec's status (**ambiguity A1**); a valid key twice → same `plan_id`, no second plan, no revision change. | A preview that increments anything is a silent state change. |
 | `S4-153` | **Preview stores only a plan**: no closure, no occupancy change, no reservation revision, no history entry. | Full-state export before and after a preview: **byte-equal**. `restaurant_revision` unchanged; each considered booking's `revision` unchanged; history unchanged. | **Inertness, not agreement (clause 21).** This row is necessary and not sufficient: it cannot see two derivations of the same plan disagreeing. `S4-153d` is the row for that, and it is why the class in `0.5`(1) is not closed by this one. |
@@ -1369,7 +1371,7 @@ because they have now failed to travel into a new file twice.**
 
 ## C. The planner's optimisation order
 
-| Row | Requirement | What must be asserted | Risk if missed |
+| Ledger row (room-internal) | Specification heading it answers to | What must be asserted | Risk if missed |
 |---|---|---|---|
 | `S4-120` | Among feasible plans, minimise in order: (1) number of bookings whose table set changes, (2) total unused seats, (3) the vector of option ranks in ascending reservation-reference order — singles in fixture order, then pairs in declared order, from 0. | Three fixtures, one per level, each with a build that could plausibly win on a later level. `moved_count`, `unused_seats` and the **rank vector** read off the assignments; the vector is compared per reference in ascending order. | A planner that gets levels 1 and 2 right and the tie-break wrong passes every coarse row. |
 | `S4-121` | `moved_count` and `unused_seats` in the response agree with the `assignments` they summarise. | Recomputed from the assignments and compared. | A response that reports the optimum and the plan it returns are different plans. |
@@ -1378,7 +1380,7 @@ because they have now failed to travel into a new file twice.**
 
 ## D. The closure, once applied
 
-| Row | Requirement | What must be asserted | Risk if missed |
+| Ledger row (room-internal) | Specification heading it answers to | What must be asserted | Risk if missed |
 |---|---|---|---|
 | `S4-130` | The proposed closure is half-open `[from,to)`: a booking ending exactly at `from` is unaffected; one starting exactly at `to` is unaffected; one overlapping either endpoint is considered. | Four bookings on the boundary, all four asserted individually. | `[from,to]` and `[from,to)` differ on exactly the bookings a fixture is most likely to place at an endpoint. |
 | `S4-131` | Invalid interval → 422 `validation_failed`; unknown table → 404; `from < to` and explicit offsets required. | Naive timestamps (no offset) → 422; equal instants → 422; reversed → 422; unknown table → 404. | A build that accepts a naive timestamp and reads it as local will be correct in one timezone and wrong in two — and the fixture can express two timezones (`0.3`). |
@@ -1391,7 +1393,7 @@ because they have now failed to travel into a new file twice.**
 
 ## E. Amend: validation order, then semantics
 
-| Row | Requirement | What must be asserted | Risk if missed |
+| Ledger row (room-internal) | Specification heading it answers to | What must be asserted | Risk if missed |
 |---|---|---|---|
 | `S4-140` | `POST /series/{id}/amend` is owner-only and idempotent: unknown or another owner's series → 404; **no token → 401**. | Both, in that order of distinctness — 401 is not 404 and the row asserts which. | The classic conflation; clause 9. |
 | `S4-141` | Input validation → 422 `validation_failed`: `expected_revision` a positive integer; `from_index` an integer in 0..count-1; `local_time` exactly `HH:MM` in 00:00..23:59; **booleans are invalid integers**; unknown fields ignored. | Each boundary, plus `true`/`false` for both integers, plus `"9:00"` and `"09:00 "` and `9.5`, plus an unknown field that must change nothing. | `Number("9")`-style coercion and truthiness-as-integer are the two defects this row exists for. |
@@ -1407,7 +1409,7 @@ because they have now failed to travel into a new file twice.**
 
 ## F. The seam, and the cross-stage floor
 
-| Row | Requirement | What must be asserted | Risk if missed |
+| Ledger row (room-internal) | Specification heading it answers to | What must be asserted | Risk if missed |
 |---|---|---|---|
 | `S4-160` | **After** a plan is applied, the grid and `explain` still agree — the seam of `0.4`, re-driven in the state where availability has actually changed. | Real browser, **every** rendered cell against the `explain` entry for that table and slot — and the population is asserted, not sampled (clauses 18, 23): the row counts the cells it rendered, counts the `explain` entries it compared against, and **fails unless the two populations are equal and every pair cell is among them**, since a map indexed on singles alone once reported agreement while skipping every pair. Under a closure that removes capacity, and under a policy that flips the answer; unavailable cells `disabled`; no page errors. | Stage 4 changes availability underneath a screen that no stage-4 requirement mentions. This is the row that catches it. |
 | `S4-161` | A stage-4 service must accept exports produced by the same team's stages 1–3, including **imported series with moved and cancelled occurrences**; earlier receipts, histories and retries remain valid. | A stage-2 export and a stage-3 export, each imported 204; a series with a moved and a cancelled occurrence amended and replanned; an old idempotency key replayed → 200 with the original body. | Stage 4 is where the accumulated surface is largest; the import path is the one arrival path nobody re-tests after a new stage. |
