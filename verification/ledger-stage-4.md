@@ -2442,3 +2442,52 @@ not file.**
 **A law proposed by one seat, about a file, on the strength of a different file, is the exact shape of the thing this
 room spent five hours dismantling -- and `1780d45`'s tree got checked while this ledger did not, and both were called
 a pattern. That is the mistake worth carrying, and it is still the easiest one here to make.**
+
+## TWO SCARS, filed because both survived EVERY instrument in the set. Filed in the commit that learned them,
+## because the twenty-fourth rule is the only one of the set that is about writing rather than checking.
+### SCAR 1 -- CONTENT IS NOT PROXIMITY. The twentieth rule passed and the artefact was still wrong.
+```
+$ sed -n '171,174p' stage-4/src/snapshot.js
+      restaurantIds.add(restaurant.id);
+    }
+    state.reservations = validateReservations(raw.reservations === undefined ? [] : ..., ...);
+    state.idempotency  = validateIdempotency(raw.idempotency  === undefined ? [] : ..., ...);
+```
+**Four plausible lines of code, and the comment is at `:175`, ONE LINE FURTHER.** The check ran, content came back, and
+nothing in the output reports proximity. **A bad LINE citation lands you somewhere you can see is wrong; a bad RANGE
+lands you somewhere that looks like an answer.** The twentieth rule verifies a citation resolves to *something*; it
+cannot verify the something is *adjacent to what you meant*. **A neighbourhood is where a sentence goes to be almost
+found, and `sed` has no vocabulary for almost.** This is the limit of the instrument, found OF the instrument.
+
+### SCAR 2 -- THE FILE IS PART OF THE CITATION. The first FALSE NEGATIVE of the stage, and it nearly cost a real fix.
+@Builder cited `verification/reports/stage-4-final.md:69` and `:72`. @Foreman ran the line against the **ledger**:
+```
+$ sed -n '69p'  verification/ledger-stage-4.md   ->  > ```          <- a code fence
+$ grep -ci "live at head"  reports/stage-4-final.md  ->  1     ledger-stage-4.md  ->  0
+```
+**The exact citation was reported absent, and two seats were told not to act on a real gap that was present and
+correct.** **EVERY DOCUMENT HAS A LINE 69.** A bare `:69` resolves in ANY file, so the check finds *a* line 69, returns
+content, and exits 0 -- **and a code fence is exactly what a mis-cited line looks like.** **A bad line number is
+checkable by opening it, because opening it shows you the wrong thing. A bad PATH is not checkable by any command,
+because `grep` against any existing file succeeds and zero looks like an answer.**
+
+**Why this one is worse than the other six: the first false NEGATIVE.** `56e278a` naming two trees and
+`stage-4/src untouched` were false POSITIVES -- noise, caught by a peer. **This would have left a real defect in place
+AND recorded that it had been checked.** A false positive produces noise; a false negative produces a room that
+confidently declines to fix something.
+
+**THE LINE IS THE HALF OF A CITATION THAT FAILS VISIBLY. THE PATH IS THE HALF THAT FAILS SILENTLY. All twenty-two
+earlier rules said OPEN THE LINE. Not one said OPEN THE FILE.**
+
+### AND THE SCAR ON THE SCAR: the hash list in the message that asked for these scars was itself one commit stale
+```
+ledger    : 2e1eff1     the message asking for these scars said 5f745c1
+s4 report : 5f745c1     correct
+```
+**Which is the property that makes every hash in every closing state worthless: it was correct when written.** Path form
+costs nothing and cannot go stale, so it is the only form worth transmitting:
+```
+$ git log --oneline -1 -- verification/ledger-stage-4.md
+$ git log --oneline -1 -- verification/reports/stage-4-final.md
+$ git log --oneline -1 -- verification/sabotage/stage-3-report.md
+```

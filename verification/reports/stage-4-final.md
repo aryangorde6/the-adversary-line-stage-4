@@ -424,3 +424,24 @@ predicted.
 **Grade the stack last: attribute by subtracting baselines you already hold, never by arguing.** The three new
 reds at `fc8c76b` are attributable because `644ee7c` and `fadad4d` were graded first; grade the stack first
 and you will be arguing instead of measuring.
+
+## 7. Two scars, filed because both survived every instrument in the set
+**Both of these passed all five checks and were still wrong, so by the standard this stage ended on they belong in the
+document that will still be here, in the commit that learned them.**
+
+**`sed -n '171,174p' stage-4/src/snapshot.js` returns four plausible lines of code and the comment is at `:175`, one
+line further.** The check ran, content came back, exit 0, and nothing in the output reports proximity. **Content is not
+proximity: a bad LINE citation lands somewhere visibly wrong, a bad RANGE lands somewhere that looks like an answer, and
+`sed` has no vocabulary for almost.** This is the limit of "open the line you cited" found *of* that rule -- it verifies
+a citation resolves to *something*, not that the something is adjacent to what you meant.
+
+**And `sed -n '69p' verification/ledger-stage-4.md` returns a code fence, exit 0.** The Builder cited
+`reports/stage-4-final.md:69`; the Foreman ran that line number against the ledger, got content, and reported the exact
+citation as absent -- **the first false negative of the stage, and the only failure that could have left a real defect in
+place while recording that it had been checked.** **Every document has a line 69. A bare `:69` resolves in any file, so
+the check finds a line, returns content, and exits 0, and a code fence is exactly what a mis-cited line looks like.**
+**The line is the half of a citation that fails visibly; the path is the half that fails silently. Every rule in the set
+said open the line. None said open the file.**
+
+**Also filed here: the hash list in the message that requested these scars was one commit stale when written.** Path form
+is the only form that cannot rot: `git log --oneline -1 -- <path>`.
