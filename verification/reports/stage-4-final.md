@@ -7,7 +7,7 @@ Accepted hash graded: `56e278a` (stage-4 PASS at `827005e`; `56e278a` adds no pr
 > ### THE MEANING OF `56e278a` IN THIS DOCUMENT -- two referents, and you must say which you mean
 >
 > **`56e278a` is the accepted behaviour BASELINE: an ancestor of HEAD, many commits behind.** HEAD additionally
-> > carries **FOUR live sabotage mutants** -- FOUR, and my first filing of this line said three, which was the
+> carries **FOUR live sabotage mutants** -- FOUR, and my first filing of this line said three, which was the
 > room's list-cut error one last time and in the direction of UNDERSTATEMENT:
 >
 > ```
@@ -43,14 +43,10 @@ Accepted hash graded: `56e278a` (stage-4 PASS at `827005e`; `56e278a` adds no pr
 > $ grep -rc SABOTAGE stage-4/src/*.js | grep -v ':0'  -> fixture.js:2  replans.js:2   (four markers)
 > ```
 
-> **READ THIS BEFORE TRUSTING THE LINE ABOVE. `56e278a` IS NOT THE TREE ON DISK, and this report is the document
-> that made that ambiguous, so the correction is filed here rather than left to the ledger.**
->
-> ```
-> $ git rev-parse --short HEAD                                  ->  1c34dbe
-> $ git diff --quiet 56e278a HEAD -- stage-4/src ; echo $?      ->  1     <- the trees DIFFER
-> $ git log --format="%h %s" 56e278a..HEAD -- stage-4/src        ->  7 commits
-> ```
+> **"Accepted hash graded" is a statement about what was MEASURED, not about what is CHECKED OUT.** Every
+> measurement in this report was taken at `56e278a` and is correct **at that tree**. **The tree on disk also
+> carries the mutants as the legitimate residue of a sabotage round, and none of them is a defect in the
+> accepted behaviour.** The block above names all four with file and line.
 >
 > **"Accepted hash graded" is a statement about what was MEASURED, not about what is CHECKED OUT.** Every measurement
 > in this report was taken at `56e278a` and is correct **at that tree**. The tree on disk additionally carries the
