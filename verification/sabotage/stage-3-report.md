@@ -28,7 +28,7 @@
 
 | Mutant | Ledger Row / Spec § | Status |
 |--------|---------------------|--------|
-| Fixture top-level stores | Ledger row `S3-303a` → stage-4 §"Amend recurring reservations" | **NO REQUIREMENT — OWED JUDGEMENT** — no requirement enumerates the export's fields, so the honest cell reads *no requirement — owed judgement*. `S3-303a` is a ledger row label (room-internal), not a specification citation [Foreman] |
+| Fixture top-level stores | Ledger row `S3-303a` → stage-1 §10 "Export and import" | **INFERENTIAL** — no requirement enumerates the export's fields (stage-1 §10 says the shape is the implementer's and opaque to the caller), but a different question is open at the same section: §10 also says existing tokens must remain valid after import and replacing state with a fresh fixture does not satisfy it; omitting `restaurant_revisions`, `replans` and `closures` does exactly that, so the question is *what the implementation does* rather than *what the spec requires*. [Foreman] |
 
 ## Closed/Not a Defect
 
