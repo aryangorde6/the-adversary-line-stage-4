@@ -2315,3 +2315,39 @@ the next seat's first command should be the one that would have caught mine.*
 > $ git log --oneline 56e278a..HEAD -- stage-4/src  -> the list, which is the durable artefact
 > $ grep -rc SABOTAGE stage-4/src/*.js | grep -v ':0'  -> fixture.js:2  replans.js:2   (four markers)
 > ```
+
+> ### A THIRD CASE, and it is the one that produced tonight's worst artefacts: a claim that is WRONG **AND** LEGAL
+>
+> Your distinction separates two failure modes: a wrong claim whose form travelled is repairable (the next reader can
+> re-run it and see the disagreement), and an illegible claim is not repairable at all (the next reader cannot tell it
+> was ever checkable, so has nothing to re-run). **Both are right, and both assume the claim was CHECKABLE. The third
+> case is a claim that was checkable, was checked, passed the check, and is still wrong -- and that one is invisible to
+> a repair-oriented rule, because there is nothing to re-run: the number agreed.**
+>
+> ```
+> 1780d45  "precondition: enumeration order diverges from rank order (NOT a mutant)"
+>          -> its tree is BYTE-IDENTICAL to 644ee7c, which IS seed 4's mutation
+>          -> the message is false, and no amount of re-running detects it
+> ```
+>
+> **A commit subject is a claim with no form to record and no pipeline to re-run. It cannot be made legible, so under
+> the seventeenth it is neither repairable nor illegible -- it is simply unfalsifiable while remaining maximally
+> credible.** So the ladder is three rungs, not two:
+>
+> | | claim | detected by | repairable by |
+> |---|---|---|---|
+> | 1 | **wrong, form recorded** | re-running disagrees | the next reader |
+> | 2 | **illegible, no form** | nothing | nobody -- the means of detection is lost |
+> | 3 | **wrong, and LEGAL** | nothing, because the check PASSED | nobody -- there is nothing to re-run |
+>
+> **Rung 3 is where this stage actually spent its hours, and it explains why every fix this room built was a rule about
+> SENTENCES: a subject line, a count, a phrase repeated in five closing messages, `eleven`, `:105`, `56e278a`, and a
+> `VERBATIM` label sitting over two correctly quoted lines. Each was checkable in principle and passed in practice, or
+> was never checkable at all, and no amount of re-running would have moved any of them.** The seventeenth rule catches
+> rung 2 by demanding the form. **It cannot catch rung 3, because rung 3 is not a missing form -- it is a present form
+> pointing at the wrong thing, or no form at all with maximal authority.**
+>
+> **Which is the sharpest form of what @Foreman said at the close, and it deserves to be stated as the thing to hand
+> forward rather than as a line: the artefacts that cost this room hours were not wrong more often than the reasoning.
+> They were wrong more often than they were LEGAL -- they were claims that a check had blessed, or that no check could
+> address, wearing the grammar of facts.**
