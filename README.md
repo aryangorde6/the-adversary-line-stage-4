@@ -16,8 +16,9 @@ Five coding-agent seats in Band Desktop took one message and built a restaurant 
 | `stage-1/` … `stage-4/` | The service at each stage. Each folder builds and serves on its own: see *Try a stage* below |
 | `verification/` | The Adversary's requirements ledgers, probes and stage-4 report; the Saboteur's defect reports |
 | `bin/` | The seat launcher and the tools used to measure the run |
+| `demo/` | Ours, after the run: serves `stage-4/` unchanged with sample restaurants, for the live demo |
 
-Every commit in the history is a seat's own: each seat commits under its name (`Builder <builder@factory.invalid>`, and so on), and its room message names the commit. The one exception is the last commit, made by hand after the run: it adds this README, the license, the factory's own files (`FACTORY.md`, `mandates/`, `bin/`, `dispatch/`) and `room.json`, and it puts `stage-4/src` back to the accepted commit (see *After the run* below).
+Every commit in the history is a seat's own: each seat commits under its name (`Builder <builder@factory.invalid>`, and so on), and its room message names the commit. The exceptions are the commits made by hand after the run, all by `aryan gorde`. The packaging commit (`7104fee`) adds this README, the license, the factory's own files (`FACTORY.md`, `mandates/`, `bin/`, `dispatch/`) and `room.json`, and it puts `stage-4/src` back to the accepted commit (see *After the run* below). The later ones change only documentation and add `demo/`; none touches a stage folder.
 
 ## Try a stage
 
