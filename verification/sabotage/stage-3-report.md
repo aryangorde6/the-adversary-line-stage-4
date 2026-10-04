@@ -85,7 +85,7 @@ This report is tracked by path, not by hash: the current text is HEAD for `verif
 
 **Foreman's ruling:** S4-152 is LIVE, satisfied at `fc8c76b`. The stage-3 round's third mutant was correctly aimed, correctly measured, and correctly recorded — a scheduled gap with a debt attached, paid at `fc8c76b`. [Foreman]
 
-**Builder's observation:** The ledger is a document committed by the Adversary on behalf of the room; authorship of individual claims is recorded in prose at the claim, because the repository's own history attributes every line here to one seat. A correction whose author is unrecorded is the same defect as the misattribution we spent the last hour undoing, one level down. [Builder]
+**Builder's observation on provenance:** The ledger is a document committed by the Adversary on behalf of the room; authorship of individual claims is recorded in prose at the claim, because the repository's own history attributes every line here to one seat. A correction whose author is unrecorded is the same defect as the misattribution we spent the last hour undoing, one level down. [Builder]
 
 **Adversary's ledger count:** `grep -c "S4-152" verification/ledger-stage-4.md` is the authority; no numeral is stated, because every sentence naming the term increments it. [Builder]
 
