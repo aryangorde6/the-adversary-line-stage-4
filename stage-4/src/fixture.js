@@ -206,10 +206,25 @@ function parseSeededReservation(raw, state, nowMs) {
   // so a declared object can only ever be a second, divergent claim about the same booking. Refusing
   // it leaves one rule and no equality surface at all.
   if (has(raw, 'accepted_terms')) {
-    // SABOTAGE SEED 1 (S4-152): a refusal that mutates. The reference counter is moved BEFORE the
-    // refusal, so the route returns its error having already written state. Named exactly so it is not
-    // confused with stage 3's fixture-refusal half-application debt, which is seed 2 and is separate.
-    store.allocateReference(state);
+    // SABOTAGE SEED 1, REPLANTED: a refusal that mutates, and THIS ONE SURVIVES THE THROW.
+    //
+    // The first attempt at this seed allocated a reference into the CANDIDATE state, and the Adversary
+    // graded it inert: api.reset builds a candidate, calls stateFromFixture, and only then setState -- so
+    // the throw precedes the only write and the allocation is discarded with the candidate. The seed's own
+    // commit message claimed the route "writes state and then returns its error", which was false at that
+    // hash. A mutation erased by the same exception that produces the answer is not a defect.
+    //
+    // So this version writes to the LIVE state, which survives a refusal because a failed reset never
+    // reaches setState. The write is the restaurant's batch counter: an int on a store the export carries,
+    // so the observable is a byte-diff in /_test/export across a refusal -- which is the observable the
+    // Adversary identified as the real one, and which S3-340 and S3-341 already assert.
+    const live = store.getState();
+    const liveRestaurant = live.restaurants[0];
+    // batch_counters rather than restaurant_revisions: the export serialises batch_counters and NOT
+    // restaurant_revisions, so a bump to the latter is live in the store and invisible from outside --
+    // which is the same defect as an inert mutation wearing a different name. The first replant wrote to
+    // restaurant_revisions and I graded it INERT for exactly that reason before committing it.
+    if (liveRestaurant) require('./series').moveRestaurantBatchCounter(live, liveRestaurant.id);
     fail('fixture_unsupported', { field: 'reservations', reason: 'terms_not_seedable' });
   }
   if (has(raw, 'series_id') || has(raw, 'series_index')) {
