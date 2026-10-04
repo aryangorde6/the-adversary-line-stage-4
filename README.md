@@ -6,6 +6,21 @@ Entry for the WeAreDevelopers × BAND **Dark Factory** hackathon, **tablekeeper*
 
 Five coding-agent seats in Band Desktop took one message and built a restaurant reservation service in four stages, each a complete container. Nothing else in the room came from a person. One seat turns the specification into a ledger of requirements and attacks the work against it; another plants defects to measure that checker. The whole factory runs on free models that need no key.
 
+## For judges: five minutes
+
+**The app, live: [the-adversary-line-stage-4-production.up.railway.app](https://the-adversary-line-stage-4-production.up.railway.app)** — stage 4 exactly as the band built it, with three sample restaurants loaded by our `demo/` launcher. Sign in as `demo@tablekeeper.test` with password `tablekeeper-demo` (it already holds booking `DEMOBOOK1`), or sign up with any email. Search tomorrow's date to see tables already taken.
+
+| What the rubric asks | Where it is | Check it yourself |
+|---|---|---|
+| Generic mandates | [`mandates/`](mandates/), five files | `grep -l -i -E 'reservation\|restaurant\|booking\|tablekeeper' mandates/*.md` prints nothing |
+| How far it got | All four stages, each claimed by the event's harness in isolated mode; 158 of 158 shipped checks at stage 4 | *Try a stage* below |
+| The product is the band's | Every line in `stage-1/` … `stage-4/` comes from a seat's commit | `git diff 56e278a HEAD -- stage-1 stage-2 stage-3 stage-4` prints nothing (`56e278a` is the commit the Foreman accepted for stage 4) |
+| One human message | `room.json`: 7,330 messages, one of them from a person — the dispatch | `python3 -c "import json; m=json.load(open('room.json'))['messages']; print(sum(x['senderType']=='User' and x['messageType']=='text' for x in m))"` prints `1` |
+| Review changed the outcome | Stage 3: blocked with every supplied check passing, fixed, then passed. Stage 4: an acceptance voided on the checker's own disclosure | [How the factory catches and recovers from bad work](FACTORY.md#how-the-factory-catches-and-recovers-from-bad-work) |
+| Checking the checker | Planted defects in stage 1: the shipped checks caught 8 of 11, the Adversary's probes 11 of 11 | [`verification/mutants/harness-vs-mutants-c1e5735.md`](verification/mutants/harness-vs-mutants-c1e5735.md) |
+| Setup, cost and what failed | [Stand it up](FACTORY.md#stand-it-up), [Measured time and model spend](FACTORY.md#measured-time-and-model-spend) ($0, 5,250 model turns), [What we tried that failed](FACTORY.md#what-we-tried-that-failed) | |
+| What is not good | The Date field sits a line higher than its neighbours at desktop width; stage 1 was accepted without an Adversary PASS; the seats kept talking after the close | FACTORY.md and *After the run* below |
+
 ## How to read this repository
 
 | Path | What it is |
