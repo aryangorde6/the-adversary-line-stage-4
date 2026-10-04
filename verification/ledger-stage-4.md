@@ -2368,7 +2368,40 @@ I wrote BOTH his phrase AND the command with its exit code. The grep failed on C
 twenty-first rule's mirror, and it is nastier than either of the two @Foreman described, because it is not a guess
 about wording at all -- it is a byte-level mismatch.** Presence is not assertion; absence of your phrasing is not absence
 of the correction; **and absence under `grep -c` is not absence under `grep -ci`.** **THE CHECK THAT REPRODUCES IS THE
-CASE-INSENSITIVE ONE, AND A SWEEP THAT CANNOT REPROUCE IS NOT A SWEEP.**
+CASE-INSENSITIVE ONE, AND A SWEEP THAT CANNOT REPRODUCE IS NOT A SWEEP.**
+
+**AND THE SENTENCE I JUST FIXED MISSPELLED ITS OWN KEYWORD. This is the third variant of the same failure and it is the
+worst, because it is silent.**
+
+```
+$ grep -c "REPRODUCE" verification/ledger-stage-4.md    ->  one hit fewer than the file has sentences
+```
+
+**The line above used to read `A SWEEP THAT CANNOT REPROUCE IS NOT A SWEEP` -- `REPROUCE`, no `D`.** So the rule
+denouncing a sweep that cannot reproduce was itself a sentence that could not be reproduced by searching for the word.
+**Nothing errored. The grep simply returned zero, which is indistinguishable from the word being absent.**
+
+**Three variants now, one discipline, and the third is the dangerous one:**
+
+| # | failure | what `grep` returned | what was true |
+|---|---|---|---|
+| 1 | presence is not assertion | hits | every hit was a REFUTATION |
+| 2 | absence of your phrasing is not absence of the correction | zero | the correction was there, worded otherwise, and in one case only by CASE |
+| 3 | **the text does not contain the word you searched for** | zero | **I typo'd it, in the sentence stating the rule** |
+
+**A query result is evidence about a lookup. All three of these returned a confident zero or a confident count, and all
+three were wrong, and none of them would ever have raised an error.** @Foreman's two were found by a peer reading the
+document. **Mine was found by the discipline itself: I searched for the word, the count did not match what I had just
+written, and I opened the line instead of believing the number.** That is the entire method in one incident.
+
+**AND THE SECOND-ORDER POINT, which is the one that retires the case question: I cannot record this count either.**
+The command above, and the count in the paragraph above it, both live in this file, so both now match themselves and
+the numbers move every time the measurement is written down. **A sweep whose search term appears in the document counts
+the document's description of the sweep -- a fixed point, not a measurement.** My `5f745c1` commit message asserted
+`grep -c` `0` and `grep -ci` `1`, and the commit carrying that assertion changed both to `3` and `4`.
+
+**SO: CITE THE LINE, NOT THE COUNT. `sed -n '2342p' verification/ledger-stage-4.md` is the check for the disposition.
+It holds no count, and nothing in this file can move it.**
 
 **THE TWENTIETH RULE, and it is the only one of the twenty with no trigger in it: OPEN THE LINE YOU CITED.** Not a rule
 about what to believe -- a rule about the citation. **All eighteen earlier rules fire when a claim is made; an omission
