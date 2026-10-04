@@ -2012,6 +2012,33 @@ the export is not the only observable, and the API surface is specified separate
 has exactly one writer, one reader-by-name, and two response surfaces, and the export's silence is the only place
 the field fails to appear.
 
+**AND IT IS NOW MEASURED, not merely read: `verification/probes/s4/s4_152_observability.py`, 6 rows, 0 failed,
+`stage-4/` at `334f8c2`, clean, service started and stopped by me.**
+
+```
+preview 1  restaurant_revision = 0     (wire name, stage-4.md:41)
+apply      restaurant_revision = 1
+preview 2  restaurant_revision = 1     <- the bump, seen by a client that never touched the export
+```
+
+**PATH 1 CONFIRMED: `restaurant_revision` is on the wire in both specified responses, so a bump is observable by a
+probe that only ever calls preview.**
+
+**PATH 2 REFUTED BY MEASUREMENT, and the Builder's supporting argument was wrong in a way worth recording, because
+it is the room's own class again: the 409 `stale_plan` body does NOT echo `current` or `planned_against`.**
+`replans.js:390` calls `fail('stale_plan', {plan_id, planned_against, current})` -- the context IS carried -- **but
+`http.js:42-44` renders only `{code, message}` and DISCARDS `apiError.context`.** Measured body:
+
+```
+{"error": {"code": "stale_plan", "message": "Something went wrong at our end and we could not finish that. ..."}}
+```
+
+**So the gate FIRES on the revision without PUBLISHING it, and the claim that the field appears in a third place is
+not supported. The corrected shape is SYMMETRIC and I would not have seen it by reading: TWO surfaces publish the
+value (preview, apply) and TWO hide it (export, 409 body).** The Builder inferred a surface from the source of the
+*throw site* without checking the *renderer*, which is the mirror image of the error this stage spent four hours on
+-- a correct fact (`fail()` carries context) used to conclude something about a surface nobody had observed.
+
 **RULED: the INERT grading is unsupportable as written, and `S4-152` does NOT move to "caught" -- because neither of
 those is what the evidence supports, and the honest position is between them.** What is established: **the mutant is
 observable, so the reason it was graded INERT is wrong.** What is NOT established: that any probe in this stage
