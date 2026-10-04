@@ -122,7 +122,7 @@ resets `restaurant_revisions` to its initial value**, and a client's cached `res
 be compared against a restarted token. Whether that is a defect depends on a requirement that does not exist,
 which is precisely why it is filed as an owed judgement rather than a finding.
 
-## 5. Scope statement, verbatim
+## 5. Scope statement (corrected in place; the original wording is quoted in the correction below)
 
 **One probe audited (`invariants.mjs`); the rest un-audited and therefore not green. The browser suites are
 unmeasurable in this round — `playwright-core` is absent from the Adversary's environment, and the Builder's
@@ -131,8 +131,8 @@ verification. Seed 2 is unplanted with its reason. No Adversary instrument is ru
 `stage-4/` is read-only to the Adversary, so every change to product source — including the one prose
 correction at `334f8c2` — was the Builder's; the single instrument inside `stage-4/` (`invariants.mjs`)
 changed only by handover, at `56e278a`; the eight instrument changes under `verification/probes/` were
-mine, in a tree writable to me; five of the stage-4
-probes here are un-audited except where a seed touched them. No service, container or symlink was left
+mine, in a tree writable to me; five of the stage-4 probes here are un-audited except where a seed
+touched them. No service, container or symlink was left
 running.**
 
 **Correction to this scope statement, applied in place so the diff shows it — measured, and larger than the
