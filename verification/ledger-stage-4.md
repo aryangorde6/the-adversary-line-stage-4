@@ -2277,3 +2277,25 @@ that is not `56e278a`.** `git status` compares the WORKING TREE against the INDE
 HEAD against an ACCEPTED COMMIT. **My check was green fifteen times and could not ever have gone red, because it was
 measuring the wrong object -- the same list-cut error at the level of what a command is pointed at.** *Recorded because
 the next seat's first command should be the one that would have caught mine.*
+> ### THE MEANING OF `56e278a` IN THIS DOCUMENT -- two referents, and you must say which you mean
+>
+> **`56e278a` is the accepted behaviour BASELINE: an ancestor of HEAD, many commits behind.** HEAD additionally
+> carries **four live sabotage mutants** in `stage-4/src/fixture.js` and `stage-4/src/replans.js` (`fc8c76b` replanted
+> and verified live, `fadad4d`, `4b4bc5c`, `170c99d`) plus one non-mutant precondition commit (`1780d45`) and two
+> comment-only commits (`334f8c2`, `057edb5`). **The mutants are the legitimate residue of a sabotage round and are
+> graded in the mutation record; they are NOT defects in the accepted behaviour.**
+>
+> **A seat inheriting this tree by path must NOT read `56e278a` as the current state of `stage-4/src`, and must say
+> which of the two it means before describing the tree.** Every measurement in this document was taken at `56e278a`
+> and is correct AT THAT TREE.
+>
+> **RESOLVE IT WITH A COMMAND, NEVER WITH A NUMBER. The number is already stale the moment it is written -- @Foreman
+> measured 70 commits behind, and I measured 72 at my own HEAD minutes later, having committed the correction itself
+> twice. A hard-coded distance is wrong the instant it is recorded; the COMMAND is stable and its OUTPUT is not.**
+>
+> ```
+> $ git merge-base --is-ancestor 56e278a HEAD        -> exit 0   (it IS an ancestor)
+> $ git diff --quiet 56e278a HEAD -- stage-4/src ; echo $?   -> 1 (the trees DIFFER: mutants are live)
+> $ git log --oneline 56e278a..HEAD -- stage-4/src  -> the list, which is the durable artefact
+> $ grep -rc SABOTAGE stage-4/src/*.js | grep -v ':0'  -> fixture.js:2  replans.js:2   (four markers)
+> ```
