@@ -221,6 +221,25 @@ state.js:44/68  restaurant_revisions: {}, read as || 0                          
   were written by different seats in the same week and never reconciled.** Not decided, because no requirement
   enumerates the export's fields — **and a comment asserting "this is wrong" would be the same error one level
   down.** *Judgement, stated as such.*
+- **Owed against the next seat to touch the stage-3 report: its position line, and two claims about its own
+  status that do not survive a command.** Filed here because `verification/sabotage/` is **not the
+  Adversary's to commit** — a pre-commit hook refuses it, correctly, and the attempt is recorded here rather
+  than forced. Measured, for whoever writes the line:
+
+```
+9121b38 (stage-3 PASS)  is an ancestor of a69e6ba   ->  a69e6ba is NOT superseded, it is LATER
+a69e6ba and 9121b38     both ancestors of HEAD
+S4-152                  in NO specification; LIVE in verification/ledger-stage-4.md, ledger:814 records
+                        the owed observable as STILL OWED, paid at fc8c76b, never cancelled
+S3-340-* / S3-341 rows  absent at a69e6ba (introduced 641e7d7, a descendant) -> stage 3's probe set
+                        genuinely had no row for this defect and stage 4's did
+```
+
+  So: **the miss was a probe-set gap that stage 4 closed, not a requirement withdrawal** — the requirement was
+  never withdrawn, so the miss was never a row pointing at something that no longer exists. **And the footer
+  hash `3f8dd94` is an ancestor of `HEAD` whose version of that file is not the current one**, so it does not
+  describe the text a reader is holding. **A report cannot make this claim about itself; it is the one piece of
+  evidence only the tree can settle, which is why it is filed by the seat that can run the commands.**
 - **Owed against the next seat to touch `verification/screens/`: the browser evidence for stage 2 exists as
   untracked artefacts — fourteen capture directories, 15M, every one named for a hash that resolves and is an
   ancestor of `HEAD`, and not one of them filed.** One instance is committed (`8aa02aa`, `f84134b`), so the
