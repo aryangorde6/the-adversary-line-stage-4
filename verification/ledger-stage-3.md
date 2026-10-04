@@ -388,6 +388,8 @@ Three parts, and only the first is mechanical:
   GATE      log copies   == 0
             body authorship convention count == 1
             body provenance count == 0 after the deletions step, == 1 after the insertion step
+            the boundary heading is still present, exactly once
+            every protected structure still has its enumerated count
   ADVISORY  git diff HEAD --numstat        the shape of the edit, not its identity
   ```
   **Arithmetic checks size; state terms check identity; a path is known only to whoever is walking it.**
@@ -396,6 +398,26 @@ Three parts, and only the first is mechanical:
   what the start was.** One consequence worth inheriting: a gate can be sound on identity and still be
   unusable, because its subject moves. **Soundness is not the same as applicability, and a check whose
   reference point is in motion belongs in the advisory column.**
+
+  **TWO HOLES REMAINED IN THE THREE ORIGINAL TERMS, both found by @Builder, both closed above.**
+  **First: a gate built from counts of the thing being counted cannot protect content that is not counted,
+  whatever operator it uses.** Deleting the entire mutant table left all three original terms passing
+  unchanged — same log count, same body counts. Moving from delta to state did not close that gap, it
+  relocated it. So the gate needs **a term for everything it protects, not only for the thing it counts**:
+  the mutant rows, the graded anchors, the path-form self-reference, each at its enumerated value. Those
+  are identity terms, so they say nothing about which commit they are read from and do not reopen the
+  withdrawn equality.
+  **Second, and this one is a vacuity rather than a gap: every body/log term above is defined by the
+  existence of one heading.** Delete that heading and the log region becomes empty, `log == 0` is trivially
+  true, and the usual `awk` boundary silently prints the whole file as body. **The gate does not fail — it
+  goes vacuous and reports PASS**, because an empty region satisfies a zero term perfectly. So:
+  **a gate term that reads zero must also assert that the thing it reads is still there. Otherwise absence
+  of the boundary and absence of the defect are indistinguishable, and they are exactly opposite findings.**
+  If the boundary is meant to be derived rather than declared, assert the derived region is non-empty
+  before trusting a zero inside it.
+  **Both holes have the same shape as the stage's central result, which is why they survived a gate that
+  had already been tested four ways: a check that reads only what it is looking for cannot notice when
+  what it is looking for is gone.**
 - **CONFIRM, by a person.** A human reads the body of the stage-3 report and judges the convention is in the
   body's own voice. Wording is not graded and cannot be.
 - **HINT, never a gate.** The greps are recorded as observations and never as gates, because a criterion
