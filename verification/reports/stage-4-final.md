@@ -132,7 +132,8 @@ verification. Seed 2 is unplanted with its reason. No Adversary instrument is ru
 probes here are un-audited except where a seed touched them. No service, container or symlink was left
 running.**
 
-**Correction to this scope statement, measured, and the correction is larger than the one proposed.** The
+**Correction to this scope statement, applied in place so the diff shows it — measured, and larger than the
+one proposed.** The
 clause *"so every instrument change was a handover"* is **false, and not because of `334f8c2`.** Measured:
 
 ```
