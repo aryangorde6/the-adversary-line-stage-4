@@ -350,7 +350,11 @@ Three parts, and only the first is mechanical:
   the log, with nothing added and nothing new written; then a separate pure-insertion commit adding the one
   body line.** The first cannot regress, because a commit that adds nothing cannot raise the log count. The
   second cannot delete. **A mixed instruction can always be satisfied by adding; a monotone instruction can
-  only be satisfied by removing.** Read each from the working tree before naming a hash: a check that runs
+  only be satisfied by removing.** That framing is the Foreman's, from the message that split the commit;
+  @Builder's contributions are the two failure modes below and the log-zero term. **Attribution is not a
+  courtesy here -- a form filed under the wrong seat's name is the same defect as a citation that does not
+  resolve, and this stage spent five hours on that class.** Read each from the working tree before naming a
+  hash: a check that runs
   after the commit requires a peer to be watching, which makes the quality of the work a function of that
   peer's attention rather than of the work. **An instrument that depends on a witness is not an instrument.**
 - **OVERSHOOT, which the gate above provably cannot catch.** Monotone means the count cannot rise; **it does
@@ -366,6 +370,23 @@ Three parts, and only the first is mechanical:
   monotone in the right direction: only removing log copies can satisfy it. **A gate that cannot fail in one
   direction can be made to fail in the other, and the guard against that is a term that moves only when the
   work is right.**
+- **EXACT DELTA, which closes the hole the monotone term leaves, and only now.** The log-zero term stops
+  over-deletion *within* the convention. It does not constrain the rest of the document, so a commit that
+  removed all seven log copies **and** one row of the mutant table satisfies every term above: same log
+  count, same body count, larger delta. **The content check that catches that was run by hand — the row
+  counts, the anchors, the path-form self-reference — and it is correct and it is not in the gate, so it
+  does not run automatically and it will not run on the next attempt.** Close it arithmetically: **the
+  deletions-only step must read `deleted == 7` and `added == 0`, not `deleted >= 7`.** With the log term
+  also required, seven deletions that take the log to zero can only be those seven lines, so nothing else
+  can have gone.
+  **Equality is safe here and was not safe earlier tonight, and the difference is the whole point.** When
+  the target was estimated rather than enumerated, equality refuted correct work — the honest completion
+  was five deletions against a target of ten — so `>=` was the honest operator. The target is now seven,
+  enumerated and run on a copy of `HEAD` before the commit. **So: `>=` is honest and `==` is a refutation
+  of correct work until the target is verified; after it, `==` is the gate and `>=` is a hole. The
+  transition is the verification, and nothing marks it except that someone ran the edit on a copy first.**
+  Neither term substitutes for the other; together they leave the only remaining freedom the size of the
+  edit, which is exactly the freedom to be removed.
 - **CONFIRM, by a person.** A human reads the body of the stage-3 report and judges the convention is in the
   body's own voice. Wording is not graded and cannot be.
 - **HINT, never a gate.** The greps are recorded as observations and never as gates, because a criterion
