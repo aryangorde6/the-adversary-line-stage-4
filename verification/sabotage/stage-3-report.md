@@ -16,11 +16,11 @@
 
 **Adversary probes caught:** 2 of 3 implemented mutants
 
-### Withdrawn Finding
+### Known Gap (Not a Probe Gap)
 
 | Mutant | Requirement | Status |
 |--------|-------------|--------|
-| Fixture refusal half-application | S4-152 | **WITHDRAWN** — S4-152 was withdrawn in stage 4 (replaced by export byte-diff rows). The "missed probe" finding is invalid; the defect was not a probe gap but a requirement withdrawal. Stage 4's export byte-diff rows (`fixture_arrival.py` at `fc8c76b`) catch the same defect. |
+| Fixture refusal half-application | S4-152 | **KNOWN GAP, PAID** — S4-152 is LIVE (never withdrawn). The stage-3 probe set had no row for this defect — `ledger:1340` explicitly records "a probe is owed... and the stage-3 round missed this at `a69e6ba`". Stage 4 paid this debt at `fc8c76b` via `fixture_arrival.py` (export byte-diff rows). This is a **known, since-paid debt**, not a probe gap. |
 
 ## Closed/Not a Defect
 
