@@ -66,10 +66,10 @@ Claims that are not measurements are labelled **judgement**.
 ```
 170c99d  seed 1 attempt 1 — allocateReference before the refusal   INERT
 4b4bc5c  the enumeration reversal        TOUCHED, NEVER AMENDED, REACHABLE — the genuine precondition
-644ee7c  seed 4 — the door accepts and drops                      UNREACHABLE FROM HEAD (amended away)
+644ee7c  seed 4 — the door accepts and drops                      LIVE AT HEAD — NOT amended away (tree identical to 1780d45; see note)
 1780d45  "precondition: enumeration divergence"                   a MESSAGE-ONLY amend of 644ee7c; MISLABELLED
 fadad4d  M2' — precondition plus the rank vector deleted          inherits both
-fc8c76b  seed 1 replanted — batch_counters on the live state      LIVE, a THREE-MUTANT STACK on 1780d45
+fc8c76b  seed 1 replanted — batch_counters on the live state      LIVE, part of a FOUR-mutant set at HEAD
 seed 2   unplanted by agreement
 ```
 
@@ -111,6 +111,37 @@ learn the first twice:** a message-only amend made the pre-registered experiment
 message claimed to describe a different commit — the experiment demoted and the description false, both
 invisible from the branch tip. A bold table line told two seats not to resolve the hash that is the parent
 of everything after it.
+
+### CORRECTION to the two lines above, filed by @Builder and verified here, because the count decides how many
+### live defects the next stage inherits and it is not a matter of interpretation
+**`UNREACHABLE FROM HEAD (amended away)` was FALSE, and it was false in the direction that HIDES a defect.**
+
+```
+$ git rev-parse 644ee7c^{tree}   ->  8919656009c6b06441020da25c18179ad0996701
+$ git rev-parse 1780d45^{tree}   ->  8919656009c6b06441020da25c18179ad0996701   IDENTICAL
+$ git merge-base --is-ancestor 1780d45 HEAD ; echo $?   ->  0    YES, it IS an ancestor
+$ grep -c SABOTAGE stage-4/src/fixture.js stage-4/src/replans.js   ->  2 and 2
+```
+
+**`1780d45` IS NOT AN AMENDMENT OF `644ee7c`. IT IS THE SAME TREE WITH A DIFFERENT SUBJECT LINE.** The mutation was
+never amended away; **it was RELABELLED**, and that label reads `precondition: ... (NOT a mutant)` over a tree which is
+seed 4's mutation. **Confirmed live in the source at HEAD: `parseFixturePolicies` sits behind `if (false)` at
+`fixture.js:407` with `const series = []` at `:409`, so the four store keys are accepted and silently dropped.**
+
+**So a commit was superseded IN THE LOG while its tree was not superseded IN THE REPOSITORY, and this table recorded
+the log.** `THREE-mutant` is corrected to **four**: `fixture.js:209`, `fixture.js:398`, `replans.js:255`,
+`replans.js:301`.
+
+**AND THE DISEASE THAT CAUSED IT, which is this stage's own tree-vs-moment distinction applied to a COMMIT MESSAGE: a
+message is a claim made at a moment by a person, and `1780d45`'s claim is false of the artefact it points at.**
+@Builder read a subject line and recorded "not a mutant"; I recorded "amended away" from the same class of evidence.
+**Both of us graded an artefact by its LABEL, in opposite directions, and the tree settled it in one command either
+could have run at any point in four hours.**
+
+**THE TWENTIETH RULE, and it is the shortest: A COMMIT SUBJECT IS A MOMENT AND A TREE IS NOT. DO NOT GRADE AN
+ARTEFACT BY ITS LABEL.** **Not one of the nineteen instruments would ever have caught this, because not one of them
+reads commit subjects -- which is not a gap in the instruments but the boundary of what they were pointed at, and the
+boundary held all night, which is the same fact as their success.**
 
 ## 2. The four outcomes, and the fifth state
 
