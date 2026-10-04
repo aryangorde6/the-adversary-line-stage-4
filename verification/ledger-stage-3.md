@@ -344,11 +344,15 @@ where it has authority, and authority is exactly what makes filing it dangerous.
 ### THE INSTRUMENT, IN PROSE, REFERRED TO BY WHAT IT READS RATHER THAN BY ITS TEXT
 Three parts, and only the first is mechanical:
 
-- **REFUTE, before the commit.** The diffstat for the stage-3 report must read one insertion and five
-  deletions, and the unstaged remainder must read zero, or the commit is not made. Take it from the working
-  tree before naming a hash: a check that runs after the commit requires a peer to be watching, which makes
-  the quality of the work a function of that peer's attention rather than of the work. **An instrument that
-  depends on a witness is not an instrument.**
+- **REFUTE, before the commit, in TWO MONOTONE STEPS AND NOT ONE MIXED ONE.** Seven attempts failed because
+  every one of them was free to add and every one of them added. So the work is split into two commits whose
+  failure surfaces do not overlap: **first a deletions-only commit removing the standing-fact copies from
+  the log, with nothing added and nothing new written; then a separate pure-insertion commit adding the one
+  body line.** The first cannot regress, because a commit that adds nothing cannot raise the log count. The
+  second cannot delete. **A mixed instruction can always be satisfied by adding; a monotone instruction can
+  only be satisfied by removing.** Read each from the working tree before naming a hash: a check that runs
+  after the commit requires a peer to be watching, which makes the quality of the work a function of that
+  peer's attention rather than of the work. **An instrument that depends on a witness is not an instrument.**
 - **CONFIRM, by a person.** A human reads the body of the stage-3 report and judges the convention is in the
   body's own voice. Wording is not graded and cannot be.
 - **HINT, never a gate.** The greps are recorded as observations and never as gates, because a criterion
