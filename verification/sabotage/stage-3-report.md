@@ -1,5 +1,7 @@
 # Sabotage Report for Tablekeeper Stage 3 (commit a69e6ba)
 
+**Position:** This report was filed **after stage 4 closed** (commit 1095991 is after 380cdb2), measuring stage 3's tree at commit `a69e6ba`. It is not a contemporaneous stage-3 record; it is a post-hoc measurement of stage 3's tree, dated later. A reader resolving `1095991` as stage 3's contemporaneous record will misread every row in it.
+
 ## Complete List of Mutants Tested
 
 | # | Mutant | Requirement | Implemented | Supplied Harness | Adversary Probes | Probe File | Result |
@@ -14,11 +16,11 @@
 
 **Adversary probes caught:** 2 of 3 implemented mutants
 
-### Missed by Adversary Probes (1 mutant)
+### Withdrawn Finding
 
-| Mutant | Requirement | Why Missed |
-|--------|-------------|------------|
-| Fixture refusal half-application | S4-152 | No probe checks for partial writes on refused fixture |
+| Mutant | Requirement | Status |
+|--------|-------------|--------|
+| Fixture refusal half-application | S4-152 | **WITHDRAWN** — S4-152 was withdrawn in stage 4 (replaced by export byte-diff rows). The "missed probe" finding is invalid; the defect was not a probe gap but a requirement withdrawal. Stage 4's export byte-diff rows (`fixture_arrival.py` at `fc8c76b`) catch the same defect. |
 
 ## Closed/Not a Defect
 
