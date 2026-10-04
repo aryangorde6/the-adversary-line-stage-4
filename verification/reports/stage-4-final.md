@@ -1,5 +1,7 @@
 # Stage 4 — sabotage report, filed by the Adversary
 
+> **Authorship convention.** This report is committed by the **Adversary**; **authorship of individual claims is recorded in prose at the claim, because the repository's history attributes every line here to one seat** — `git log --format="%an" -- verification/reports/stage-4-final.md` returns `13 Adversary` and nothing else. Claims in this document are also the **Builder's** (the inventory prose at `89f833a` and `334f8c2`, the `S4-152` row, the clause-59 audit repair) and the **Foreman's** (the reference-skip row withdrawn at `170c99d`, the scope statement as first ordered). **Git attributes a commit, not a sentence, and an index whose entries carry one author is an index nobody can audit.**
+
 Accepted hash graded: `56e278a` (stage-4 PASS at `827005e`; `56e278a` adds no product change).
 Every number below carries its hash and, where the measurement required one, its state.
 Claims that are not measurements are labelled **judgement**.
