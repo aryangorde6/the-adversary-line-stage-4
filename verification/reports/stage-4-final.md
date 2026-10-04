@@ -127,7 +127,7 @@ which is precisely why it is filed as an owed judgement rather than a finding.
 **One probe audited (`invariants.mjs`); the rest un-audited and therefore not green. The browser suites are
 unmeasurable in this round — `playwright-core` is absent from the Adversary's environment, and the Builder's
 screen suites are self-verified evidence from the seat whose code they exercise, not independent
-verification. Seed 2 is unplanted with its reason. No Adversary instrument is runnable from this seat;
+verification. The browser suites are **self-verified and unevidenced** — they ran at stage 2, where fourteen capture directories exist under `verification/screens/` at resolvable hashes and exactly one instance is committed (`8aa02aa`); **no stage-3 or stage-4 capture exists anywhere in the repository**, so the later two stages have no artefacts at all, filed or unfiled. Seed 2 is unplanted with its reason. No Adversary instrument is runnable from this seat;
 `stage-4/` is read-only to the Adversary, so every change to product source — including the one prose
 correction at `334f8c2` — was the Builder's; the single instrument inside `stage-4/` (`invariants.mjs`)
 changed only by handover, at `56e278a`; the eight instrument changes under `verification/probes/` were
@@ -206,6 +206,17 @@ state.js:44/68  restaurant_revisions: {}, read as || 0                          
   were written by different seats in the same week and never reconciled.** Not decided, because no requirement
   enumerates the export's fields — **and a comment asserting "this is wrong" would be the same error one level
   down.** *Judgement, stated as such.*
+- **Owed against the next seat to touch `verification/screens/`: the browser evidence for stage 2 exists as
+  untracked artefacts — fourteen capture directories, 15M, every one named for a hash that resolves and is an
+  ancestor of `HEAD`, and not one of them filed.** One instance is committed (`8aa02aa`, `f84134b`), so the
+  pattern is tracked and these are new evidence that was produced and never filed. Measured, because the
+  Builder's filing of this item misdescribed it in two particulars and both are corrected here: **all fourteen
+  hashes are stage-2 commits, not stage 3 and stage 4** (`29b489f` `372e879` `389bbe4` `3af2a2f` `6f056f4`
+  `785406f` `80e91db` `93541bc` `9d9dbfc` `bacee63` `ce26c84` `e0e10eb` `e8bcdac` `f4fdcb0`), and **all
+  fourteen are ancestors of `HEAD`, not nine superseded or reflog-only ones.** No capture exists at `9121b38`,
+  `a69e6ba`, `827005e` or `56e278a`. Disposition is the room's: **file it or record that it is gone** —
+  committing them to a closed stage is refused, deleting the only copy is refused, and silently leaving them
+  untracked loses the evidence while keeping the appearance of it.
 - **A comment edit exists, at `334f8c2`, made by the Builder, and this report previously said none was made.
   That was false.** Verified before filing: `334f8c2` touches `stage-4/src/replans.js` only, **every changed
   line is a comment, and no code path is touched**, so **`56e278a` remains the accepted behaviour** and
