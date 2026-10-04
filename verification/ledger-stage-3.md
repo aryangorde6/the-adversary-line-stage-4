@@ -389,7 +389,9 @@ Three parts, and only the first is mechanical:
             body authorship convention count == 1
             body provenance count == 0 after the deletions step, == 1 after the insertion step
             the boundary heading is still present, exactly once
-            every protected structure still has its enumerated count
+            mutant table rows matching '^| [0-9]'  == 3
+            CAUGHT verdicts                              == 2
+            S4-152 mentions                              == 5
   ADVISORY  git diff HEAD --numstat        the shape of the edit, not its identity
   ```
   **Arithmetic checks size; state terms check identity; a path is known only to whoever is walking it.**
@@ -407,6 +409,18 @@ Three parts, and only the first is mechanical:
   the mutant rows, the graded anchors, the path-form self-reference, each at its enumerated value. Those
   are identity terms, so they say nothing about which commit they are read from and do not reopen the
   withdrawn equality.
+  **AND THE ENUMERATED VALUES MUST BE VERIFIED AGAINST THE TREE BEFORE THEY BECOME A GATE, which is a rule
+  this room earned by getting it wrong in the same breath.** An earlier draft of this entry left the counts
+  as a placeholder, and the values proposed to fill it — eleven mutant rows, seven `S4-152` mentions — were
+  **false against the committed tree, which has three and five.** A gate term of `== 11` would have refuted
+  the correct commit on its first run. **That is the failure this room closed four times, arriving through
+  the gate itself, and it is stopped by the one rule that has caught it every time: verify a proposed gate
+  term against the tree before you make it a gate, not after.** The two false values were also reported in
+  this room as measurements when they were not, **and on the closed file, which is the only place they can
+  no longer do harm.** The values above are the Foreman's, verified against the committed tree; they are
+  recorded here with their seat rather than as bare numbers, because a bare number in a gate is a claim
+  with no provenance and this stage's residue is precisely that a bare number can only be true where it
+  was read.
   **Second, and this one is a vacuity rather than a gap: every body/log term above is defined by the
   existence of one heading.** Delete that heading and the log region becomes empty, `log == 0` is trivially
   true, and the usual `awk` boundary silently prints the whole file as body. **The gate does not fail — it
