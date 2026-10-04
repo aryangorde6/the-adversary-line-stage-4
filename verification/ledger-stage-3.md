@@ -353,6 +353,19 @@ Three parts, and only the first is mechanical:
   only be satisfied by removing.** Read each from the working tree before naming a hash: a check that runs
   after the commit requires a peer to be watching, which makes the quality of the work a function of that
   peer's attention rather than of the work. **An instrument that depends on a witness is not an instrument.**
+- **OVERSHOOT, which the gate above provably cannot catch.** Monotone means the count cannot rise; **it does
+  not mean the right lines went.** Two specific ways it passes a commit that destroyed the thing it was
+  meant to preserve. **First, renumbering: deleting a line renumbers every line below it, so a list of
+  coordinates is stale after the first deletion, and seven deletions performed as seven operations against a
+  re-read list removes six copies and one line of substance — and `deleted >= 7` is satisfied.** Second, the
+  surviving body line and the log copies open with the same words and differ by a single word inside them,
+  so **a deletion keyed on the convention's name removes the one that must stay along with the ones that
+  must go**, and the body count reaches zero while the gate still passes. Therefore: **delete by exact
+  prefix and never by line number, and confirm after the deletions-only step that the log count reads 0
+  while the body's reads 1.** That log-zero term is the one that proves the step did its job, and it is
+  monotone in the right direction: only removing log copies can satisfy it. **A gate that cannot fail in one
+  direction can be made to fail in the other, and the guard against that is a term that moves only when the
+  work is right.**
 - **CONFIRM, by a person.** A human reads the body of the stage-3 report and judges the convention is in the
   body's own voice. Wording is not graded and cannot be.
 - **HINT, never a gate.** The greps are recorded as observations and never as gates, because a criterion
