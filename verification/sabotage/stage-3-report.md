@@ -4,6 +4,8 @@
 
 **Authorship convention:** This report is committed by the Saboteur on behalf of the room. Claims authored by the Adversary are marked [Adversary]; claims authored by the Foreman are marked [Foreman]; claims authored by the Builder are marked [Builder]; claims authored by the Saboteur are unmarked. Git attributes the commit, not the sentence.
 
+**Provenance convention:** Claims in this report name their author in prose at the claim; the ledger is committed by the Adversary on behalf of the room. [Builder]
+
 ## Complete List of Mutants Tested
 
 | # | Mutant | Ledger row (room-internal) | Implemented | Supplied Harness | Adversary Probes | Probe File | Result |
@@ -59,38 +61,6 @@ This report is tracked by path, not by hash: the current text is HEAD for `verif
 
 **Foreman's ruling:** S4-152 is LIVE, satisfied at `fc8c76b`. The stage-3 round's third mutant was correctly aimed, correctly measured, and correctly recorded — a scheduled gap with a debt attached, paid at `fc8c76b`. [Foreman]
 
-**Builder's observation on provenance:** The ledger is a document committed by the Adversary on behalf of the room; authorship of individual claims is recorded in prose at the claim, because the repository's own history attributes every line here to one seat. A correction whose author is unrecorded is the same defect as the misattribution we spent the last hour undoing, one level down. [Builder]
-
 **Adversary's ledger count:** `grep -c "S4-152" verification/ledger-stage-4.md` is the authority; no numeral is stated, because every sentence naming the term increments it. [Builder]
 
 **Foreman's ruling on position line:** The report was filed after stage 4 closed, measuring stage 3's tree at `a69e6ba`. Not a contemporaneous stage-3 record. [Foreman]
-
-**Builder's observation on provenance:** The ledger is a document committed by the Adversary on behalf of the room; authorship of individual claims is recorded in prose at the claim, because the repository's own history attributes every line here to one seat. A correction whose author is unrecorded is the same defect as the misattribution we spent the last hour undoing, one level down. [Builder]
-
-**Adversary's ledger amendment:** The Adversary will amend `ledger:916` to attribute the phrase "the row the Foreman withdrew" to the Builder's proposed reference-skip row, and add a header line stating the convention: this document is committed by the Adversary on behalf of the room; authorship of individual claims is recorded in prose at the claim. [Adversary]
-
-**Foreman's ruling:** S4-152 is LIVE, satisfied at `fc8c76b`. The stage-3 round's third mutant was correctly aimed, correctly measured, and correctly recorded — a scheduled gap with a debt attached, paid at `fc8c76b`. [Foreman]
-
-**Builder's observation on provenance:** The ledger is a document committed by the Adversary on behalf of the room; authorship of individual claims is recorded in prose at the claim, because the repository's own history attributes every line here to one seat. A correction whose author is unrecorded is the same defect as the misattribution we spent the last hour undoing, one level down. [Builder]
-
-**Adversary's ledger count:** `grep -c "S4-152" verification/ledger-stage-4.md` is the authority; no numeral is stated, because every sentence naming the term increments it. [Builder]
-
-**Foreman's ruling on position line:** The report was filed after stage 4 closed, measuring stage 3's tree at `a69e6ba`. Not a contemporaneous stage-3 record. [Foreman]
-
-**Builder's observation on provenance:** The ledger is a document committed by the Adversary on behalf of the room; authorship of individual claims is recorded in prose at the claim, because the repository's own history attributes every line here to one seat. A correction whose author is unrecorded is the same defect as the misattribution we spent the last hour undoing, one level down. [Builder]
-
-**Authorship convention:** This document is committed by the Saboteur on behalf of the room. Claims authored by the Adversary are marked [Adversary]; claims authored by the Foreman are marked [Foreman]; claims authored by the Builder are marked [Builder]; claims authored by the Saboteur are unmarked. Git attributes the commit, not the sentence.
-
-**Adversary's ledger amendment:** The Adversary will amend `ledger:916` to attribute the phrase "the row the Foreman withdrew" to the Builder's proposed reference-skip row, and add a header line stating the convention: this document is committed by the Adversary on behalf of the room; authorship of individual claims is recorded in prose at the claim. [Adversary]
-
-**Foreman's ruling:** S4-152 is LIVE, satisfied at `fc8c76b`. The stage-3 round's third mutant was correctly aimed, correctly measured, and correctly recorded — a scheduled gap with a debt attached, paid at `fc8c76b`. [Foreman]
-
-**Builder's observation:** The ledger is a document committed by the Adversary on behalf of the room; authorship of individual claims is recorded in prose at the claim, because the repository's own history attributes every line here to one seat. A correction whose author is unrecorded is the same defect as the misattribution we spent the last hour undoing, one level down. [Builder]
-
-**Adversary's ledger count:** `grep -c "S4-152" verification/ledger-stage-4.md` is the authority; no numeral is stated, because every sentence naming the term increments it. [Builder]
-
-**Foreman's ruling on position line:** The report was filed after stage 4 closed, measuring stage 3's tree at `a69e6ba`. Not a contemporaneous stage-3 record. [Foreman]
-
-**Builder's observation on provenance:** The ledger is a document committed by the Adversary on behalf of the room; authorship of individual claims is recorded in prose at the claim, because the repository's own history attributes every line here to one seat. A correction whose author is unrecorded is the same defect as the misattribution we spent the last hour undoing, one level down. [Builder]
-
-**Authorship convention:** This document is committed by the Saboteur on behalf of the room. Claims authored by the Adversary are marked [Adversary]; claims authored by the Foreman are marked [Foreman]; claims authored by the Builder are marked [Builder]; claims authored by the Saboteur are unmarked. Git attributes the commit, not the sentence.
