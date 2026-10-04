@@ -206,6 +206,10 @@ function parseSeededReservation(raw, state, nowMs) {
   // so a declared object can only ever be a second, divergent claim about the same booking. Refusing
   // it leaves one rule and no equality surface at all.
   if (has(raw, 'accepted_terms')) {
+    // SABOTAGE SEED 1 (S4-152): a refusal that mutates. The reference counter is moved BEFORE the
+    // refusal, so the route returns its error having already written state. Named exactly so it is not
+    // confused with stage 3's fixture-refusal half-application debt, which is seed 2 and is separate.
+    store.allocateReference(state);
     fail('fixture_unsupported', { field: 'reservations', reason: 'terms_not_seedable' });
   }
   if (has(raw, 'series_id') || has(raw, 'series_index')) {
