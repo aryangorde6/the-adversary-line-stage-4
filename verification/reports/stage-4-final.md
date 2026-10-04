@@ -219,12 +219,18 @@ state.js:44/68  restaurant_revisions: {}, read as || 0                          
   surface that carries state." *The cause, per the Builder: prose written by the seat that wrote the code,
   describing intent rather than reach — a statement made by the party with the most access to the subject and
   the least incentive to check it.*
+- **Every claim in this report expires at the next commit that could have changed it, and no seat is
+  responsible for noticing.** This list is reconciled only when I touch it, which is why the item above had to
+  be retired by hand: **a document can be internally accurate as of its own commit and the record as a whole
+  accurate as of no single moment.** Verified against the tree at `c4e2f6b`, not against this thread.
 - **Owed against whoever next touches the export: the concurrency token's documentation and its serialisation
   were written by different seats in the same week and never reconciled.** Not decided, because no requirement
   enumerates the export's fields — **and a comment asserting "this is wrong" would be the same error one level
   down.** *Judgement, stated as such.*
-- **Owed against the next seat to touch the stage-3 report: its position line, and two claims about its own
-  status that do not survive a command.** Filed here because `verification/sabotage/` is **not the
+- **PAID, not owed — retired at `c4e2f6b`, and the retirement is the point.** This item was filed by me
+  against the stage-3 report's position line and two claims about its own status. **The position line is now in
+  that report (`:3`), `S4-152`'s status is settled (live, satisfied at `fc8c76b`, and a room-internal label
+  rather than a requirement), and the probe-set gap is measured and closed.** Filed here originally because `verification/sabotage/` is **not the
   Adversary's to commit** — a pre-commit hook refuses it, correctly, and the attempt is recorded here rather
   than forced. Measured, for whoever writes the line:
 
