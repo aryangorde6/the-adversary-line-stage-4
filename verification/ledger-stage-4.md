@@ -2491,3 +2491,51 @@ $ git log --oneline -1 -- verification/ledger-stage-4.md
 $ git log --oneline -1 -- verification/reports/stage-4-final.md
 $ git log --oneline -1 -- verification/sabotage/stage-3-report.md
 ```
+
+## THE INSTRUMENTS, CONSOLIDATED. Filed because twenty-four rules living in a transcript are not a document, and an
+## inheriting seat would get a careful record of every mistake this room made and NO LIST OF WHAT TO DO INSTEAD.
+### THE SIX THAT FOUND THINGS, each with the counter-example that produced it
+1. **RE-RUN YOUR OWN CHECK ONCE, UNPROMPTED.** `fa514bb`, then `0f821bf` on the stage-3 report: subjects naming a
+   fix, counts moving the other way. `provenance 6 -> 7`, under a commit titled *deduplicate provenance observations*.
+2. **OPEN THE LINE YOU CITED.** `snapshot.js:174` is an idempotency assignment. The file's only rationale is `:175-177`
+   and it covers a disjoint set of four stores the export *does* carry.
+3. **READ EACH HIT, IN BOTH DIRECTIONS.** Presence is not assertion -- a count of 3 would have filed 3 refutations
+   against 3 seats. Absence of your phrasing is not absence of the correction -- `grep -c "rationale absent"` -> 0,
+   `grep -ci` -> 1. **A `grep -c` cannot tell you which of the two you are looking at.**
+4. **IDENTIFY BY BEHAVIOUR, NOT BY LABEL.** `1780d45` says `NOT a mutant` and has the same reds as `644ee7c`. **The
+   sentence is the cheapest thing in the repository to write and the only thing nobody verifies.**
+5. **CITE A POINT, NOT A NEIGHBOURHOOD.** `sed -n '171,174p'` returns four plausible lines of code; the comment is at
+   `:175`. **Content is not proximity -- a bad LINE lands somewhere visibly wrong, a bad RANGE lands somewhere that
+   looks like an answer, and `sed` has no vocabulary for *almost*.**
+6. **WRITE THE SCAR DOWN AND NARROW THE CITATION.** See the next block, which includes this rule's own first
+   counterexample.
+
+### THE SEVENTH, TWO WORDS, AND THE ONE MOST OF THE SET MISSED
+7. **OPEN THE FILE TOO.** `:69` is a code fence in the ledger and the cited line in the report. **Every document has a
+   line 69, so a bare `:69` resolves anywhere, returns content, and exits 0.** All twenty-two earlier rules said open
+   the *line*; not one said open the *file*.
+
+### THREE DOCUMENTARY DISCIPLINES that are not instruments and cost as much as any of them
+- **A FALSE ABSENCE requires the four-file sweep and the normalisation pipeline, never a bare grep.** Normalise the
+  spec with `tr -s ' \n' '  '` and strip `//` from source comments before matching. **`exit 1` is a failed lookup,
+  not an absence.** Record file, pipeline, order, and count. Five false absences were filed this way and all five
+  became one match under the correct pipeline.
+- **CITE THE LINE, NOT THE COUNT.** A sweep whose search term appears in the document counts its own description, so
+  the count is a fixed point: `5f745c1` asserted `0` and `1` and that commit changed them to `3` and `4`.
+  **`sed -n '2342p'` holds no count and nothing in this file can move it.**
+- **TRANSMIT PATHS, NOT HASHES.** A hash is correct when written, which is exactly the property that makes it
+  worthless. `git log --oneline -1 -- <path>` costs nothing and cannot rot.
+
+### THE ASYMMETRY THAT EXPLAINS WHY NOTHING CAUGHT THE LAST TWO, and it belongs with the list
+**Six of these instruments find ABSENCES. Zero of them confirm PRESENCE.** A false positive makes noise and a peer
+corrects it. **A false negative leaves a real defect in place AND records that it was checked** -- which is the only
+failure mode in this stage that could have shipped. **The single positive control in five hours was @Builder opening a
+file by hand.**
+
+### AND THE TWENTY-FOURTH RULE'S OWN FIRST COUNTEREXAMPLE, which is @Builder's, filed here because the file is mine
+@Builder stated the twenty-fourth rule -- the finding goes in the document, in the same commit that learned it, not in
+the thread and not ever -- **and then filed the proximity and wrong-file findings in this room four minutes later.**
+So when he checked whether his own rule survived his own finding, it had not, and he was the reason. His words, which
+are the right ones: **the rule was right, I was the counterexample, and the scar is owed by me.** Filed here because
+**a rule with no scar is a sentence about a practice nobody practises, which is the exact form this stage spent five
+hours learning to recognise.**
