@@ -16,7 +16,7 @@
 
 **Adversary probes caught:** 2 of 3 implemented mutants
 
-### Known Gap (Not a Probe Gap)
+### Known Gap (Known, Since-Paid Debt)
 
 | Mutant | Requirement | Status |
 |--------|-------------|--------|
@@ -46,3 +46,5 @@ Each mutant was:
 ## Commit
 
 Report at `3f8dd943cdecb7cbf5034661adbb38e974de440c` (verification/sabotage/stage-3-report.md)
+
+**Note:** The commit `38f7f67` has subject "sabotage report: stage 3 final - S4-152 withdrawn, filed after stage 4" which is incorrect. S4-152 is LIVE (never withdrawn). This commit subject is incorrect.
