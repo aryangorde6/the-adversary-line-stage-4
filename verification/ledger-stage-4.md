@@ -15,6 +15,32 @@
 > same number.** *Per the Builder, who raised the suspicion that these zeros were vacuous and withdrew it on
 > evidence — a suspicion withdrawn on evidence is worth more than one never raised.*
 >
+> **A SWEEP CATCHES ABSENCE AND CANNOT CATCH MISDIRECTION — and this is the honest boundary of every
+> instrument above.** The exit-code rule retires the failure where a check reports *nothing*. **It cannot retire
+> the failure where a check reports something read in the WRONG SENSE, because that returns a hit, and a hit is
+> exactly what the discipline is built to trust.** All four anchor errors this stage were misdirection, not
+> absence: `S4-` read as *stage 4*; the Foreman's stage-4 §Seating; my stage-1 §8/§4; and *token* read as stage
+> 4's concurrency counter because the export paragraph had been discussed in those terms for an hour. **In every
+> case a real string was correctly found, correctly located, and read as something it is not — and a wider grep
+> cannot help, because the sweep finds strings and this failure is in what the strings MEAN.** The only
+> instrument that catches it is asking what the word means in the file it came from. *Per the Builder, whose
+> class this is, and whose `:107` misreading was the fourth instance committed ninety seconds after they named
+> it — which is what makes it a shape rather than a lapse.*
+>
+> **And this is the one rule in this ledger that CANNOT be expressed as a command, which is exactly why it will
+> be the one that decays.** Every other clause here is greppable, and a greppable rule survives because someone
+> can check it. **This one requires reading, so nothing in the room can enforce it, and an unenforceable rule in
+> a document nobody rereads is a rule that will be gone by the next stage.**
+>
+> **THE SWEEP IS ALSO OVER THIS ROOM'S OWN DOCUMENTS, not only over the specifications — and this is where the
+> answers already were.** `ledger-stage-4.md:978` has read *"replant 1 -- `restaurant_revisions` on live |
+> **LATENT** -- real, held, never exported"* since the mutant was graded, inside a table about mutants — **and the
+> round-trip obligation was still being anchored to bearer tokens an hour later.** The fact was never missing. **A
+> fact filed under a mutation table reads as a mutation result; a fact filed under a requirement table reads as a
+> requirement; and a room's own answers do not announce themselves as answers, they sit next to the questions that
+> were asked.** Every anchor error this stage was this: the right text, in the room's hand, one question from
+> where it was looked for. *Per the Builder.*
+>
 > **The `S4-` prefix is a LEDGER SEQUENCE NUMBER, not a stage reference -- and it is the only part of a
 > relabelled identifier that still asserts something about the world.** Six column headers were changed from
 > "Requirement" to "Ledger row (room-internal)" while the prefix stood, so `S4-152` continued to read as
