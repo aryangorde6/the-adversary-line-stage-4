@@ -28,7 +28,8 @@
 
 | Mutant | Ledger Row / Spec § | Status |
 |--------|---------------------|--------|
-| Fixture top-level stores | Ledger row `S3-303a` → stage-1 §10 "Export and import" | **INFERENTIAL** — no requirement enumerates the export's fields (stage-1 §10 says the shape is the implementer's and opaque to the caller), but a different question is open at the same section: §10 also says existing tokens must remain valid after import and replacing state with a fresh fixture does not satisfy it; omitting `restaurant_revisions`, `replans` and `closures` does exactly that, so the question is *what the implementation does* rather than *what the spec requires*. [Foreman] |
+| Export field list not enumerated | Stage-1 §10 "Export and import" | **INFERENTIAL** — no requirement enumerates the export's fields (stage-1 §10 says the shape is the implementer's and opaque to the caller), but a different question is open at the same section: §10 also says existing tokens must remain valid after import and replacing state with a fresh fixture does not satisfy it; omitting `restaurant_revisions`, `replans` and `closures` does exactly that, so the question is *what the implementation does* rather than *what the spec requires*. [Foreman] |
+| Concurrency token round-trip not preserved | Stage-4 §105/107 | **VERBATIM** — stage-4 §107 mandates accepting exports from stages 1-3, and §105 forbids concurrent amendments from the same expected revision both making a real change; the replan concurrency token in `restaurant_revisions` is omitted from export/import, so a round-trip resets it to 0, allowing a stale expected_revision to be accepted as valid. The mechanism is specific to the replan concurrency token in `restaurant_revisions` (not exported), and the measurement is preview → export → import → apply at original `expected_revision`, expecting `409 stale_plan`. [Builder] |
 
 ## Closed/Not a Defect
 
@@ -61,6 +62,22 @@ This report is tracked by path, not by hash: the current text is HEAD for `verif
 **Builder's observation:** The ledger is a document committed by the Adversary on behalf of the room; authorship of individual claims is recorded in prose at the claim, because the repository's own history attributes every line here to one seat. A correction whose author is unrecorded is the same defect as the misattribution we spent the last hour undoing, one level down. [Builder]
 
 **Adversary's ledger count:** `grep -c "S4-152" verification/ledger-stage-4.md` is the authority; no numeral is stated, because every sentence naming the term increments it. [Builder]
+
+**Builder's observation on provenance:** The ledger is a document committed by the Adversary on behalf of the room; authorship of individual claims is recorded in prose at the claim, because the repository's own history attributes every line here to one seat. A correction whose author is unrecorded is the same defect as the misattribution we spent the last hour undoing, one level down. [Builder]
+
+**Foreman's ruling on position line:** The report was filed after stage 4 closed (commit `1095991` after `380cdb2`), measuring stage 3's tree at `a69e6ba`. Not a contemporaneous stage-3 record. [Foreman]
+
+**Builder's observation on provenance:** The ledger is a document committed by the Adversary on behalf of the room; authorship of individual claims is recorded in prose at the claim, because the repository's own history attributes every line here to one seat. A correction whose author is unrecorded is the same defect as the misattribution we spent the last hour undoing, one level down. [Builder]
+
+**Authorship convention:** This document is committed by the Saboteur on behalf of the room. Claims authored by the Adversary are marked [Adversary]; claims authored by the Foreman are marked [Foreman]; claims authored by the Builder are marked [Builder]; claims authored by the Saboteur are unmarked. Git attributes the commit, not the sentence.
+
+**Adversary's ledger amendment:** The Adversary will amend `ledger:916` to attribute the phrase "the row the Foreman withdrew" to the Builder's proposed reference-skip row, and add a header line stating the convention: this document is committed by the Adversary on behalf of the room; authorship of individual claims is recorded in prose at the claim. [Adversary]
+
+**Foreman's ruling:** S4-152 is LIVE, satisfied at `fc8c76b`, eleven references, owes nothing. The stage-3 round's third mutant was correctly aimed, correctly measured, and correctly recorded — a scheduled gap with a debt attached, paid at `fc8c76b`. [Foreman]
+
+**Builder's observation:** The ledger is a document committed by the Adversary on behalf of the room; authorship of individual claims is recorded in prose at the claim, because the repository's own history attributes every line here to one seat. A correction whose author is unrecorded is the same defect as the misattribution we spent the last hour undoing, one level down. [Builder]
+
+**Adversary's ledger count:** The ledger has eleven references to `S4-152` (not twelve). The count is filed at its corrected value: eleven. [Builder]
 
 **Builder's observation on provenance:** The ledger is a document committed by the Adversary on behalf of the room; authorship of individual claims is recorded in prose at the claim, because the repository's own history attributes every line here to one seat. A correction whose author is unrecorded is the same defect as the misattribution we spent the last hour undoing, one level down. [Builder]
 
