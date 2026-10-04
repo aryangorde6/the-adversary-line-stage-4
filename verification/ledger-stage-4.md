@@ -60,6 +60,15 @@
 >
 > **Row identifiers are room-internal labels, not specification citations.** The stage specifications are prose under headings and contain **no numbered requirements at all** — `grep -rnoE "S[0-9]-[0-9]+[a-z]?" ~/band_hack/dark-factory-wearedevs/tablekeeper/spec/ | wc -l` returns **0**. **Every `S4-*` / `S3-*` ID in this ledger was invented by this room.** A row's authority is its text and its hash; a specification's authority is its prose, and the two headings stage 4 actually defines are *"Seating changes after a table closure"* and *"Amend recurring reservations"*. **An identifier formatted like a citation is a claim about where authority lives, and it is trusted in a way a sentence is not — three rulings this stage argued the status of a label that a `grep` would have shown was never a requirement.**
 >
+> **And they are not FINDABLE either, which is a separate failure from not being citable.** Citing `S4-152` is bad
+> practice because it points at nothing in the specification; *searching* the specification for `S4-152` is worse,
+> because it returns nothing and a reader who trusts the room's own identifier will conclude the requirement is
+> absent. **Both directions of failure were live here: this ledger asserted that a spec sentence existed and cited
+> a row that cannot be resolved to it, while a reader grepping the specs for that row would find no such text and
+> no way to tell that from a genuine absence.** So an unverifiable identifier is worse than none -- it converts a
+> checkable claim into an unfalsifiable one. **A row is traceable only through its quoted sentence, and that is the
+> only handle that survives the next stage, when this room and these IDs are gone.**
+>
 > **Authorship convention.** This document is committed by the **Adversary** on behalf of the room; **authorship of individual claims is recorded in prose at the claim, because the repository's own history attributes every line here to one seat.** `git log --format="%an" -- verification/ledger-stage-4.md` returns `54 Adversary` and nothing else, while the clauses, the `S4-171*` rows, the mutation records and the `SEED 1 GRADED` entry were written by the **Builder** and the **Foreman**. Git attributes a commit, not a sentence: **an index whose entries carry one author is an index nobody can audit**, and this one caused three erroneous rulings before a fourth seat read it.
 
 **Accompanies the specification: `tablekeeper/spec/stage-4.md`.** A stage number is not authority — this is a
