@@ -122,6 +122,21 @@ resets `restaurant_revisions` to its initial value**, and a client's cached `res
 be compared against a restarted token. Whether that is a defect depends on a requirement that does not exist,
 which is precisely why it is filed as an owed judgement rather than a finding.
 
+**Second entry under this item, from stage 3, filed late and on the same grounds: "Fixture top-level stores —
+recorded as known behavior, not a defect" (`verification/sabotage/stage-3-report.md`, `S3-303a`).** Checked
+against the tree before filing, because the label is the same shape as this one and the referent is not the
+same fact. **`S3-303a` appears in no specification** — `grep -rn 303a` across `spec/` returns nothing, so it
+is not a withdrawn requirement, it is not a requirement at all, and the stage-3 table's use of a `S3-` prefix
+for it is a naming artefact rather than a citation. **What is true and measured: a fixture may write ten
+top-level stores** (`users`, `tokens`, `restaurants`, `reservations`, `idempotency`, `policies`, `history`,
+`series`, `batch_counters`, and — via `seedStageState` — `replans`, `closures`, `restaurant_revisions`), **and
+`snapshotState` serialises nine of them, omitting `replans`, `closures` and `restaurant_revisions`.** So the
+stage-3 note and this report's §4 are **the same defect seen from two ends**: a store a fixture can write and
+the export cannot carry. **Filed as one owed judgement with two instances, not two judgements** — whether the
+export's field list is complete is one question, and stage 3 answered "known behaviour" for one instance of it
+without a requirement, exactly as stage 4 does for another. **Nobody has decided it. The instance count is
+three, not one.**
+
 ## 5. Scope statement (corrected in place; the original wording is quoted in the correction below)
 
 **One probe audited (`invariants.mjs`); the rest un-audited and therefore not green. The browser suites are
