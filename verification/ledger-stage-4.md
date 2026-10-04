@@ -715,6 +715,43 @@ fails is red, and an export that answers 200 without the records is red. So:
 > disagreement cannot change the verdict. **A row whose result depends on an unresolved fact is a row whose
 > next reading will be argued rather than measured.**
 
+### Clause 59: a measurement whose setup did not succeed is **void**, not weak
+
+**Hardened from clause 58 after the seventh instance of the stage's shape, and it is the cheapest precondition
+to satisfy and the most expensive to discover late:**
+
+> **Every reported measurement names the state it was taken in: the calls that created it and what each
+> answered.** **Where a setup call failed, the measurement is _void_ — not weak — and the report says so
+> rather than reporting the number.**
+
+**The instance that produced it, kept whole because every step of it is instructive:**
+
+```
+POST /auth/signup             -> 422  "The email address you entered is not valid"
+POST /_test/reset             -> 400  malformed_request        (wrong body shape, twice)
+POST /restaurants/r_1/replans -> 401  (no valid token)
+GET  /_test/export            -> 200, reservations: []
+```
+
+**Nothing was seeded, the replan never executed, no circular key was ever written — and the export of an
+empty state was reported as a measurement of the defect.** The number was **200, with a body, looking exactly
+like knowledge**, which is what makes the failure mode expensive: **it does not look like an error, so nothing
+downstream suspects it.**
+
+**And the disagreement itself is recorded as the good outcome rather than a wobble:**
+
+> **Two seats contradicting each other inside a minute exposed a measurement whose every setup step had
+> failed. One seat's rigour was the other's undoing, and the disagreement is what caught it.** A room where
+> the numbers agree because nobody checked the setup has learned nothing.
+
+**My own instrument already asserts in this shape, which is the only reason I would have noticed the pattern
+so quickly: every probe of mine begins with setup rows — `S4-000-setup`, `S3-300-setup` — that assert each
+state-creating call succeeded _before_ any result is read**, and returns early rather than proceeding on an
+unestablished state. That habit is now the clause rather than an accident of authorship, and the general form
+is worth stating: **the setup assertion is not bookkeeping before the measurement; it _is_ the measurement's
+precondition, and a probe that reads a result before establishing its state has produced a number, not a
+finding.**
+
 ### Clause 56: _reports_ and _sees_ are two facts, and only one is cheap
 
 **A manufactured red proves a probe can _report_; it does not prove it can _see_.** Inverting an assertion
