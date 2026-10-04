@@ -270,9 +270,10 @@ function planFor(state, restaurant, closure, considered, byReference) {
 function betterThan(candidate, best) {
   if (candidate.moved !== best.moved) return candidate.moved < best.moved;
   if (candidate.unused !== best.unused) return candidate.unused < best.unused;
-  for (let index = 0; index < candidate.ranks.length; index += 1) {
-    if (candidate.ranks[index] !== best.ranks[index]) return candidate.ranks[index] < best.ranks[index];
-  }
+  // SABOTAGE M2': the rank vector DELETED, on top of the reversal planted in the previous commit.
+  // Together these are what the round wanted since M2 was recorded equivalent: the enumeration now walks
+  // the opposite way from rank order, so nothing else performs the third objective, and the specification's
+  // third term is doing real work for the first time. Aimed at S4-171d, which exists for this divergence.
   return false;
 }
 
