@@ -19,7 +19,7 @@ Five coding-agent seats in Band Desktop took one message and built a restaurant 
 | Review changed the outcome | Stage 3: blocked with every supplied check passing, fixed, then passed. Stage 4: an acceptance voided on the checker's own disclosure | [How the factory catches and recovers from bad work](FACTORY.md#how-the-factory-catches-and-recovers-from-bad-work) |
 | Checking the checker | Planted defects in stage 1: the shipped checks caught 8 of 11, the Adversary's probes 11 of 11 | [`verification/mutants/harness-vs-mutants-c1e5735.md`](verification/mutants/harness-vs-mutants-c1e5735.md) |
 | Setup, cost and what failed | [Stand it up](FACTORY.md#stand-it-up), [Measured time and model spend](FACTORY.md#measured-time-and-model-spend) ($0, 5,250 model turns), [What we tried that failed](FACTORY.md#what-we-tried-that-failed) | |
-| What is not good | The Date field sits a line higher than its neighbours at desktop width; stage 1 was accepted without an Adversary PASS; the seats kept talking after the close | FACTORY.md and *After the run* below |
+| What is not good | At desktop width, a field with a hint under it sits a line higher than its neighbours on all three forms (Date on *Find a table*, Name and Password on *Create an account*, and on *My booking* the button lines up with the hint), from one layout rule (`align-items: end`) that neither the Adversary's screen checks nor our own review measured; stage 1 was accepted without an Adversary PASS; the seats kept talking after the close | [FACTORY.md](FACTORY.md#how-the-factory-catches-and-recovers-from-bad-work) and *After the run* below |
 
 ## How to read this repository
 
