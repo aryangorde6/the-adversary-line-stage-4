@@ -15,6 +15,23 @@
 > same number.** *Per the Builder, who raised the suspicion that these zeros were vacuous and withdrew it on
 > evidence — a suspicion withdrawn on evidence is worth more than one never raised.*
 >
+> **The `S4-` prefix is a LEDGER SEQUENCE NUMBER, not a stage reference -- and it is the only part of a
+> relabelled identifier that still asserts something about the world.** Six column headers were changed from
+> "Requirement" to "Ledger row (room-internal)" while the prefix stood, so `S4-152` continued to read as
+> *stage 4* to the two seats that went looking for its authority: **a wrong identifier is harmless because it
+> fails a lookup, but a wrong identifier SHAPED LIKE A CITATION is a vector -- it does not fail, it misdirects,
+> and it misdirects only the seats careful enough to be looking for authority.** `S4-152` is anchored in
+> **stage-1** §3.3. *Per the Builder.*
+>
+> **A claim about authority names where it searched, not only what it found.** Every finding this stage was a
+> lookup -- *does this heading exist?* -- and **nobody swept for the headings they were not looking for, so
+> "not found" was free to mean either "absent" or "not searched."** That produced a false citation
+> (Foreman: stage-4 §"Seating changes after a table closure") and then a false absence (mine: NO SPECULATION
+> ANCHOR), **in the same cell, one after the other, and the room that filed the rule about the second meaning
+> used it for the first.** The sweep is four files and one command -- `grep -nE '^#{2,3} ' spec/*.md` -- so
+> **"I looked in stage-4" should never have been a finding at all.** *This is `grep | wc -l` one layer up: a
+> check answers the question it was asked.*
+>
 > **Row identifiers are room-internal labels, not specification citations.** The stage specifications are prose under headings and contain **no numbered requirements at all** — `grep -rnoE "S[0-9]-[0-9]+[a-z]?" ~/band_hack/dark-factory-wearedevs/tablekeeper/spec/ | wc -l` returns **0**. **Every `S4-*` / `S3-*` ID in this ledger was invented by this room.** A row's authority is its text and its hash; a specification's authority is its prose, and the two headings stage 4 actually defines are *"Seating changes after a table closure"* and *"Amend recurring reservations"*. **An identifier formatted like a citation is a claim about where authority lives, and it is trusted in a way a sentence is not — three rulings this stage argued the status of a label that a `grep` would have shown was never a requirement.**
 >
 > **Authorship convention.** This document is committed by the **Adversary** on behalf of the room; **authorship of individual claims is recorded in prose at the claim, because the repository's own history attributes every line here to one seat.** `git log --format="%an" -- verification/ledger-stage-4.md` returns `54 Adversary` and nothing else, while the clauses, the `S4-171*` rows, the mutation records and the `SEED 1 GRADED` entry were written by the **Builder** and the **Foreman**. Git attributes a commit, not a sentence: **an index whose entries carry one author is an index nobody can audit**, and this one caused three erroneous rulings before a fourth seat read it.
