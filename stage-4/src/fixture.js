@@ -206,37 +206,6 @@ function parseSeededReservation(raw, state, nowMs) {
   // so a declared object can only ever be a second, divergent claim about the same booking. Refusing
   // it leaves one rule and no equality surface at all.
   if (has(raw, 'accepted_terms')) {
-    // SABOTAGE SEED 1, REPLANTED: a refusal that mutates, and THIS ONE SURVIVES THE THROW.
-    //
-    // The first attempt at this seed allocated a reference into the CANDIDATE state, and the Adversary
-    // graded it inert: api.reset builds a candidate, calls stateFromFixture, and only then setState -- so
-    // the throw precedes the only write and the allocation is discarded with the candidate. The seed's own
-    // commit message claimed the route "writes state and then returns its error", which was false at that
-    // hash. A mutation erased by the same exception that produces the answer is not a defect.
-    //
-    // So this version writes to the LIVE state, which survives a refusal because a failed reset never
-    // reaches setState. The write is the restaurant's batch counter: an int on a store the export carries,
-    // so the observable is a byte-diff in /_test/export across a refusal -- which is the observable the
-    // Adversary identified as the real one, and which S3-340 and S3-341 already assert.
-    const live = store.getState();
-    const liveRestaurant = live.restaurants[0];
-    // batch_counters rather than restaurant_revisions -- but NOT for the reason first recorded here, which
-    // was wrong. That comment said a bump to the latter would be "live in the store and invisible from
-    // outside", because the export omits the field. The export does omit it. The invisibility does not
-    // follow, and the omission was the defect this stage is about rather than a reason a mutation cannot
-    // be seen. Measured by the Adversary at 76a7173: replans.js:362 publishes restaurant_revision in the
-    // PREVIEW response and replans.js:420 sets it on APPLY, both specified at stage-4.md:41 and :54, so a
-    // probe that only ever previews observes the bump. The other surface does not: replans.js:390 hands the
-    // revision to fail() as context, but http.js:42-44 renders only {code, message} and discards it. Two
-    // surfaces publish the token and two hide it, and the export is not among the publishers.
-    //
-    // Consequence, at the limit of what was measured [Builder, Foreman, Adversary]: the original INERT
-    // grading of the first replant is unsupportable, because invisibility was its stated reason and the
-    // field is on the wire. The Adversary ruled S4-152 stays MISSED -- no probe in this stage is known to
-    // have read that field -- so the result is unchanged and the recorded CAUSE is now known to be wrong.
-    // A correct mutant was graded against the wrong observable, and the defect of the stage is what hid it
-    // from its own grader.
-    if (liveRestaurant) require('./series').moveRestaurantBatchCounter(live, liveRestaurant.id);
     fail('fixture_unsupported', { field: 'reservations', reason: 'terms_not_seedable' });
   }
   if (has(raw, 'series_id') || has(raw, 'series_index')) {
@@ -395,18 +364,11 @@ function parseFixtureBatchCounters(raw) {
 }
 
 function seedStageState(state, fixture) {
-  // SABOTAGE SEED 4 (the pre-registered seed): the reset door ACCEPTS the four store keys and silently
-  // drops them. This is the stage-3 defect the Adversary's fixture_arrival.py was written about: the reset
-  // answers 204, the author believes they seeded a policy, and every assertion they then write is quietly
-  // about policy 0 with nothing red.
-  //
-  // No parser is called. Nothing is refused. The four keys are accepted and ignored, which is the whole
-  // shape of the original defect and the reason fixture_arrival.py owes controls asserting the door
-  // REFUSES what it cannot seed.
-  const policies = [];
-  if (false) { policies.length = parseFixturePolicies(fixture.policies, state.restaurants).length; }
+  const policies = has(fixture, 'policies')
+    ? parseFixturePolicies(fixture.policies, state.restaurants)
+    : [];
 
-  const series = [];
+  const series = has(fixture, 'series') ? parseFixtureSeries(fixture.series, state.users, state.restaurants) : [];
   state.policies = policies;
   // A seeded reservation is parsed before the policies are known, so its terms are derived again here
   // against the policies this same fixture declared. Without this pass a fixture could state a 15-minute
@@ -424,8 +386,8 @@ function seedStageState(state, fixture) {
   }
 
   state.series = series;
-  state.history = [];
-  state.batch_counters = {};
+  state.history = has(fixture, 'history') ? parseFixtureHistory(fixture.history) : [];
+  state.batch_counters = has(fixture, 'batch_counters') ? parseFixtureBatchCounters(fixture.batch_counters) : {};
   // Every seeded occurrence's reservation carries its series identity, so the series and the bookings
   // agree rather than two halves of one fixture describing different worlds.
   const byReference = new Map(state.reservations.map((reservation) => [reservation.reference, reservation]));

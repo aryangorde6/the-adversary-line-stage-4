@@ -19,38 +19,10 @@
 //     shrunk it, and re-judging it under the new policy would silently invalidate a promise already made.
 //
 // `restaurant_revision` is the concurrency token. It starts at 0 after a reset and moves once for each
-// successful new booking, REAL amendment (reservation or series), cancellation, policy publication and
-// plan application -- and NOT for no-ops, failures, previews or replays. There are six sites that move
-// it, not five: api.js booking, api.js amendment (guarded by if (wasConfirmed), which is what makes the
-// "not for no-ops" half true rather than aspirational), api.js cancellation, series.js series
-// amendment, policy.js publication and this file's apply. A plan records the revision it was built
-// against, and apply refuses if the restaurant has moved on: any intervening change means the plan was
-// computed from a state that no longer exists, and applying it would half-apply a repair.
-//
-// KNOWN LIMIT, now anchored. The token does NOT survive an export/import round trip. snapshotState
-// serialises users, tokens, restaurants, reservations, idempotency, policies, history, series and
-// batch_counters -- restaurant_revisions is absent -- while import replaces state wholesale via
-// store.setState(next). So a client holding a cached restaurant_revision across a re-import compares it
-// against a restarted token.
-//
-// Ruled INFERENTIAL at stage-4.md:47 with :56, composed with stage-1 section 10's replacement sentence
-// [Foreman]. Not VERBATIM, and the negative control is the reason: the four-stage corpus mentions
-// restaurant_revision exactly twice, at :41 and :54, and both are response bodies -- neither sentence
-// mentions export, import or persistence. :47 defines the quantity; section 10 leaves its persistence
-// unaddressed rather than required. A definition plus a contradiction is not a violation of a clause.
-//
-// The loss is upstream in snapshotState, not in import. state.js:72 is the only write to
-// restaurant_revisions and it is +1, no decrement exists anywhere, and the only other initialiser is the
-// empty object at :44. The revision is therefore monotonic and the imported state -- reservations carried,
-// revision 0 -- is unreachable by reset, by reset plus events, or by import [Builder, Adversary 76a7173,
-// measured in verification/probes/s4/reset_vs_import.py]. importState is not losing the counter; it is
-// faithfully restoring a document that never carried it.
-//
-// Disposition: fix owed, and not a defect against any verbatim clause -- 56e278a violates none. One store
-// added to the exported set, no import change, on the rationale already written at snapshot.js:174: a
-// revision reported to clients on every preview and every apply is a promise already made, and this one is
-// made and kept in no store. Filed by path; the row and its measurement are recorded in
-// verification/ledger-stage-4.md and verification/probes/s4/roundtrip_revision.py.
+// successful new booking, real amendment, cancellation, policy publication and plan application -- and
+// NOT for no-ops, failures, previews or replays. A plan records the revision it was built against, and
+// apply refuses if the restaurant has moved on: any intervening change means the plan was computed from a
+// state that no longer exists, and applying it would half-apply a repair.
 
 const { fail } = require('./errors');
 const domain = require('./domain');
@@ -252,11 +224,7 @@ function planFor(state, restaurant, closure, considered, byReference) {
       if (best === null || betterThan(candidate, best)) best = candidate;
       return;
     }
-    // SABOTAGE SEED 3: the enumeration reversal. The DFS walks each booking's options in REVERSE rank
-    // order, so the first complete plan it finds is the rank-MAXIMAL one and betterThan's third term is
-    // load-bearing for the first time. With the rank vector intact this build is still correct; with the
-    // vector deleted as well (M2') it is the rank-blind planner that S4-171d catches.
-    for (const option of optionsFor[at].options.slice().reverse()) {
+    for (const option of optionsFor[at].options) {
       if (conflictsWithChosen(chosen, option.table_ids, optionsFor[at].reservation, byReference)) continue;
       chosen.push({ reference: optionsFor[at].reservation.reference, table_ids: option.table_ids });
       walk(at + 1, moved + option.moved, unused + (option.capacity - optionsFor[at].reservation.party_size),
@@ -298,10 +266,9 @@ function planFor(state, restaurant, closure, considered, byReference) {
 function betterThan(candidate, best) {
   if (candidate.moved !== best.moved) return candidate.moved < best.moved;
   if (candidate.unused !== best.unused) return candidate.unused < best.unused;
-  // SABOTAGE M2': the rank vector DELETED, on top of the reversal planted in the previous commit.
-  // Together these are what the round wanted since M2 was recorded equivalent: the enumeration now walks
-  // the opposite way from rank order, so nothing else performs the third objective, and the specification's
-  // third term is doing real work for the first time. Aimed at S4-171d, which exists for this divergence.
+  for (let index = 0; index < candidate.ranks.length; index += 1) {
+    if (candidate.ranks[index] !== best.ranks[index]) return candidate.ranks[index] < best.ranks[index];
+  }
   return false;
 }
 
