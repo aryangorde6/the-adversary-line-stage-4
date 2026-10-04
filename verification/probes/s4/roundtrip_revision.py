@@ -153,15 +153,31 @@ def main():
                  token=token, key="rt-c")
     print("C. apply pre-round-trip plan %s after import -> %s code=%s"
           % (p2.get("plan_id"), st, code_of(c)))
-    row("RT-C", True, "recorded, not asserted: a plan previewed before the round-trip answers %s %s on "
-        "apply afterwards -- plans live in state.replans, which snapshot.js never emits"
-        % (st, code_of(c)))
+    row("RT-C", True,
+        "CONSEQUENCE, recorded as a consequence and not as an independent finding: a plan previewed before the "
+        "round-trip answers %s %s on apply afterwards, because state.replans is deliberately unexported (see "
+        "state.js:36-38, 'a plan is a claim about a moment ... which is why it does not travel in an export at "
+        "all'). This is the correct behaviour, so the unreachable stale_plan inversion is unreachable BECAUSE "
+        "THE CODE IS RIGHT" % (st, code_of(c)))
 
     # ---- D. what the export carries --------------------------------------------
     keys = sorted(exp.get("state", {}).keys())
-    for k in ("replans", "closures", "restaurant_revisions"):
-        row("RT-D-%s" % k[:4], k not in keys,
-            "state.%s is absent from the export (%s in state: %s)" % (k, k in keys, k in keys))
+    # The Builder's correction, verified in source: these three are NOT one omission three times.
+    # They are three different things, and a list renders them as one.
+    row("RT-D-repl", "replans" not in keys,
+        "DECIDED AND CORRECT, not a finding: state.replans is absent from the export, and state.js:36-38 argues "
+        "why -- 'a plan is a claim about a moment rather than a fact about the restaurant, which is why it does "
+        "not travel in an export at all'. Asserted as CORRECT BEHAVIOUR, and deliberately not filed alongside the "
+        "two omissions below")
+    row("RT-D-clos", "closures" not in keys,
+        "OMITTED AGAINST ITS OWN STATED REASON: state.closures is absent, and the comment directly above it in "
+        "the file that owns it argues it must persist -- 'a closure is a fact about a date and outlives the "
+        "request that created it, so it is the thing availability reads and the thing that can move a date's "
+        "day_state'. The confession is in the source, in this stage's own hand")
+    row("RT-D-rest", "restaurant_revisions" not in keys,
+        "OMITTED WITH NO ARGUMENT AT ALL: state.restaurant_revisions is absent and no comment anywhere defends "
+        "it, while its two neighbours each carry a paragraph. The omission with the worst consequence is the one "
+        "nobody argued about; the one arguably right is the one that got the best reasoning")
     for k in ("history", "series", "idempotency"):
         row("RT-D-%s" % k[:4], k in keys,
             "state.%s survives the round-trip (present: %s), as the Builder scoped it" % (k, k in keys))
