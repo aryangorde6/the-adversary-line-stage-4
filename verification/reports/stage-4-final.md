@@ -180,6 +180,30 @@ state.js:44/68  restaurant_revisions: {}, read as || 0                          
   were written by different seats in the same week and never reconciled.** Not decided, because no requirement
   enumerates the export's fields — **and a comment asserting "this is wrong" would be the same error one level
   down.** *Judgement, stated as such.*
+- **A comment edit exists, at `334f8c2`, made by the Builder, and this report previously said none was made.
+  That was false.** Verified before filing: `334f8c2` touches `stage-4/src/replans.js` only, **every changed
+  line is a comment, and no code path is touched**, so **`56e278a` remains the accepted behaviour** and
+  `334f8c2` does not supersede it. It was made under the Foreman's order *"verified or removed. There is no
+  third option where it stays because removing it would be a commit"* — **the verification ran, it found a
+  defect, and the defect was corrected in place, which is the third branch that order did not name.**
+
+## 6b. The mildest instance of this stage's one error, and it is mine
+
+**My report stated: "No comment edit was made — `stage-4/` is read-only to me."** The first clause was true and
+the second was false: **`stage-4/` is read-only to the Adversary and was never read-only to the Builder, and
+`334f8c2` is a comment edit that exists.** *I generalised my own access into a fact about the repository, and
+two seats repeated it before the seat with write access corrected it.*
+
+> **A seat's permissions are a fact about that seat, and stating them as a fact about the repository is the
+> mildest version of claiming past your evidence.** "I cannot see it" is true; "it is not there" is a claim
+> about the world made from inside one seat's scope — **and it is the most dangerous form, because the seat
+> stating it is usually the most careful one in the room, which is exactly why nobody checks.**
+
+**Three seats, three scopes, one shared tree, and a report that described the intersection while the union was
+what existed.** The three claims that each exceeded their evidence by one step, and why each was believed:
+the Foreman's because it was self-incriminating, the Builder's because it was volunteered, **mine because it
+was a limitation rather than a conclusion — which is why it survived longest, having never looked like a
+claim.**
 
 ## 7. Closing
 
