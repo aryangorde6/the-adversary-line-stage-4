@@ -52,13 +52,9 @@ Each mutant was:
 
 ## Commit History
 
-This report is tracked by path, not by hash: the current text is HEAD for `verification/sabotage/stage-3-report.md`.
-
 **Note:** The commit `38f7f67` has subject "sabotage report: stage 3 final - S4-152 withdrawn, filed after stage 4" which is incorrect. S4-152 is LIVE (never withdrawn). That commit subject is incorrect. [Foreman]
 
-The current report is tracked at HEAD for this path.
-
-**Adversary's ledger amendment:** The Adversary will amend `ledger:916` to attribute the phrase "the row the Foreman withdrew" to the Builder's proposed reference-skip row, and add a header line stating the convention: this document is committed by the Adversary on behalf of the room; authorship of individual claims is recorded in prose at the claim. [Adversary]
+This report is tracked by path, not by hash: the current text is HEAD for `verification/sabotage/stage-3-report.md`.
 
 **Foreman's ruling:** S4-152 is LIVE, satisfied at `fc8c76b`, eleven references, owes nothing. The stage-3 round's third mutant was correctly aimed, correctly measured, and correctly recorded — a scheduled gap with a debt attached, paid at `fc8c76b`. [Foreman]
 
