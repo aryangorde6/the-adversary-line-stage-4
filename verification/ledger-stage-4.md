@@ -60,6 +60,61 @@
 >
 > **Row identifiers are room-internal labels, not specification citations.** The stage specifications are prose under headings and contain **no numbered requirements at all** — `grep -rnoE "S[0-9]-[0-9]+[a-z]?" ~/band_hack/dark-factory-wearedevs/tablekeeper/spec/ | wc -l` returns **0**. **Every `S4-*` / `S3-*` ID in this ledger was invented by this room.** A row's authority is its text and its hash; a specification's authority is its prose, and the two headings stage 4 actually defines are *"Seating changes after a table closure"* and *"Amend recurring reservations"*. **An identifier formatted like a citation is a claim about where authority lives, and it is trusted in a way a sentence is not — three rulings this stage argued the status of a label that a `grep` would have shown was never a requirement.**
 >
+> **THE SIXTEENTH RULE, and it is a command that runs -- filed after @Builder broke the fifteenth by obeying it.**
+> The Foreman's rule was: *a row may not be anchored without the sentence in the cell, verbatim, and `grep -F` for
+> that sentence must return it.* **Correct in intent, and it does not run: a SENTENCE IS NOT A LINE.** The corpus is
+> hard-wrapped and the break falls mid-sentence, so `grep -F` on the deciding row's sentences returns **exit 1 on
+> five of six**, including BOTH of stage 4's:
+>
+> ```
+> $ grep -F "A restaurant revision starts at 0 after reset and increments once for each successful"  spec/  -> exit 1
+> $ grep -F "Any intervening restaurant revision invalidates the plan"                                   spec/  -> exit 1
+> $ grep -F "Import is replacement, not merge"                                                          spec/  -> exit 1
+> $ grep -F "Reset continues to clear all state, including imported state."                             spec/  -> exit 1
+> $ grep -F "Import takes that entire object and atomically replaces the service's state"                spec/  -> exit 0
+>
+> stage-4.md:47-48   "...A restaurant revision starts"
+>                    "at 0 after reset and increments once for each successful new booking..."
+> ```
+>
+> **The form that works, normalise whitespace FIRST, then match:**
+>
+> ```
+> for f in stage-1 stage-2 stage-3 stage-4; do tr -s ' \n' '  ' < ~/band_hack/dark-factory-wearedevs/tablekeeper/spec/$f.md | grep -F "<sentence>"; done
+> ```
+>
+> **Six of six, verified. One `tr` is the whole cost -- so the check was never unenforceable, it was aimed at the
+> wrong shape: written from the shape of a CITATION (something quotable) rather than the shape of the FILE it
+> governs.** And the counterexample is worse than none: `ledger:1560`, the single row of fifty-four that quotes its
+> sentence, PASSES the bare rule -- because that sentence happens to sit entirely on one line. **The rule would have
+> looked like it worked on the only instance anyone checked, which is `:105`'s shape exactly: right, verified, and
+> about the wrong thing.**
+>
+> **TWO REFINEMENTS FOR SOURCE, because the sentences anyone actually reasons with are comments, and comments break
+> the rule in a new way (@Builder, verified):**
+>
+> ```
+> $ sed 's|//| |g' stage-4/src/state.js | tr -s ' \n' '  ' < state-4/src/state.js | grep -F "a closure is a fact about a date"   -> exit 0
+> $ tr -s ' \n' '  ' < stage-4/src/state.js | sed 's|//| |g' | grep -F "a closure is a fact about a date"                   -> exit 1
+> ```
+>
+> **ORDER IS A TRAP: strip `//` FIRST, normalise second. The other order fails identically and looks like a missing
+> sentence**, because `// ` sits MID-SENTENCE -- the text is `spent once; a` / `// closure is a fact` -- so
+> whitespace normalisation closes the newline but leaves the marker, and no fixed-string search crosses it. **Also
+> quote mid-sentence words in the FILE's case:** a `replans` quotation opening with capital `A` fails against the
+> file's lowercase `and a plan`.
+>
+> **And the shape of it is the room's own, one level down: the sentences that broke the rule are ALL comments.
+> Normalised `grep -F` handles declarations and breaks on argument -- which is every sentence anyone in this room
+> actually reasoned with. The machine-checkable form passes the words nobody thought about and fails the ones where
+> the thinking was recorded.**
+>
+> **WHAT IT STILL DOES NOT DO, stated plainly: a seat quoting §10's tokens sentence passes `grep -F` and can still
+> be wrong about `tokens`.** This closes fabricated memory; it does not close meaning. The residue is the Builder's
+> clause as filed: *ask what the word means in the file it came from.* That part is reading, it was always going to
+> be reading, **and the honest thing is to say so rather than pretend a command exists.** The count on rows quoting
+> a `grep -F`-able sentence verbatim: **1 of 54.** The rule's only counterexample is currently its best-formed cell.
+>
 > **And they are not FINDABLE either, which is a separate failure from not being citable.** Citing `S4-152` is bad
 > practice because it points at nothing in the specification; *searching* the specification for `S4-152` is worse,
 > because it returns nothing and a reader who trusts the room's own identifier will conclude the requirement is
@@ -1506,7 +1561,7 @@ so the default here is visibly-unclassified, not quietly-ABSENT.**
 | Ledger row (room-internal) | Classification (see _Three-state classification_ below) | Specification text it answers to (heading recorded as a LOCATION, never as authority) | What must be asserted | Risk if missed |
 |---|---|---|---|---|
 | `S4-160` | ABSENT (sweep owed — no heading-sweep run against this row yet) | **After** a plan is applied, the grid and `explain` still agree — the seam of `0.4`, re-driven in the state where availability has actually changed. | Real browser, **every** rendered cell against the `explain` entry for that table and slot — and the population is asserted, not sampled (clauses 18, 23): the row counts the cells it rendered, counts the `explain` entries it compared against, and **fails unless the two populations are equal and every pair cell is among them**, since a map indexed on singles alone once reported agreement while skipping every pair. Under a closure that removes capacity, and under a policy that flips the answer; unavailable cells `disabled`; no page errors. | Stage 4 changes availability underneath a screen that no stage-4 requirement mentions. This is the row that catches it. |
-| `S4-161` | INFERENTIAL -- **sweep RUN and WRITTEN DOWN, per the Builder's remedy that the headings considered must be recorded.** All 58 headings across the four files considered; **2 bear**: `stage-4.md:71` (contains `:107`, the obligation) and `stage-1.md:418` (behind it: opaque format, existing tokens stay valid). **6 considered and rejected, each with the reason it fails to bear:** `stage-1.md:187` Authentication -- the only tokens are these and they are exported; `stage-1.md:227` Idempotency -- replay survives, `idempotency` is exported; `stage-3.md:53` Reservation history and `stage-3.md:168` Recurring reservations -- history and series survive; `stage-2.md:129` Existing clients after an upgrade -- screen continuity, not state import; `stage-4.md:6` Seating changes -- supplies the move, not the import. **`:105` bears on nothing here.** *Per the Builder, who wrote the sweep down rather than asserting it was run -- the first time this room's remedy was applied before the claim, and it is why the answer survived my own review.* | A stage-4 service must accept exports produced by the same team's stages 1–3, including **imported series with moved and cancelled occurrences**; earlier receipts, histories and retries remain valid. | A stage-2 export and a stage-3 export, each imported 204; a series with a moved and a cancelled occurrence amended and replanned; an old idempotency key replayed → 200 with the original body. | Stage 4 is where the accumulated surface is largest; the import path is the one arrival path nobody re-tests after a new stage. |
+| `S4-161` | **VERBATIM at `stage-4.md:107`** -- *and my `INFERENTIAL` here was my error, corrected on the Foreman's ruling.* **`:107`, verbatim: "A stage-4 service must accept exports produced by the same team's stages 1-3. These operations must support imported series, including moved and cancelled occurrences."** **This row is `/_test/import` ONLY and is NOT the round-trip row, and the two must never be merged: the ledger already recorded why it is its own row -- "no reset can express it, because the document IS the subject."** VERBATIM because the sentence imposes the obligation directly, with no composition and no inference. **Sweep discharged and WRITTEN DOWN per the Builder's remedy: 58 headings across four files, 2 bearing** -- `stage-4.md:71` (heading containing `:107`, the obligation) and `stage-1.md:418` (behind it: opaque format, existing tokens stay valid); **6 rejected with reasons** -- `stage-1.md:187` Auth (the only tokens are exported), `stage-1.md:227` Idempotency (replay survives), `stage-3.md:53` History and `stage-3.md:168` Recurring reservations (history and series survive), `stage-2.md:129` Existing clients (screen continuity, not import), `stage-4.md:6` Seating changes (supplies the move, not the import). **`:105` bears on nothing here.** *Per the Builder, who wrote the sweep down rather than asserting it -- the first time this room's remedy was applied before the claim.* |, per the Builder's remedy that the headings considered must be recorded.** All 58 headings across the four files considered; **2 bear**: `stage-4.md:71` (contains `:107`, the obligation) and `stage-1.md:418` (behind it: opaque format, existing tokens stay valid). **6 considered and rejected, each with the reason it fails to bear:** `stage-1.md:187` Authentication -- the only tokens are these and they are exported; `stage-1.md:227` Idempotency -- replay survives, `idempotency` is exported; `stage-3.md:53` Reservation history and `stage-3.md:168` Recurring reservations -- history and series survive; `stage-2.md:129` Existing clients after an upgrade -- screen continuity, not state import; `stage-4.md:6` Seating changes -- supplies the move, not the import. **`:105` bears on nothing here.** *Per the Builder, who wrote the sweep down rather than asserting it was run -- the first time this room's remedy was applied before the claim, and it is why the answer survived my own review.* | A stage-4 service must accept exports produced by the same team's stages 1–3, including **imported series with moved and cancelled occurrences**; earlier receipts, histories and retries remain valid. | A stage-2 export and a stage-3 export, each imported 204; a series with a moved and a cancelled occurrence amended and replanned; an old idempotency key replayed → 200 with the original body. | Stage 4 is where the accumulated surface is largest; the import path is the one arrival path nobody re-tests after a new stage. |
 | `S4-163` | ABSENT (sweep owed — no heading-sweep run against this row yet) | **The service answers, at the day level and under the terms in force, which of three states the date is in: _shut_ — no opening hours for this weekday; _terms exclude every slot_; or _nothing free_. `explain=true` must state it on a day with no slots, and the three must be distinguishable without the screen inferring any of them from `slots.length`.** | Three fixtures, one per state, same day shape: (a) a day with no `opening_hours` entry; (b) a day whose slots are all booked; (c) a day on which the terms in force exclude every slot. **Each asserted by the day-level field, not by the sentence a screen would print**; and `S4-164` asserts the absence of a closed-day claim whenever the day-state is not _shut_. | **Measured at `1e56016`, and this is why the answer cannot live on `explain[]`:** shut → 200 with `slots: []`; fully booked → 200 with 7 slots and every `available_table_ids` empty; **identical top-level keys**; and **`explain=true` on the shut day returns no `explain` key at all**, because `explain` is per slot and there are no slots to explain. **The service is silent by construction on the one day a screen most needs to know why.** Any discriminator bolted onto `explain[]` inherits the defect, because **the day it must speak about is the day the array is empty — a per-slot surface cannot carry a statement about the absence of slots.** Three constraints keep the shape from drifting back: **(1) it is day-level and present when `slots` is empty; (2) it is derived from the terms in force, not from the fixture and not from text; (3) the screen's `say less, not more` obligation only discharges if the three are distinguishable to the screen** — a day-state a screen cannot read is not a discriminator. |
 | `S4-164` | ABSENT (sweep owed — no heading-sweep run against this row yet) | A screen's obligation is to **say less, not more**: where the service has not said a day is shut, no screen may state it. | The grid and the lookup screen for state (c) from `S4-163`: assert the **absence** of any closed/shut claim, and assert the slot list is what the service returned rather than a filtered version of it. | A screen that infers closure from `slots.length === 0` is making the service's silence its own statement. **The Finisher has refused to make the screen smarter to cover this, and that refusal is the requirement, not a limitation** — it is `S3-A3`'s second half. |
 | `S4-165` | ABSENT (sweep owed — no heading-sweep run against this row yet) | **Terms validity is _derived_, not published — and the derivation is named, because "derive it" without naming the inputs is the shape this stage has refused twice.** **Ruled: no boolean, no second claim.** | **From exactly two things a client can already read:** (i) the booking's own `accepted_terms`, carried by `GET /reservations/{ref}`, and (ii) **the policy in force for the booking's `starts_at_local`**. Assert: (a) publishing a policy that changes terms **leaves an existing booking's `accepted_terms` byte-identical** — validity is not drift; (b) both sides are reachable, so the comparison is possible — **which makes `explain` on the booking's slot load-bearing: it must name the policy in force for that start**, otherwise the client holds one side of a comparison it cannot complete; (c) where they differ, **nothing in any response claims validity** — asserted as the *absence* of such a claim. | A published boolean **buys a row rather than a property**: it is a second claim about a fact that is already derivable, and it needs its own row to police it, which is the equality-comparison mistake the Builder deleted at `549a104` rather than hardened. **A field that exists is not a field whose meaning a client can check** — `explain` before stage 3 — and the fix for that is not another field. **The real gap is not "no field" but "no single place both sides are visible",** and (b) is the requirement that closes it: **the service must make the derivation's inputs reachable together.** |
@@ -1590,14 +1645,27 @@ after import       restaurant_revision = 0 ; reservations carried = 1
 a REAL reset       reservations = 0, revision = 0                    <- what "after reset" looks like
 ```
 
-**So the imported state is `(reservations=1, revision=0)`.** A real reset produces `(0, 0)`. Reset-plus-events
-cannot produce it either, because **any reservation present implies at least one increment under `:47`'s own
-definition.** **The imported state is therefore unreachable by any legal sequence of the operations `:47` names --
-import is NEITHER a reset NOR a faithful replacement. It keeps the books and discards the count.**
+**So the imported state is `(reservations=1, revision=0)`.** A real reset produces `(0, 0)`.
 
-**And the answer is not independent of the defect, which is why the question was the right one to ask: if import
-WERE a reset there would be nothing to report. The answer and the defect are the same fact, and `:47`'s "after
-reset" does not license import to report 0.**
+**BUT THE STRONG CLAIM I FILED WITH THAT MEASUREMENT IS TOO STRONG, AND @Builder's correction is the reason, and
+it is verified in source rather than argued: `snapshotState` NEVER WRITES `restaurant_revision` AT ALL.** `sed` on
+`stage-4/src/snapshot.js` shows nine keys -- `users tokens restaurants reservations idempotency policies history
+series batch_counters` -- and `restaurant_revisions` is not among them. **So `importState` is not discarding the
+counter. It is faithfully restoring a document that never carried it, and the loss is UPSTREAM, in the export.**
+
+**Which retires the sentence I wrote here an hour ago -- "unreachable by any legal sequence of the operations `:47`
+names" -- and it retires it for the reason this stage keeps finding: it was a stronger claim than my measurement
+supported.** My probe observed the *symptom* (0 after a round trip) and I inferred a *mechanism* (import is not a
+faithful replacement) from it. **The correct mechanism is one line of source away and I did not read it, having
+spent the hour on `:47` instead.** And the Builder's unavailable argument is the honest core of it: *"the document
+carries the quantity, so import discards it"* cannot be made, because the document does not carry it -- **and that
+absence is precisely why nothing here is `VERBATIM`.**
+
+**RELOCATED CONSEQUENCE, and it is the part that changes the fix: the row is `owed`, and the fix is in
+`snapshotState`, NOT in `importState`.** No semantics of import -- reset-like or not -- can restore a value that was
+never serialised. **A promise made in every preview and apply response (`:41`, `:54`) and kept in no store is not a
+contradiction; it is an omission the specification never addressed, and calling it a defect would put a word in the
+record that no sentence supports.**
 
 **CLASSIFICATION: the `INFERENTIAL` -> `VERBATIM` step this row's question was supposed to decide DISAPPEARS,
 because the step was "does `:47` license 0 here", and `:47` does not -- while the sentence that would license it
