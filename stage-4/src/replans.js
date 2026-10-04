@@ -224,7 +224,11 @@ function planFor(state, restaurant, closure, considered, byReference) {
       if (best === null || betterThan(candidate, best)) best = candidate;
       return;
     }
-    for (const option of optionsFor[at].options) {
+    // SABOTAGE SEED 3: the enumeration reversal. The DFS walks each booking's options in REVERSE rank
+    // order, so the first complete plan it finds is the rank-MAXIMAL one and betterThan's third term is
+    // load-bearing for the first time. With the rank vector intact this build is still correct; with the
+    // vector deleted as well (M2') it is the rank-blind planner that S4-171d catches.
+    for (const option of optionsFor[at].options.slice().reverse()) {
       if (conflictsWithChosen(chosen, option.table_ids, optionsFor[at].reservation, byReference)) continue;
       chosen.push({ reference: optionsFor[at].reservation.reference, table_ids: option.table_ids });
       walk(at + 1, moved + option.moved, unused + (option.capacity - optionsFor[at].reservation.party_size),
