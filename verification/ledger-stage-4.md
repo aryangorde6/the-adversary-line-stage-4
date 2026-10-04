@@ -920,8 +920,10 @@ graded, so the reds *new at this hash* are attributable by difference rather tha
   rather than two.** **Scoped, because the scope is the whole point: the object withdrawn was the
   Foreman's proposed *reference-skip row* ("the next booking's reference skips a value"), retired at
   `170c99d` because `allocateReference` is a random draw with a taken-check and so has no counter and
-  nothing to skip. `S4-152` itself was never withdrawn -- it is live, carries an observable, has eleven
-  references, and this line is its first `saw`. A row and a requirement are different objects and this
+  nothing to skip. `S4-152` itself was never withdrawn -- it is live, carries an observable, and this
+  line is its first `saw`. (Reference count is deliberately not stated here: `grep -c "S4-152"
+  verification/ledger-stage-4.md` is the authority, and a numeral written into the sentence being amended
+  is stale the moment the amendment lands -- which is how this document came to say twelve.) A row and a requirement are different objects and this
   sentence used to read as if they were one.** *The clause and the phrase being scoped here are the
   **Builder's**, written at `fc8c76b`; this ledger is committed by the Adversary, so the repository's
   history attributes both the phrase and this correction to one seat, and the diff is the only
