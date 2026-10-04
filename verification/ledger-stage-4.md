@@ -819,6 +819,70 @@ PLANTED STATE, read before any result (clause 59), Builder's own words:
   reference in the candidate state (seed it, or write it and return a success-bearing refusal). Without that,
   the seed is a no-op wearing a defect's commit message.
 
+## THE PLANTINGS GRADED -- all four, per probe, ruling on none
+
+### The graph first, because two of the four hashes mean something other than what the room was told
+
+```
+96000db  ledger (mine)
+  170c99d  seed 1   parent 96000db   fixture.js   allocateReference before the refusal
+    4b4bc5c  reversal  parent 170c99d  replans.js  DFS walks options in REVERSE rank order
+      644ee7c  seed 4  parent 4b4bc5c  fixture.js  the door accepts and drops the four keys
+      1780d45  parent 4b4bc5c  fixture.js  same tree as 644ee7c, message says "precondition"
+        fadad4d  M2'   parent 1780d45  replans.js  and betterThan's third term deleted
+```
+
+- **`4b4bc5c` was never amended and is not orphaned. It is the parent of all three later plantings** and it is
+  the genuine precondition: reversal only, no fixture change. The account of an amend that rewrote a hash is
+  **not what happened**; what exists is a *new sibling* of `644ee7c`.
+- **`1780d45` is not a precondition.** Its diff is `fixture.js` -- **seed 4's mutation** -- and its tree is
+  byte-identical to `644ee7c`. It inherits the reversal from its parent, so **it carries both mutants and its
+  message describes neither.**
+- **So `644ee7c` and `fadad4d` both carry seed 4's defect, and no planting after `170c99d` isolates a single
+  defect.** Attribution below is by file and by row disjointness, and is stated as attribution, not as proof.
+
+### The grades
+
+| planting | hash | write_family | discriminator | planner_property | negative_control | s3/fixture_arrival |
+|---|---|---|---|---|---|---|
+| seed 1 | `170c99d` | 9/9 | 16/16 | 15/15 | 8/8 | 36/36 |
+| precondition | `4b4bc5c` | 9/9 | 16/16 | 15/15 | 8/8 | 36/36 |
+| "precondition" | `1780d45` | 9/9 | 11/16 | 15/15 | 7/8 | 30/36 |
+| seed 4 | `644ee7c` | 9/9 | 11/16 | 15/15 | 7/8 | 30/36 |
+| M2' | `fadad4d` | 9/9 | 16/16 | **14/15** | 7/8 | 30/36 |
+
+**Per-probe, in the format fixed before the seeds landed:**
+
+- **seed 1 `170c99d`: 84 rows, 0 red -- and the seed is inert** (`api.reset` throws before `store.setState`).
+  **Not a survivor: a survivor is a live defect no probe saw.** The rows are `reported: yes, saw: no change`.
+- **precondition `4b4bc5c`: 84 rows, 0 red, correctly.** **Earns nobody a `saw` and is not evidence about any
+  probe** -- it is graded by whether the mutant planted on top of it becomes visible, and one does.
+- **`1780d45`: the same reds as `644ee7c`**, which is the check that identifies it: whatever its message says,
+  **its tree is seed 4.**
+- **seed 4 `644ee7c`: 10 reds across two probes.**
+  - **`fixture_arrival.py` 30/36 -- `S3-301-policies`, `S3-301-series`, `S3-301-history`, `S3-305`,
+    `S4-151-control`, `S3-302b`.** **This is the pre-registered seed and the row aimed at it caught it.**
+  - `discriminator.py` 11/16 -- `S4-167-a1`, `a2a`, `a2b`, `a3b`, `cal`. **My rows, not the aimed row: evidence
+    about those five rows only, and it does not touch `fixture_arrival.py`'s credit.**
+  - `negative_control.py` 7/8 -- `NC-004` red, meaning the control's deliberately wrong answer became the
+    build's answer. **A control going red is not a coverage claim in either direction.**
+  - `write_family.py` 9/9 and `planner_property.py` 15/15: **the planner reds require the vector deletion, so
+    their silence here is what isolates `fadad4d`'s reds to the third term.**
+- **M2' `fadad4d`: `planner_property` 14/15, and the red is `S4-171b` -- not `S4-171d`, the row it was aimed
+  at.** `S4-171d` **PASSES** against the mutant written for it. `S4-171b` is the row **withdrawn from coverage
+  at `d534b5e`**. So: **`planner_property` has its first `saw`, and the row that earned it is the one that had
+  been demoted, while the row aimed at the defect passed.** Its other reds (`discriminator` 16/16 here) are the
+  fixture mutation's absence, which is the attribution working in both directions.
+
+### What the pre-registration cost and bought, written out
+
+> `fixture_arrival.py` was `saw: unknown`; it is now **`saw`, at `644ee7c`, six named reds.**
+
+**"Narrow by construction" was an argument and is now a measurement, and the measurement is favourable: the one
+probe written end-to-end from an incident is the one that saw the incident -- while three other probes saw it
+too and are owed nothing for it.** The fourth horn did not fire: **no catch came from a Builder probe in place
+of mine.**
+
 ### Clause 56: _reports_ and _sees_ are two facts, and only one is cheap
 
 **A manufactured red proves a probe can _report_; it does not prove it can _see_.** Inverting an assertion
