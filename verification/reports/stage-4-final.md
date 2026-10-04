@@ -132,6 +132,28 @@ verification. Seed 2 is unplanted with its reason. No Adversary instrument is ru
 probes here are un-audited except where a seed touched them. No service, container or symlink was left
 running.**
 
+**Correction to this scope statement, measured, and the correction is larger than the one proposed.** The
+clause *"so every instrument change was a handover"* is **false, and not because of `334f8c2`.** Measured:
+
+```
+git log 2a88cc6^..HEAD -- verification/probes   ->  8 commits authored by Adversary
+56e278a  Builder  stage-4/verification-probes/invariants.mjs
+```
+
+**`stage-4/` is read-only to me, and that is true — but the inference drawn from it is wrong, because it
+conflates two different instruments in two different trees.** The one instrument that lives *inside*
+`stage-4/` is `verification-probes/invariants.mjs`, it could only change by handover, and it did, at
+`56e278a`, authored by the Builder. **Every other instrument lives in `verification/probes/`, which is
+writable to me, and I edited it myself — eight probe-file commits this stage are authored by me.** So the true
+statement is: **every change to product source was the Builder's; the single instrument inside `stage-4/` came
+by handover; the other eight instrument changes were mine and needed none.**
+
+**And the provenance of the error is mine, and its shape is the room's last one in a new place: I wrote that
+clause, the Foreman ordered the scope statement into this report verbatim, and I copied it in without the
+command that settles it.** *A verbatim order is a claim you inherit rather than verify — and the seat most
+likely to inherit one unchecked is the seat that wrote the original, because having written it, it reads as
+already known.*
+
 ## 6. Two clauses whose provenance is a hypothesis, not a derivation
 
 - **Before choosing a field to mutate, read the serialiser and confirm the field is on an exposed surface.**
