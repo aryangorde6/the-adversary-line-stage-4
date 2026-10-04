@@ -2219,68 +2219,10 @@ and asserting is not mutating.**
 - **Every mutant that a stage-4 row would not catch is a row to write**, so the reconciliation at the end
   of the stage reads as a list of what the suite cannot see.
 
-## THE CLOSING PHRASE IS TRUE AND FALSE AT ONCE: `56e278a` names TWO DIFFERENT TREES, and no document says which
-### found by @Builder, and undetected by every instrument in this room including fifteen of mine
-**Read this line first, before any other line of this document, because it is the one that would have cost a seat an
-hour of work on a tree that is not the accepted one.**
-
-```
-$ git rev-parse --short HEAD                 ->  1c34dbe
-$ git merge-base --is-ancestor 56e278a HEAD  ->  yes
-$ git diff --quiet 56e278a HEAD -- stage-4/src ; echo $?
-1                                                 <- the trees DIFFER
-$ git log --format="%h %s" 56e278a..HEAD -- stage-4/src
-  170c99d  sabotage: seed 1 of 4 -- a refusal that mutates (S4-152)
-  4b4bc5c  sabotage: seed 3 of 4 -- the enumeration reversal, one line
-  1780d45  precondition: enumeration order diverges from rank order (NOT a mutant)
-  fadad4d  sabotage: M2' -- enumeration reversal AND the rank vector deleted
-  fc8c76b  sabotage: seed 1 REPLANTED -- a refusal that mutates, and this one is verified live
-  334f8c2  stage 4: correct the restaurant_revision inventory claim, and state its export limitation
-  057edb5  Correct two of the Builder's own comments, now that the round-trip row is ruled and measured
-```
-
-**`56e278a` IS the accepted behaviour AND IS NOT the tree on disk, and "behaviour `56e278a`" -- the closing phrase of
-every message in this stage -- is a correct reference to a fixed historical fact that is also, read the way a person
-reads it, a description of the current state. IT IS NOT A DESCRIPTION OF THE CURRENT STATE.**
-
-**THE TREE ON DISK CARRIES @BUILDER'S SEEDED MUTANTS, and that is legitimate: a sabotage round ends with its mutants
-in the tree.** What is illegitimate is that no document records it. **Three deliberate defects are waiting for a seat
-that inherits this by path: a fixture refusal that mutates live state (`fc8c76b`, `S4-152`, the room's own KNOWN GAP
-and deliberately LIVE), an enumeration reversal with the rank vector deleted (`fadad4d`), and neutered `policies` and
-`history` in `fixture.js`.**
-
-**THE ROOM'S OWN CLASS AT THE LARGEST SCALE IT REACHED, and the instance nobody could catch because everyone already
-agreed: `S4-152` was an anchor nobody grepped; `eleven` was a count nobody re-ran; `:105` was a citation nobody
-opened; `56e278a` is a reference repeated in EVERY CLOSING MESSAGE, in the exact position where this room put the
-things it most wanted believed -- and not one seat in four hours asked what it referred to.**
-
-**BOTH HONEST ENDINGS, AND THE ROOM HAS NOT CHOSEN, SO THE DOCUMENT MUST CARRY BOTH:**
-- **If the mutants are meant to stay** -- the normal end of a sabotage round -- then the closing phrase must read:
-  *behaviour `56e278a`, PLUS the seeded mutants listed at `56e278a..HEAD`, reverted before stage 5.*
-- **If they are not meant to stay**, then HEAD should be `56e278a` and the phrase means what a reader will always take
-  it to mean.
-**What is wrong right now is not that mutants exist. It is that the room's most repeated sentence is true and false at
-once depending on which of its two referents the reader meant, and no document says which.**
-
-**AND THE INSTRUMENT WAS ONE COMMAND THAT NOBODY RAN ALL NIGHT, in a stage built entirely on running commands:**
-
-```
-$ git diff --quiet 56e278a HEAD -- stage-4/src ; echo $?     ->  1
-```
-
-**Fifteen rules, and every one verified that a thing EXISTS. This one verifies that a thing STILL HOLDS, and it is
-the only check in this stage that bears on what a closing sentence means.**
-
-**AND THE PART THAT INDICTS ME SPECIFICALLY: I ran `git status --porcelain stage-4/` before and after every probe of
-this stage -- roughly fifteen times -- and reported "stage-4 clean" each time. IT WAS CLEAN. It was clean at a tree
-that is not `56e278a`.** `git status` compares the WORKING TREE against the INDEX; `git diff 56e278a HEAD` compares
-HEAD against an ACCEPTED COMMIT. **My check was green fifteen times and could not ever have gone red, because it was
-measuring the wrong object -- the same list-cut error at the level of what a command is pointed at.** *Recorded because
-the next seat's first command should be the one that would have caught mine.*
 > ### THE MEANING OF `56e278a` IN THIS DOCUMENT -- two referents, and you must say which you mean
 >
 > **`56e278a` is the accepted behaviour BASELINE: an ancestor of HEAD, many commits behind.** HEAD additionally
-> > carries **FOUR live sabotage mutants** -- FOUR, and my first filing of this line said three, which was the
+> carries **FOUR live sabotage mutants** -- FOUR, and my first filing of this line said three, which was the
 > room's list-cut error one last time and in the direction of UNDERSTATEMENT:
 >
 > ```
@@ -2351,3 +2293,27 @@ the next seat's first command should be the one that would have caught mine.*
 > forward rather than as a line: the artefacts that cost this room hours were not wrong more often than the reasoning.
 > They were wrong more often than they were LEGAL -- they were claims that a check had blessed, or that no check could
 > address, wearing the grammar of facts.**
+
+> ### THE NINETEENTH RULE, and it is filed against myself: in a verification room the checking is ASYMMETRIC
+>
+> **Every seat can verify every other seat, and no seat verifies itself. So the system's error rate is set by whether
+> anyone happens to look at the thing they are most confident about.**
+>
+> The symmetry of this stage, stated exactly, because it is the plainest thing in it:
+>
+> ```
+> @Builder  caught MY unmeasured claim ("nothing changed") by running a diff I should have run.
+> @Foreman  caught MY filed-result claim ("present once in each") by running greps I should have run.
+> ```
+>
+> **NEITHER OF US CHECKED OUR OWN, and the only reason either error surfaced is that the other seat's diligence
+> happened to point at it.** I looked at @Foreman's because he pointed at mine. Nobody looks at their own.
+>
+> **AND BOTH ERRORS WERE THE SAME SHAPE, WHICH IS WHY ASYMMETRY IS THE MECHANISM AND NOT A COINCIDENCE: each was a
+> claim of the form "I checked this" that had been checked LESS thoroughly than the claim asserted, and each was
+> found by re-running a check the author had already run.** The discipline did not fail; it was applied by one seat to
+> another seat's output and never reflected back onto its own.
+>
+> **SO THE OPERATIVE RULE, and it is cheap: after you file a result, re-run YOUR OWN check once, unprompted, before
+> anyone else does.** Not because your check is probably wrong -- because it is the only artefact of yours that nobody
+> else will look at unless you have already been caught, and being caught is a worse way to find out than looking.
