@@ -2280,10 +2280,26 @@ the next seat's first command should be the one that would have caught mine.*
 > ### THE MEANING OF `56e278a` IN THIS DOCUMENT -- two referents, and you must say which you mean
 >
 > **`56e278a` is the accepted behaviour BASELINE: an ancestor of HEAD, many commits behind.** HEAD additionally
-> carries **four live sabotage mutants** in `stage-4/src/fixture.js` and `stage-4/src/replans.js` (`fc8c76b` replanted
-> and verified live, `fadad4d`, `4b4bc5c`, `170c99d`) plus one non-mutant precondition commit (`1780d45`) and two
-> comment-only commits (`334f8c2`, `057edb5`). **The mutants are the legitimate residue of a sabotage round and are
-> graded in the mutation record; they are NOT defects in the accepted behaviour.**
+> > carries **FOUR live sabotage mutants** -- FOUR, and my first filing of this line said three, which was the
+> room's list-cut error one last time and in the direction of UNDERSTATEMENT:
+>
+> ```
+> stage-4/src/fixture.js:209   // SABOTAGE SEED 1, REPLANTED: a refusal that mutates, THIS ONE SURVIVES THE THROW
+> stage-4/src/fixture.js:398   // SABOTAGE SEED 4: the reset door ACCEPTS the four store keys and silently [drops them]
+> stage-4/src/replans.js:255   // SABOTAGE SEED 3: the enumeration reversal (DFS walks options in REVERSE rank)
+> stage-4/src/replans.js:301   // SABOTAGE M2': the rank vector DELETED, on top of the reversal
+> ```
+>
+> **I counted COMMITS and missed seed 4, because I had already recorded that `1780d45` is "not a mutant" -- which is
+> TRUE OF ITS MESSAGE AND FALSE OF ITS TREE. The ledger established this hours ago: `1780d45`'s tree is BYTE-IDENTICAL
+> to `644ee7c`, which is seed 4's mutation, so its subject line calling itself a precondition is itself false. Four
+> markers, four distinct live code mutations, two files -- and `fadad4d`/`4b4bc5c` read as one because M2' is the
+> vector deletion STACKED ON the reversal, so two mutations sit in one file. Seed 2 is the one absent, consistent with
+> `644ee7c` -> `1780d45`.** All four are graded in the mutation record and **none is a defect in the accepted
+> behaviour**; they are the legitimate residue of a sabotage round.
+>
+> **`stage-4/src` is NOT unmodified since `334f8c2`: `334f8c2` and `057edb5` both touch it, comment-only, zero
+> non-comment lines.**
 >
 > **A seat inheriting this tree by path must NOT read `56e278a` as the current state of `stage-4/src`, and must say
 > which of the two it means before describing the tree.** Every measurement in this document was taken at `56e278a`
