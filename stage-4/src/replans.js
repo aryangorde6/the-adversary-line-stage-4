@@ -19,10 +19,21 @@
 //     shrunk it, and re-judging it under the new policy would silently invalidate a promise already made.
 //
 // `restaurant_revision` is the concurrency token. It starts at 0 after a reset and moves once for each
-// successful new booking, real amendment, cancellation, policy publication and plan application -- and
-// NOT for no-ops, failures, previews or replays. A plan records the revision it was built against, and
-// apply refuses if the restaurant has moved on: any intervening change means the plan was computed from a
-// state that no longer exists, and applying it would half-apply a repair.
+// successful new booking, REAL amendment (reservation or series), cancellation, policy publication and
+// plan application -- and NOT for no-ops, failures, previews or replays. There are six sites that move
+// it, not five: api.js booking, api.js amendment (guarded by if (wasConfirmed), which is what makes the
+// "not for no-ops" half true rather than aspirational), api.js cancellation, series.js series
+// amendment, policy.js publication and this file's apply. A plan records the revision it was built
+// against, and apply refuses if the restaurant has moved on: any intervening change means the plan was
+// computed from a state that no longer exists, and applying it would half-apply a repair.
+//
+// KNOWN LIMIT, and it is a limit on this comment as much as on the code: the token does NOT survive an
+// export/import round trip. snapshotState serialises users, tokens, restaurants, reservations,
+// idempotency, policies, history, series and batch_counters -- restaurant_revisions is absent -- while
+// import replaces state wholesale via store.setState(next). So a client holding a cached
+// restaurant_revision across a re-import compares it against a restarted token. No requirement in the
+// specification enumerates the export's fields, so this is filed as an owed judgement about the surface
+// rather than a defect: see verification/reports/stage-4-final.md.
 
 const { fail } = require('./errors');
 const domain = require('./domain');
