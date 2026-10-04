@@ -1497,7 +1497,7 @@ so the default here is visibly-unclassified, not quietly-ABSENT.**
 | Ledger row (room-internal) | Classification (see _Three-state classification_ below) | Specification text it answers to (heading recorded as a LOCATION, never as authority) | What must be asserted | Risk if missed |
 |---|---|---|---|---|
 | `S4-160` | ABSENT (sweep owed — no heading-sweep run against this row yet) | **After** a plan is applied, the grid and `explain` still agree — the seam of `0.4`, re-driven in the state where availability has actually changed. | Real browser, **every** rendered cell against the `explain` entry for that table and slot — and the population is asserted, not sampled (clauses 18, 23): the row counts the cells it rendered, counts the `explain` entries it compared against, and **fails unless the two populations are equal and every pair cell is among them**, since a map indexed on singles alone once reported agreement while skipping every pair. Under a closure that removes capacity, and under a policy that flips the answer; unavailable cells `disabled`; no page errors. | Stage 4 changes availability underneath a screen that no stage-4 requirement mentions. This is the row that catches it. |
-| `S4-161` | ABSENT (sweep owed — no heading-sweep run against this row yet) | A stage-4 service must accept exports produced by the same team's stages 1–3, including **imported series with moved and cancelled occurrences**; earlier receipts, histories and retries remain valid. | A stage-2 export and a stage-3 export, each imported 204; a series with a moved and a cancelled occurrence amended and replanned; an old idempotency key replayed → 200 with the original body. | Stage 4 is where the accumulated surface is largest; the import path is the one arrival path nobody re-tests after a new stage. |
+| `S4-161` | INFERENTIAL -- **sweep RUN and WRITTEN DOWN, per the Builder's remedy that the headings considered must be recorded.** All 58 headings across the four files considered; **2 bear**: `stage-4.md:71` (contains `:107`, the obligation) and `stage-1.md:418` (behind it: opaque format, existing tokens stay valid). **6 considered and rejected, each with the reason it fails to bear:** `stage-1.md:187` Authentication -- the only tokens are these and they are exported; `stage-1.md:227` Idempotency -- replay survives, `idempotency` is exported; `stage-3.md:53` Reservation history and `stage-3.md:168` Recurring reservations -- history and series survive; `stage-2.md:129` Existing clients after an upgrade -- screen continuity, not state import; `stage-4.md:6` Seating changes -- supplies the move, not the import. **`:105` bears on nothing here.** *Per the Builder, who wrote the sweep down rather than asserting it was run -- the first time this room's remedy was applied before the claim, and it is why the answer survived my own review.* | A stage-4 service must accept exports produced by the same team's stages 1–3, including **imported series with moved and cancelled occurrences**; earlier receipts, histories and retries remain valid. | A stage-2 export and a stage-3 export, each imported 204; a series with a moved and a cancelled occurrence amended and replanned; an old idempotency key replayed → 200 with the original body. | Stage 4 is where the accumulated surface is largest; the import path is the one arrival path nobody re-tests after a new stage. |
 | `S4-163` | ABSENT (sweep owed — no heading-sweep run against this row yet) | **The service answers, at the day level and under the terms in force, which of three states the date is in: _shut_ — no opening hours for this weekday; _terms exclude every slot_; or _nothing free_. `explain=true` must state it on a day with no slots, and the three must be distinguishable without the screen inferring any of them from `slots.length`.** | Three fixtures, one per state, same day shape: (a) a day with no `opening_hours` entry; (b) a day whose slots are all booked; (c) a day on which the terms in force exclude every slot. **Each asserted by the day-level field, not by the sentence a screen would print**; and `S4-164` asserts the absence of a closed-day claim whenever the day-state is not _shut_. | **Measured at `1e56016`, and this is why the answer cannot live on `explain[]`:** shut → 200 with `slots: []`; fully booked → 200 with 7 slots and every `available_table_ids` empty; **identical top-level keys**; and **`explain=true` on the shut day returns no `explain` key at all**, because `explain` is per slot and there are no slots to explain. **The service is silent by construction on the one day a screen most needs to know why.** Any discriminator bolted onto `explain[]` inherits the defect, because **the day it must speak about is the day the array is empty — a per-slot surface cannot carry a statement about the absence of slots.** Three constraints keep the shape from drifting back: **(1) it is day-level and present when `slots` is empty; (2) it is derived from the terms in force, not from the fixture and not from text; (3) the screen's `say less, not more` obligation only discharges if the three are distinguishable to the screen** — a day-state a screen cannot read is not a discriminator. |
 | `S4-164` | ABSENT (sweep owed — no heading-sweep run against this row yet) | A screen's obligation is to **say less, not more**: where the service has not said a day is shut, no screen may state it. | The grid and the lookup screen for state (c) from `S4-163`: assert the **absence** of any closed/shut claim, and assert the slot list is what the service returned rather than a filtered version of it. | A screen that infers closure from `slots.length === 0` is making the service's silence its own statement. **The Finisher has refused to make the screen smarter to cover this, and that refusal is the requirement, not a limitation** — it is `S3-A3`'s second half. |
 | `S4-165` | ABSENT (sweep owed — no heading-sweep run against this row yet) | **Terms validity is _derived_, not published — and the derivation is named, because "derive it" without naming the inputs is the shape this stage has refused twice.** **Ruled: no boolean, no second claim.** | **From exactly two things a client can already read:** (i) the booking's own `accepted_terms`, carried by `GET /reservations/{ref}`, and (ii) **the policy in force for the booking's `starts_at_local`**. Assert: (a) publishing a policy that changes terms **leaves an existing booking's `accepted_terms` byte-identical** — validity is not drift; (b) both sides are reachable, so the comparison is possible — **which makes `explain` on the booking's slot load-bearing: it must name the policy in force for that start**, otherwise the client holds one side of a comparison it cannot complete; (c) where they differ, **nothing in any response claims validity** — asserted as the *absence* of such a claim. | A published boolean **buys a row rather than a property**: it is a second claim about a fact that is already derivable, and it needs its own row to police it, which is the equality-comparison mistake the Builder deleted at `549a104` rather than hardened. **A field that exists is not a field whose meaning a client can check** — `explain` before stage 3 — and the fix for that is not another field. **The real gap is not "no field" but "no single place both sides are visible",** and (b) is the requirement that closes it: **the service must make the derivation's inputs reachable together.** |
@@ -1550,29 +1550,66 @@ the file gives it.**
    the revision check at `:389` is reached. Both amendments must be previewed after the import, both record 0, the
    first applies, the second reads 1 and gets `stale_plan`. **`:105` holds. The token resets; the prohibition is
    unbroken.** Measured: RT-C.
-3. **`stage-4.md:107` — about BACKWARD COMPATIBILITY, not stage 4's own survival.** *"A stage-4 service must accept
+3. **`stage-4.md:105` — WRONG MECHANISM, and this is what made the predicted inversion unreachable.** `:105` sits
+   in the **series-amendment** section: the body at `:77` is `{"expected_revision": 3, "from_index": 2, ...}`, the
+   error at `:82` is `stale_revision`, and `:105` is preceded by *"Each affected series revision increases once per
+   plan application"*. **The replan gate is `:56` and its code is `stale_plan`.** Two mechanisms, two vocabularies,
+   two codes -- **and `:105` still holds precisely because it was never exposed to the thing that breaks.** Verified
+   by reading `:47`, `:56`, `:77`, `:82` and `:105` directly rather than accepting the distinction from the thread.
+4. **`stage-4.md:107` — about BACKWARD COMPATIBILITY, not stage 4's own survival.** *"A stage-4 service must accept
    exports produced by the same team's stages 1–3"* governs accepting an **earlier stage's** document, which is
    what `snapshot.js:171-174` implements in its own comment. **Read as "stage 4 must survive its own round trip" it
    says something else, and that is how I first read it.**
 
-**THE ANCHOR, quoted rather than paraphrased — stage-1 §10, snapshot and replacement, and NOT its tokens sentence:**
+**THE ANCHOR, quoted rather than paraphrased -- `stage-4.md:47` with `:56`, and NOT `:105`:**
 
-> *"Export is an atomic, read-only snapshot; subsequent source writes do not change it."*
-> *"Import takes that entire object and atomically replaces the service's state."*
+> **`:47`** -- *"A restaurant revision starts at 0 after reset and increments once for each successful new booking, real amendment, cancellation, policy publication or plan application."*
+> **`:56`** -- *"Any intervening restaurant revision invalidates the plan: 409 `stale_plan`, changing nothing."*
 
-**`INFERENTIAL`, because no sentence in any of the four files enumerates the stores** — `grep -c
-"restaurant_revisions\|replans\|closures" stage-1.md` returns **0**. **The obligation is the composition: §10 says
-export is a snapshot of the service's state and import replaces the service's state, and stage 4 hands over a
-document missing three of its own stores, so what import installs is not the state that was exported.**
+**`:47` is a DEFINITION, not an expectation, and that is why it beats every anchor this room filed: it does not
+mention export or import at all.** Read it against what the round trip produces and the contradiction needs no
+inference about import semantics whatsoever -- **the imported state contains the events `:47` says increment the
+quantity, and reports the quantity as 0.**
 
-**And the distinction that makes this section's anchor the room's sharpest, because one section now carries two
-rulings that look contradictory and are not:**
+**THE ANSWER TO THE FOREMAN'S OPEN QUESTION -- "is `POST /_test/import` *after reset*?" -- IS NO, AND IT IS
+MEASURED, not argued. `verification/probes/s4/reset_vs_import.py`, 5 rows, 0 failed, `stage-4/` at `334f8c2`,
+clean, service started and stopped by me:**
 
-> **§10's "the state format is opaque to the caller" governs the SHAPE and closes the field-list question
-> permanently — the implementer chooses. §10's "export is an atomic, read-only snapshot" governs the CONTENT and
-> leaves the round-trip question open, because a snapshot missing a third of the service's state is not a snapshot
-> of anything the specification recognises.** **Opaque and complete are different properties, and the
-> specification constrained only the first.**
+```
+:47 baseline       one successful new booking                        -> revision 1
+after import       restaurant_revision = 0 ; reservations carried = 1
+a REAL reset       reservations = 0, revision = 0                    <- what "after reset" looks like
+```
+
+**So the imported state is `(reservations=1, revision=0)`.** A real reset produces `(0, 0)`. Reset-plus-events
+cannot produce it either, because **any reservation present implies at least one increment under `:47`'s own
+definition.** **The imported state is therefore unreachable by any legal sequence of the operations `:47` names --
+import is NEITHER a reset NOR a faithful replacement. It keeps the books and discards the count.**
+
+**And the answer is not independent of the defect, which is why the question was the right one to ask: if import
+WERE a reset there would be nothing to report. The answer and the defect are the same fact, and `:47`'s "after
+reset" does not license import to report 0.**
+
+**CLASSIFICATION: the `INFERENTIAL` -> `VERBATIM` step this row's question was supposed to decide DISAPPEARS,
+because the step was "does `:47` license 0 here", and `:47` does not -- while the sentence that would license it
+names a different operation.** **So the contradiction is internal to a VERBATIM definition plus a measured state,
+and needs no sentence about export to state it. Recorded as `VERBATIM`-eligible and NOT ruled here: the class is
+the Foreman's call, and this stage has produced five anchors from five seats each confident they had the last
+word. The measurement is not in dispute and it is committed.**
+
+**And the distinction that survives, because it is about two different properties rather than about this defect:
+§10's "the state format is opaque to the caller" governs the SHAPE and closes the field-list question permanently
+-- the implementer chooses. §10's "export is an atomic, read-only snapshot" governs the CONTENT. Opaque and
+complete are different properties, and the specification constrained only the first.**
+
+**AND A NOTE ON A COMMIT SUBJECT, because it is the most durable sentence in this repository and it is wrong:
+`3a18a87`'s subject reads "classified INFERENTIAL at stage-4.md:105 with :107".** It names the anchor the
+measurement refuted, in the past tense, as a fact. **A subject cannot be corrected without rewriting history, which
+this stage has ruled out, so the correction lives here instead -- and the Builder's reading of why is the sharpest
+thing in this section: the text that gets cited is the text the conversation has already said out loud. `:105` was
+the Builder's proposal and the most recently mentioned text in the room; `:47` was the subject and got dropped.
+An anchor chosen from memory is the last thing someone mentioned; an anchor chosen from a sweep is only ever the
+thing that is actually there.**
 
 **And the correction, which is the reason this is a measurement and not a reading — the specific consequence
 described does NOT hold, because it is unreachable:**
